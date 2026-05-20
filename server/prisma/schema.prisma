@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  passwordHash    String?
+  googleId        String?   @unique
+  avatarUrl       String?
+  role            Role      @default(VOTER)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  votes           Vote[]
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+  candidateProfile Candidate?
+}
+
+model Election {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  category    String?
+  status      ElectionStatus @default(UPCOMING)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  candidates  Candidate[]
+  votes       Vote[]
+}
+
+model Candidate {
+  id           String    @id @default(uuid())
+  contestantId String    @unique
+  name         String
+  party        String?
+  description  String?
+  imageUrl     String?
+  electionId   String?
+  election     Election?  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  userId       String?   @unique
+  user         User?     @relation(fields: [userId], references: [id])
+  votes        Vote[]
+}
+
+
+
+model Vote {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  electionId  String
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, electionId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   Json?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  VOTER
+  ADMIN
+  CANDIDATE
+}
+
+enum ElectionStatus {
+  UPCOMING
+  ACTIVE
+  ENDED
+}
