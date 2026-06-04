@@ -5,12 +5,20 @@ const cloudinary = require('../config/cloudinary');
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: 'voting-app',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }],
+    folder: 'votechain',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    transformation: [{ width: 800, height: 800, crop: 'limit' }],
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Invalid file type'), false);
+  },
+});
 
 module.exports = upload;

@@ -1,0 +1,14 @@
+const ROLES = {
+  VOTER: 'VOTER',
+  CONTESTANT: 'CONTESTANT',
+  ADMIN: 'ADMIN',
+};
+
+const ELECTION_STATUS = {
+  UPCOMING: 'UPCOMING',
+  ACTIVE: 'ACTIVE',
+  ENDED: 'ENDED',
+  CANCELLED: 'CANCELLED',
+};
+
+module.exports = { ROLES, ELECTION_STATUS };

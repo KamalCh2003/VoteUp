@@ -1,11 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
-
 }
 
 datasource db {
@@ -13,95 +7,194 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id              String    @id @default(uuid())
-  name            String
-  email           String    @unique
-  passwordHash    String?
-  googleId        String?   @unique
-  avatarUrl       String?
-  role            Role      @default(VOTER)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  votes           Vote[]
-  refreshTokens   RefreshToken[]
-  auditLogs       AuditLog[]
-  candidateProfile Candidate?
-}
-
-model Election {
-  id          String        @id @default(uuid())
-  title       String
-  description String?
-  category    String?
-  status      ElectionStatus @default(UPCOMING)
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  candidates  Candidate[]
-  votes       Vote[]
-}
-
-model Candidate {
-  id           String    @id @default(uuid())
-  contestantId String    @unique
-  name         String
-  party        String?
-  description  String?
-  imageUrl     String?
-  electionId   String?
-  election     Election?  @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  userId       String?   @unique
-  user         User?     @relation(fields: [userId], references: [id])
-  votes        Vote[]
-}
-
-
-
-model Vote {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  electionId  String
-  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-
-  @@unique([userId, electionId])
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  revoked   Boolean  @default(false)
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  action    String
-  details   Json?
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  ipAddress String?
-  createdAt DateTime @default(now())
-}
-
 enum Role {
   VOTER
+  CONTESTANT
   ADMIN
-  CANDIDATE
+}
+
+enum CandidateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
 }
 
 enum ElectionStatus {
   UPCOMING
   ACTIVE
   ENDED
+  CANCELLED
+}
+
+enum PaymentType {
+  CANDIDACY_FEE
+  PREMIUM_VOTER
+  WALLET_TOPUP
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum NotifType {
+  VOTE_CONFIRMED
+  ELECTION_REMINDER
+  ELECTION_RESULT
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  CANDIDACY_UPDATE
+  SYSTEM_ALERT
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  passwordHash       String
+  firstName          String
+  lastName           String
+  nationalId         String              @unique
+  phone              String?
+  avatarUrl          String?
+  role               Role                @default(VOTER)
+  isVerified         Boolean             @default(false)
+  isActive           Boolean             @default(true)
+  googleId           String?             @unique
+  twoFactorEnabled   Boolean             @default(false)
+  anonymousMode      Boolean             @default(true)
+  votes              Vote[]
+  notifications      Notification[]
+  payments           Payment[]
+  wallet             Wallet?
+  auditLogs          AuditLog[]
+  candidate          Candidate?
+  verificationTokens VerificationToken[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model Candidate {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  electionId      String
+  election        Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  party           String?
+  slogan          String?
+  bio             String?
+  manifesto       String?
+  bannerUrl       String?
+  websiteUrl      String?
+  twitterHandle   String?
+  instagramHandle String?
+  status          CandidateStatus @default(PENDING)
+  votesReceived   Int             @default(0)
+  votes           Vote[]
+  payments        Payment[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Election {
+  id            String         @id @default(uuid())
+  title         String
+  description   String?
+  category      String
+  startDate     DateTime
+  endDate       DateTime
+  status        ElectionStatus @default(UPCOMING)
+  maxCandidates Int            @default(10)
+  totalVotes    Int            @default(0)
+  maxVoters     Int?
+  votePrice     Int            @default(100)  
+  createdBy     String
+  candidates    Candidate[]
+  votes         Vote[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Vote {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  electionId  String
+  election    Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  isAnonymous Boolean   @default(true)
+  txHash      String?   @unique
+  votedAt     DateTime  @default(now())
+
+  @@unique([userId, electionId])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidateId           String?
+  candidate             Candidate?    @relation(fields: [candidateId], references: [id])
+  amount                Float
+  currency              String        @default("USD")
+  type                  PaymentType
+  status                PaymentStatus @default(PENDING)
+  stripePaymentIntentId String?       @unique
+  receiptUrl            String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Float    @default(0)
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotifType
+  isRead    Boolean   @default(false)
+  link      String?
+  createdAt DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  event     String
+  details   String?
+  ipAddress String?
+  result    String   @default("OK")
+  createdAt DateTime @default(now())
+}
+
+model VerificationToken {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  token     String    @unique
+  type      TokenType
+  expiresAt DateTime
+  used      Boolean   @default(false)
+  createdAt DateTime  @default(now())
 }

@@ -1,42 +1,108 @@
-const electionService = require('../services/election.service');
-const catchAsync = require('../utils/catchAsync');
+const prisma = require('../config/database');
 
-const getAll = catchAsync(async (req, res) => {
-  const { status } = req.query;
-  const elections = await electionService.getElections(status);
-  return res.json({ success: true, data: elections });
-});
+exports.getAll = async (req, res) => {
+  try {
+    const { status, category, limit } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (category) where.category = category;
 
-const getOne = catchAsync(async (req, res) => {
-  const election = await electionService.getElectionById(req.params.id);
-  return res.json({ success: true, data: election });
-});
+    const elections = await prisma.election.findMany({
+      where,
+      take: limit ? parseInt(limit) : 20,
+      orderBy: { startDate: 'desc' },
+      include: { _count: { select: { candidates: true, votes: true } } },
+    });
+    res.json({ elections });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch elections' });
+  }
+};
 
-const create = catchAsync(async (req, res) => {
-  const { title, description, category, startDate, endDate } = req.body;
-  const election = await electionService.createElection({
-    title,
-    description,
-    category,
-    startDate: new Date(startDate),
-    endDate: new Date(endDate),
-  });
-  return res.status(201).json({ success: true, data: election });
-});
+exports.getById = async (req, res) => {
+  try {
+    const election = await prisma.election.findUnique({
+      where: { id: req.params.id },
+      include: {
+        candidates: {
+          where: { status: 'APPROVED' },
+          include: { user: { select: { firstName: true, lastName: true, avatarUrl: true } } },
+        },
+      },
+    });
+    if (!election) return res.status(404).json({ error: 'Election not found' });
+    res.json({ election });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch election' });
+  }
+};
 
-const update = catchAsync(async (req, res) => {
-  const election = await electionService.updateElection(req.params.id, req.body);
-  return res.json({ success: true, data: election });
-});
+exports.create = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      startDate,
+      endDate,
+      maxCandidates,
+      maxVoters,
+      votePrice,
+    } = req.body;
 
-const remove = catchAsync(async (req, res) => {
-  await electionService.deleteElection(req.params.id);
-  return res.json({ success: true, message: 'Election deleted' });
-});
+    // Parse integers with defaults
+    const parsedMaxCandidates = parseInt(maxCandidates, 10) || 10;
+    const parsedMaxVoters = maxVoters ? parseInt(maxVoters, 10) : null;  // null = unlimited
+    const parsedVotePrice = parseInt(votePrice, 10) || 100;
 
-const getResults = catchAsync(async (req, res) => {
-  const results = await electionService.getResults(req.params.id);
-  return res.json({ success: true, data: results });
-});
+    // Parse dates
+    const parsedStartDate = new Date(startDate);
+    const parsedEndDate = new Date(endDate);
 
-module.exports = { getAll, getOne, create, update, remove, getResults };
+    if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid start or end date' });
+    }
+
+    const election = await prisma.election.create({
+      data: {
+        title,
+        description,
+        category,
+        startDate: parsedStartDate,
+        endDate: parsedEndDate,
+        maxCandidates: parsedMaxCandidates,
+        maxVoters: parsedMaxVoters,
+        votePrice: parsedVotePrice,
+        createdBy: req.user.id,
+      },
+    });
+
+    res.status(201).json({ election });
+  } catch (err) {
+    console.error('Election creation error:', err);
+    res.status(500).json({ error: 'Failed to create election' });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    if (data.startDate) data.startDate = new Date(data.startDate);
+    if (data.endDate) data.endDate = new Date(data.endDate);
+
+    const election = await prisma.election.update({ where: { id }, data });
+    res.json({ election });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update election' });
+  }
+};
+
+exports.delete = async (req, res) => {
+  try {
+    await prisma.election.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Election deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete election' });
+  }
+};

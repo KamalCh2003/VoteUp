@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const catchAsync = require('../utils/catchAsync');
-const ApiError = require('../utils/ApiError');
+const ApiError = require('../utils/error');
 
 // user management
 const getAllUsers = catchAsync(async (req, res) => {

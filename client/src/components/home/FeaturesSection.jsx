@@ -3,29 +3,25 @@ import { Shield, BarChart3, Globe, ClipboardList } from "lucide-react";
 const features = [
   {
     title: "End-to-end encrypted",
-    description:
-      "All votes are encrypted at rest and in transit using 256-bit SSL.",
+    description: "All votes are encrypted at rest and in transit using 256-bit SSL.",
     icon: Shield,
     color: "text-violet-400",
   },
   {
     title: "Real-time analytics",
-    description:
-      "Live vote counts and demographic insights as votes are cast.",
+    description: "Live vote counts and demographic insights as votes are cast.",
     icon: BarChart3,
     color: "text-cyan-400",
   },
   {
     title: "Vote from anywhere",
-    description:
-      "Mobile-first, fully responsive design works on any device.",
+    description: "Mobile-first, fully responsive design works on any device.",
     icon: Globe,
     color: "text-pink-400",
   },
   {
     title: "Full audit trail",
-    description:
-      "Complete transparency — every vote is logged, nothing is hidden.",
+    description: "Complete transparency — every vote is logged, nothing is hidden.",
     icon: ClipboardList,
     color: "text-yellow-400",
   },
@@ -42,7 +38,6 @@ export default function FeaturesSection() {
       <div className="grid gap-4 md:grid-cols-2">
         {features.map((feature, index) => {
           const Icon = feature.icon;
-
           return (
             <div
               key={index}

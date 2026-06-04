@@ -1,24 +1,23 @@
+require('dotenv').config();
 const app = require('./app');
-const config = require('./config');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./config/database');
 
-const prisma = new PrismaClient();
+const PORT = process.env.PORT || 5000;
 
-async function startServer() {
+async function start() {
   try {
-    // Test the database connection
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('✅ Database connected successfully');
-
-    // Start the server only after DB is confirmed
-    app.listen(config.port, () => {
-      console.log(`🚀 Server running on port ${config.port}`);
-    });
+    await prisma.$connect();
+    console.log('Database connected');
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   } catch (error) {
-    console.error('❌ Failed to connect to database:', error.message);
-    console.error('Make sure your NeonDB project is active and IP is allowed.');
+    console.error('Failed to start:', error);
     process.exit(1);
   }
 }
 
-startServer();
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+start();

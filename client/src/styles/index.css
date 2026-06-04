@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #09090f;
+  --bg2: #111120;
+  --bg3: #1c1c32;
+  --bg4: #24243e;
+  --glass: rgba(255, 255, 255, 0.055);
+  --glass2: rgba(255, 255, 255, 0.09);
+  --gb: rgba(255, 255, 255, 0.11);
+  --t: #eeeeff;
+  --t2: #9090b8;
+  --t3: #50507a;
+  --a: #7c6fff;
+  --a2: #00d4aa;
+  --a3: #ff6b8a;
+  --a4: #f5a623;
+  --abg: rgba(124, 111, 255, 0.15);
+  --a2bg: rgba(0, 212, 170, 0.12);
+  --a3bg: rgba(255, 107, 138, 0.12);
+  --a4bg: rgba(245, 166, 35, 0.12);
+}
+
+.light {
+  --bg: #f4f4ff;
+  --bg2: #eaeaff;
+  --bg3: #ffffff;
+  --bg4: #f0f0ff;
+  --glass: rgba(255, 255, 255, 0.75);
+  --glass2: rgba(255, 255, 255, 0.9);
+  --gb: rgba(180, 170, 255, 0.25);
+  --t: #1a1a3a;
+  --t2: #5050a0;
+  --t3: #9090c0;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--t);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-gray-900 dark:bg-black dark:text-white;
+  }
+}

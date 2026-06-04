@@ -1,17 +1,18 @@
-import { createContext, useState, useEffect, useContext } from 'react';
-import API from '../services/api';
+// client/src/context/AuthContext.jsx
+import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (token) {
-      API.get('/auth/me')
-        .then((res) => setUser(res.data.data))
+      api.get('/users/me')
+        .then(({ data }) => setUser(data.user))
         .catch(() => localStorage.clear())
         .finally(() => setLoading(false));
     } else {
@@ -19,55 +20,30 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async ({ email, password }) => {
-    const { data } = await API.post('/auth/login', { email, password });
-    localStorage.setItem('accessToken', data.data.tokens.accessToken);
-    localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
-    setUser(data.data.user);
-    return data;
+  const login = async (email, password) => {
+    const { data } = await api.post('/auth/login', { email, password });
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    setUser(data.user);
+    return data.user;
   };
 
-  // ✅ Updated: includes electionId for contestants
-  const register = async ({ name, email, password, role, contestantId, adminKey, electionId }) => {
-  console.log("🔵 register called with:", { name, email, role, contestantId, electionId });
-  const payload = { name, email, password, role };
-  if (role === 'CONTESTANT') {
-    payload.contestantId = contestantId;
-    if (electionId) payload.electionId = electionId;
-  }
-  if (role === 'ADMIN') payload.adminKey = adminKey;
-  console.log("🔵 sending payload:", payload);
-
-  try {
-    const { data } = await API.post('/auth/register', payload);
-    console.log("🔵 register response:", data);
-    localStorage.setItem('accessToken', data.data.tokens.accessToken);
-    localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
-    setUser(data.data.user);
-    return data;
-  } catch (error) {
-    console.error("🔵 register error:", error);
-    throw error; // rethrow so the calling component can handle it
-  }
-};
+  const register = async (formData) => {
+    // Send registration data to backend (which now sends an OTP email)
+    const { data } = await api.post('/auth/register', formData);
+    return data; // contains { message, email }
+  };
 
   const logout = () => {
     localStorage.clear();
     setUser(null);
-    window.location.href = '/';
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

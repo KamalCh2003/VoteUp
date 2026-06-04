@@ -1,15 +1,16 @@
 const router = require('express').Router();
-const adminController = require('../controllers/admin.controller.js');
-const authenticate = require('../middleware/authenticate.js');
-const authorize = require('../middleware/authorize.js');
-const upload = require('../middleware/upload.js');
-const statsController = require('../controllers/stats.controller');
+const ctrl = require('../controllers/admin.controller');
+const { authenticate } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleCheck');
 
-router.use(authenticate, authorize('ADMIN'));
-
-router.get('/dashboard', adminController.getDashboardStats);
-router.get('/audit-logs', adminController.getAuditLogs);
-router.post('/candidates', upload.single('image'), adminController.createCandidate);
-router.get('/stats/dashboard', statsController.getDashboardStats);
+router.use(authenticate, requireRole('ADMIN'));
+router.get('/stats', ctrl.getStats);
+router.get('/users', ctrl.getUsers);
+router.put('/candidates/:id', ctrl.approveCandidate);
+router.get('/audit-logs', ctrl.getAuditLogs);
+router.get('/finance/revenue-trend', ctrl.getRevenueTrend);
+router.get('/finance/payment-methods', ctrl.getPaymentMethods);
+router.get('/finance/top-voters', ctrl.getTopVoters);
+router.get('/candidates', ctrl.getAllCandidates);
 
 module.exports = router;

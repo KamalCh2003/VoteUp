@@ -1,227 +1,121 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
+import Navbar from './components/layout/Navbar';
+import ContestantNavbar from './components/layout/ContestantNavbar';
+import Footer from './components/layout/Footer';
+import Landing from './components/common/Landing';
+import LoginForm from './components/auth/LoginForm';
+import RegisterForm from './components/auth/RegisterForm';
+import ForgotPassword from './components/auth/ForgotPassword';
+import VerifyEmail from './components/auth/VerifyEmail';
+import About from './components/voter/About';
+import VoterHome from './components/voter/VoterHome';
+import ElectionList from './components/voter/ElectionList';    // also used as public
+import CastVote from './components/voter/CastVote';
+import ResultsView from './components/voter/ResultsView';    // also used as public
+import VoteHistory from './components/voter/VoteHistory';
+import VoterProfile from './components/voter/VoterProfile';
+import ContestantDashboard from './components/contestant/ContestantDashboard';
+import ContestantProfile from './components/contestant/ContestantProfile';
+import CampaignManager from './components/contestant/CampaignManager';
+import AnalyticsView from './components/contestant/AnalyticsView';
+import ApplyCandidacy from './components/contestant/ApplyCandidacy';
+import CandidacyPayment from './components/payment/CandidacyPayment';
+import PremiumPlans from './components/payment/PremiumPlans';
+import PaymentSuccess from './components/payment/PaymentSuccess';
+import PaymentFailed from './components/payment/PaymentFailed';
+import Wallet from './components/payment/Wallet';
+import NotFound from './components/common/NotFound';
+import AdminHome from './components/admin/AdminHome';
+import ElectionDetails from './components/elections/ElectionDetails';
+import VotePaymentPage from './components/payment/VotePaymentPage';
 
-// Layout
-import Navbar from "./layout/Navbar";
-import Footer from "./layout/Footer";
-import ProtectedRoute from "./layout/ProtectedRoute";
-
-// Public Pages
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ElectionsPage from "./pages/Elections";
-import ResultsPage from "./pages/Results";
-import AboutPage from "./pages/About";
-
-// Voter Pages
-// import VoterDashboard from "./pages/Voter/Dashboard";
-import VoterElections from "./pages/Voter/Elections";
-import VoterVote from "./pages/Voter/Vote";
-import VoterResults from "./pages/Voter/Results";
-import VoterProfile from "./pages/Voter/Profile";
-import UserHome from "./pages/Voter/UserHome";
-
-// Contestant Pages
-import ContestantDashboard from "./pages/Contestant/Dashboard";
-import ContestantCampaign from "./pages/Contestant/Campaign";
-import ContestantAnalytics from "./pages/Contestant/Analytics";
-
-// Admin Pages
-import AdminHome from "./pages/Admin/AdminHome";
-import AdminDashboard from "./pages/Admin/Dashboard";
-import AdminElections from "./pages/Admin/Elections";
-import AdminCandidates from "./pages/Admin/Candidates";
-import AdminUsers from "./pages/Admin/Users";
-import AdminAuditLogs from "./pages/Admin/AuditLogs";
+function Protected({ children, roles }) {
+  const { isAuthenticated, user, loading } = useAuth();
+  if (loading) return <div className="flex justify-center p-10">Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/" />;
+  return children;
+}
 
 function AppContent() {
   const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isContestantRoute = location.pathname.startsWith('/contestant');
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Show Navbar only on Home page */}
-      {location.pathname === "/" && <Navbar />}
+    <>
+      {!isAdminRoute && !isContestantRoute && <Navbar />}
+      {isContestantRoute && <ContestantNavbar />}
 
-      <Routes>
-        {/* PUBLIC ROUTES */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/pages/Elections" element={<ElectionsPage />} />
-        <Route path="/pages/Results" element={<ResultsPage />} />
-        <Route path="/pages/About" element={<AboutPage />} />
-        <Route path="/Results" element={<ResultsPage />} />
+      {isAdminRoute ? (
+        <Routes>
+          <Route path="/admin" element={<Protected roles={['ADMIN']}><AdminHome /></Protected>} />
+          <Route path="/admin/*" element={<Protected roles={['ADMIN']}><AdminHome /></Protected>} />
+        </Routes>
+      ) : (
+        <main className="min-h-screen px-4 py-4 max-w-7xl mx-auto">
+          <Routes>
+            {/* Public pages */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/register" element={<RegisterForm />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/elections" element={<ElectionList />} />
+            <Route path="/results" element={<ResultsView />} />
+            <Route path="/results/:electionId" element={<ResultsView />} />
 
+            {/* Voter – protected actions */}
+            <Route path="/voter/home" element={<Protected roles={['VOTER']}><VoterHome /></Protected>} />
+            <Route path="/voter/vote/:electionId" element={<Protected roles={['VOTER']}><CastVote /></Protected>} />
+            <Route path="/voter/history" element={<Protected roles={['VOTER']}><VoteHistory /></Protected>} />
+            <Route path="/voter/profile" element={<Protected roles={['VOTER']}><VoterProfile /></Protected>} />
+            <Route path="/elections/:id" element={<Protected roles={['VOTER']}><ElectionDetails /></Protected>} />
 
-        {/* VOTER ROUTES */}
-        <Route
-          path="/voter/userhome"
-          element={
-            <ProtectedRoute roles={["VOTER"]}>
-              <UserHome />
-            </ProtectedRoute>
-          }
-        />
+            {/* Contestant */}
+            <Route path="/contestant/dashboard" element={<Protected roles={['CONTESTANT']}><ContestantDashboard /></Protected>} />
+            <Route path="/contestant/profile" element={<Protected roles={['CONTESTANT']}><ContestantProfile /></Protected>} />
+            <Route path="/contestant/campaign" element={<Protected roles={['CONTESTANT']}><CampaignManager /></Protected>} />
+            <Route path="/contestant/analytics" element={<Protected roles={['CONTESTANT']}><AnalyticsView /></Protected>} />
+            <Route path="/contestant/apply" element={<Protected roles={['VOTER', 'CONTESTANT']}><ApplyCandidacy /></Protected>} />
 
-        <Route
-          path="/voter/elections"
-          element={
-            <ProtectedRoute roles={["VOTER"]}>
-              <VoterElections />
-            </ProtectedRoute>
-          }
-        />
+            {/* Payment */}
+            <Route path="/payment/candidacy" element={<Protected><CandidacyPayment /></Protected>} />
+            <Route path="/payment/plans" element={<Protected><PremiumPlans /></Protected>} />
+            <Route path="/payment/success" element={<Protected><PaymentSuccess /></Protected>} />
+            <Route path="/payment/failed" element={<Protected><PaymentFailed /></Protected>} />
+            <Route path="/payment/wallet" element={<Protected><Wallet /></Protected>} />
+            <Route path="/voter/buy-votes" element={<Protected roles={['VOTER']}><VotePaymentPage /></Protected>} />
 
-        <Route
-          path="/voter/vote/:electionId"
-          element={
-            <ProtectedRoute roles={["VOTER"]}>
-              <VoterVote />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/voter/results"
-          element={
-            <ProtectedRoute roles={["VOTER"]}>
-              <VoterResults />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/voter/results/:electionId"
-          element={
-            <ProtectedRoute roles={["VOTER"]}>
-              <VoterResults />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/voter/profile"
-          element={
-            <ProtectedRoute roles={["VOTER"]}>
-              <VoterProfile />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* CONTESTANT ROUTES */}
-        <Route
-          path="/contestant/dashboard"
-          element={
-            <ProtectedRoute roles={["CANDIDATE"]}>
-              <ContestantDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/contestant/campaign"
-          element={
-            <ProtectedRoute roles={["CANDIDATE"]}>
-              <ContestantCampaign />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/contestant/analytics"
-          element={
-            <ProtectedRoute roles={["CANDIDATE"]}>
-              <ContestantAnalytics />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ADMIN ROUTES */}
-        <Route
-          path="/admin/adminhome"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminHome />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/elections"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminElections />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/candidates"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminCandidates />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminUsers />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/audit-logs"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminAuditLogs />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 404 PAGE */}
-        <Route
-          path="*"
-          element={
-            <div className="flex min-h-screen flex-col items-center justify-center">
-              <h1 className="text-7xl font-bold text-violet-500">
-                404
-              </h1>
-
-              <p className="mt-4 text-zinc-400">
-                Page not found
-              </p>
-            </div>
-          }
-        />
-      </Routes>
-
-       {/* Show Navbar only on Home page */}
-      {location.pathname === "/" && <Footer />}
-    </div>
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      )}
+      {!isAdminRoute && !isContestantRoute && <Footer />}
+    </>
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;

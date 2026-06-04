@@ -1,8 +1,8 @@
 import HeroSection from "../components/home/HeroSection";
 import StatsSection from "../components/home/StatsSection";
-import LiveElectionSection from "../components/home/LiveElections";
+import LiveElectionSection from "../components/home/LiveElectionSection";
 import FeaturesSection from "../components/home/FeaturesSection";
-import WhoCanUse from "../components/home/WhoUse";
+import WhoCanUse from "../components/home/WhoCanUse";
 
 
 export default function Home() {
