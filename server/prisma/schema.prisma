@@ -17,7 +17,7 @@ enum Gender {
   MALE 
   FEMALE 
   OTHER 
-  }
+}
 
 enum CandidateStatus {
   PENDING
@@ -70,7 +70,7 @@ model User {
   nationalId         String              @unique
   phone              String?
   avatarUrl          String?
-  gender             Gender? @default(OTHER)
+  gender             Gender?             @default(OTHER)
   role               Role                @default(VOTER)
   isVerified         Boolean             @default(false)
   isActive           Boolean             @default(true)
@@ -80,7 +80,6 @@ model User {
   votes              Vote[]
   notifications      Notification[]
   payments           Payment[]
-  wallet             Wallet?
   auditLogs          AuditLog[]
   candidate          Candidate?
   verificationTokens VerificationToken[]
@@ -95,7 +94,7 @@ model Candidate {
   avatarUrl       String?
   electionId      String
   election        Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  candidateNumber String?          // new field
+  candidateNumber String?
   party           String?
   slogan          String?
   bio             String?
@@ -113,26 +112,26 @@ model Candidate {
 }
 
 model Election {
-  id            String         @id @default(uuid())
-  title         String
-  description   String?
-  category      String
-  startDate     DateTime
-  endDate       DateTime
-  status        ElectionStatus @default(UPCOMING)
-  maxCandidates Int            @default(10)
-  totalVotes    Int            @default(0)
-  maxVoters     Int?
-  votePrice     Int            @default(100)   // 0 = free, >0 = paid
-  rules         String?
-  organizerName String?
-  organizerEmail String?
-  organizerPhone String?
-  createdBy     String
-  candidates    Candidate[]
-  votes         Vote[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id              String         @id @default(uuid())
+  title           String
+  description     String?
+  category        String
+  startDate       DateTime
+  endDate         DateTime
+  status          ElectionStatus @default(UPCOMING)
+  maxCandidates   Int            @default(10)
+  totalVotes      Int            @default(0)
+  maxVoters       Int?
+  votePrice       Int            @default(100)
+  rules           String?
+  organizerName   String?
+  organizerEmail  String?
+  organizerPhone  String?
+  createdBy       String
+  candidates      Candidate[]
+  votes           Vote[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model Vote {
@@ -149,7 +148,6 @@ model Vote {
   votedAt     DateTime  @default(now())
   paymentId   String?   @unique
   payment     Payment?  @relation(fields: [paymentId], references: [id])
-  
 }
 
 model Payment {
@@ -166,17 +164,7 @@ model Payment {
   receiptUrl            String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-  votes                 Vote[]        // relation back to votes (optional)
-}
-
-model Wallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance   Float    @default(0)
-  currency  String   @default("USD")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  votes                 Vote[]
 }
 
 model Notification {
@@ -203,10 +191,9 @@ model AuditLog {
 }
 
 model VerificationToken {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
   token     String    @unique
   type      TokenType
   expiresAt DateTime

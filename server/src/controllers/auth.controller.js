@@ -5,8 +5,6 @@ const { generateToken, generateRefreshToken } = require('../config/jwt');
 const emailService = require('../services/email.service');
 const passport = require('passport');
 
-
-
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ─── REGISTER ──────────────────────────────────
@@ -29,7 +27,7 @@ exports.register = async (req, res) => {
         lastName,
         nationalId: effectiveNationalId,
         role: role || 'VOTER',
-        wallet: { create: { balance: 0 } },
+        // wallet creation removed
       },
     });
 
@@ -88,7 +86,6 @@ exports.verifyOtp = async (req, res) => {
       prisma.verificationToken.update({ where: { id: vToken.id }, data: { used: true } }),
     ]);
 
-    // Generate tokens after successful verification
     const payload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = generateToken(payload);
     const refreshToken = generateRefreshToken(payload);
@@ -153,7 +150,7 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-// ─── LOGIN (unchanged) ─────────────────────────
+// ─── LOGIN ─────────────────────────
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;

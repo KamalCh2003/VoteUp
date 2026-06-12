@@ -1,3 +1,4 @@
+// controllers/user.controller.js
 const bcrypt = require('bcrypt');
 const prisma = require('../config/database');
 
@@ -9,12 +10,12 @@ exports.getProfile = async (req, res) => {
         id: true, email: true, firstName: true, lastName: true,
         nationalId: true, phone: true, avatarUrl: true, role: true,
         isVerified: true, anonymousMode: true, twoFactorEnabled: true,
-        wallet: { select: { balance: true } },
         candidate: { select: { id: true, status: true } },
       },
     });
     res.json({ user });
   } catch (err) {
+    console.error('Get profile error:', err);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 };
@@ -33,6 +34,7 @@ exports.updateProfile = async (req, res) => {
     });
     res.json({ user: { id: user.id, firstName: user.firstName, lastName: user.lastName } });
   } catch (err) {
+    console.error('Update profile error:', err);
     res.status(500).json({ error: 'Update failed' });
   }
 };
@@ -48,6 +50,7 @@ exports.changePassword = async (req, res) => {
     await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash } });
     res.json({ message: 'Password updated' });
   } catch (err) {
+    console.error('Change password error:', err);
     res.status(500).json({ error: 'Password change failed' });
   }
 };
@@ -61,6 +64,7 @@ exports.uploadAvatar = async (req, res) => {
     });
     res.json({ avatarUrl: user.avatarUrl });
   } catch (err) {
+    console.error('Upload avatar error:', err);
     res.status(500).json({ error: 'Upload failed' });
   }
 };

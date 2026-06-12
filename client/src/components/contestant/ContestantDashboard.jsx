@@ -210,53 +210,55 @@ export default function ContestantDashboard() {
               <h2 className="text-xl font-semibold text-white mb-4">Candidates</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {election.candidates?.map((candidate) => {
-                  const isCopied = copiedCandidateId === candidate.id;
                   const share = ((candidate.votesReceived || 0) / totalVotes) * 100;
+                  const isCopied = copiedCandidateId === candidate.id;
                   return (
                     <div
                       key={candidate.id}
-                      className="group rounded-xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-4 transition hover:border-violet-500/30 hover:bg-white/[0.05]"
+                      className="group rounded-xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-4 transition hover:border-violet-500/30 hover:bg-white/[0.05] w-full aspect-square flex flex-col"
                     >
-                      <div className="flex items-start gap-3">
-                        {/* Square candidate image */}
-                        <div className="h-12 w-12 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-lg overflow-hidden flex-shrink-0">
+                      {/* Circular avatar */}
+                      <div className="flex justify-center mb-2">
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg overflow-hidden">
                           {candidate.avatarUrl ? (
                             <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                           ) : (
                             `${candidate.user?.firstName?.[0]}${candidate.user?.lastName?.[0]}`
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-white truncate">
-                            {candidate.user?.firstName} {candidate.user?.lastName}
-                          </h3>
-                          <p className="text-gray-400 text-xs truncate">{candidate.party || 'Independent'}</p>
-                          {candidate.slogan && (
-                            <p className="text-gray-500 text-xs mt-1 line-clamp-1 italic">"{candidate.slogan}"</p>
-                          )}
-                          {isActive && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-xs text-gray-400 mb-0.5">
-                                <span>Vote share</span>
-                                <span>{share.toFixed(1)}%</span>
-                              </div>
-                              <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
-                                  style={{ width: `${share}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                          {!isActive && election.status === 'ENDED' && (
-                            <div className="mt-2 text-center text-sm">
-                              <span className="text-white font-medium">{share.toFixed(1)}%</span>
-                              <span className="text-gray-500 text-xs"> vote share</span>
-                            </div>
-                          )}
-                        </div>
                       </div>
-                      <div className="mt-3 flex justify-end">
+                      <h3 className="font-semibold text-white text-center truncate">
+                        {candidate.user?.firstName} {candidate.user?.lastName}
+                      </h3>
+                      <p className="text-gray-400 text-xs text-center truncate">
+                        {candidate.party || 'Independent'}
+                      </p>
+                      {candidate.slogan && (
+                        <p className="text-gray-500 text-xs mt-1 text-center line-clamp-2 italic">
+                          "{candidate.slogan}"
+                        </p>
+                      )}
+                      {isActive && (
+                        <div className="mt-auto pt-2">
+                          <div className="flex justify-between text-xs text-gray-400 mb-0.5">
+                            <span>Vote share</span>
+                            <span>{share.toFixed(1)}%</span>
+                          </div>
+                          <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
+                              style={{ width: `${share}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {!isActive && election.status === 'ENDED' && (
+                        <div className="mt-auto text-center text-sm">
+                          <span className="text-white font-medium">{share.toFixed(1)}%</span>
+                          <span className="text-gray-500 text-xs"> vote share</span>
+                        </div>
+                      )}
+                      <div className="mt-3 flex justify-center">
                         <button
                           onClick={() => handleShareCandidate(candidate)}
                           className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition"
@@ -275,7 +277,7 @@ export default function ContestantDashboard() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Leaderboard */}
+          {/* RIGHT COLUMN: Leaderboard (unchanged) */}
           <div className="space-y-6">
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5">
               <div className="flex items-center justify-between mb-4">
@@ -308,7 +310,7 @@ export default function ContestantDashboard() {
                             {idx === 0 && <Trophy size={14} className="inline text-yellow-400 mr-1" />}
                             #{idx + 1}
                           </div>
-                          <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                             {comp.avatarUrl ? (
                               <img src={comp.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -331,7 +333,7 @@ export default function ContestantDashboard() {
                 </div>
               </div>
 
-              {/* Mobile ranking cards – also only share % */}
+              {/* Mobile ranking cards */}
               <div className="sm:hidden space-y-3">
                 {competitors.map((comp, idx) => {
                   const isYou = comp.user.id === user?.id;
@@ -344,7 +346,7 @@ export default function ContestantDashboard() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="font-bold text-white text-sm">#{idx + 1}</div>
-                          <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                             {comp.avatarUrl ? <img src={comp.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : `${comp.user.firstName[0]}${comp.user.lastName[0]}`}
                           </div>
                           <div>
@@ -368,7 +370,6 @@ export default function ContestantDashboard() {
               )}
             </div>
 
-            {/* Campaign snapshot – keep total votes but that's fine */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5">
               <h3 className="text-lg font-semibold text-white mb-3">Campaign Snapshot</h3>
               <div className="grid grid-cols-2 gap-3 text-center">
