@@ -1,311 +1,390 @@
+// src/components/contestant/ContestantDashboard.jsx
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Vote, BarChart3, Users, Clock, Shield, ArrowRight, PlusCircle,
-  TrendingUp, Calendar, RefreshCw, Trophy, UserCheck
+  Calendar,
+  Clock,
+  Users,
+  Vote,
+  ArrowLeft,
+  Loader2,
+  Share2,
+  CheckCircle,
+  Trophy,
+  UserCheck,
+  RefreshCw,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 export default function ContestantDashboard() {
+  const navigate = useNavigate();
+  const toast = useToast();
   const { user } = useAuth();
-  const [candidacy, setCandidacy] = useState(null);
-  const [activeElections, setActiveElections] = useState([]);
-  const [competitors, setCompetitors] = useState([]);
+  const [election, setElection] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [competitorsLoading, setCompetitorsLoading] = useState(false);
+  const [copiedCandidateId, setCopiedCandidateId] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [competitors, setCompetitors] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Fetch competitors for the election the candidate is part of
+  const getTimeRemaining = (endDate) => {
+    const total = Date.parse(endDate) - Date.now();
+    if (total <= 0) return { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+    const seconds = Math.floor((total / 1000) % 60);
+    const minutes = Math.floor((total / 1000 / 60) % 60);
+    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+    const days = Math.floor(total / (1000 * 60 * 60 * 24));
+    return { total, days, hours, minutes, seconds };
+  };
+
+  const formatCountdown = (time) => {
+    if (time.total <= 0) return 'Ended';
+    const parts = [];
+    if (time.days > 0) parts.push(`${time.days}d`);
+    if (time.hours > 0) parts.push(`${time.hours}h`);
+    if (time.minutes > 0) parts.push(`${time.minutes}m`);
+    parts.push(`${time.seconds}s`);
+    return parts.join(' ');
+  };
+
   const fetchCompetitors = async (electionId) => {
     if (!electionId) return;
-    setCompetitorsLoading(true);
     try {
-      const response = await api.get(`/elections/${electionId}`);
-      const electionData = response.data.election;
-      const candidatesArray = electionData?.candidates || [];
-      // Sort by votes received descending for ranking
-      const sorted = [...candidatesArray].sort((a, b) => b.votesReceived - a.votesReceived);
+      const res = await api.get(`/elections/${electionId}`);
+      const candidates = res.data.election.candidates || [];
+      const sorted = [...candidates].sort((a, b) => b.votesReceived - a.votesReceived);
       setCompetitors(sorted);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to fetch competitors:', err);
-    } finally {
-      setCompetitorsLoading(false);
     }
   };
 
-  // Initial data load
   useEffect(() => {
-    Promise.all([
-      api.get('/candidates/me'),
-      api.get('/elections', { params: { status: 'ACTIVE', limit: 4 } }),
-    ])
-      .then(([candidacyRes, electionsRes]) => {
-        const myCandidacy = candidacyRes.data.candidate;
-        setCandidacy(myCandidacy);
-        setActiveElections(electionsRes.data.elections || []);
-        if (myCandidacy?.election?.id) {
-          fetchCompetitors(myCandidacy.election.id);
+    const fetchMyElection = async () => {
+      try {
+        const { data: candidateData } = await api.get('/candidates/me');
+        const myCandidate = candidateData.candidate;
+        if (!myCandidate || !myCandidate.electionId) {
+          setElection(null);
+          setLoading(false);
+          return;
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+        const { data: electionData } = await api.get(`/elections/${myCandidate.electionId}`);
+        const fetchedElection = electionData.election;
+        setElection(fetchedElection);
+        if (fetchedElection.status === 'ACTIVE') {
+          setTimeLeft(getTimeRemaining(fetchedElection.endDate));
+        }
+        await fetchCompetitors(myCandidate.electionId);
+        const interval = setInterval(() => {
+          if (myCandidate.electionId) fetchCompetitors(myCandidate.electionId);
+        }, 15000);
+        return () => clearInterval(interval);
+      } catch (err) {
+        console.error('Failed to fetch contestant election:', err);
+        toast.error('Could not load your election details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMyElection();
+  }, [toast]);
 
-  // Set up periodic refresh for live ranking (every 15 seconds)
   useEffect(() => {
-    if (!candidacy?.election?.id) return;
+    if (!election || election.status !== 'ACTIVE') return;
     const interval = setInterval(() => {
-      fetchCompetitors(candidacy.election.id);
-    }, 15000);
+      setTimeLeft(getTimeRemaining(election.endDate));
+    }, 1000);
     return () => clearInterval(interval);
-  }, [candidacy?.election?.id]);
+  }, [election]);
+
+  const handleShareCandidate = async (candidate) => {
+    const shareUrl = `${window.location.origin}/candidate/${candidate.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${candidate.user?.firstName} ${candidate.user?.lastName}`,
+          text: `Support ${candidate.user?.firstName} ${candidate.user?.lastName} in the election!`,
+          url: shareUrl,
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error(err);
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedCandidateId(candidate.id);
+      setTimeout(() => setCopiedCandidateId(null), 2000);
+      toast.success('Link copied!');
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-400"></div>
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="animate-spin text-violet-400" size={48} />
       </div>
     );
   }
 
-  // Helper to get current user's rank
-  const getCurrentUserRank = () => {
-    const index = competitors.findIndex(c => c.user.id === user?.id);
-    return index !== -1 ? index + 1 : null;
-  };
+  if (!election) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-400">You are not part of any election yet.</p>
+        <Link to="/contestant/apply" className="text-violet-400 hover:underline mt-2 inline-block">
+          Apply now
+        </Link>
+      </div>
+    );
+  }
+
+  const isActive = election.status === 'ACTIVE' && new Date() <= new Date(election.endDate);
+  const pricePerVote = election.votePrice || 0;
+  const totalVotes = election.totalVotes || 1;
+  const currentUserRank = competitors.findIndex(c => c.user?.id === user?.id) + 1;
 
   return (
-    <div className="mt-6">
-      {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xl font-bold">
-            {user.firstName?.[0]}{user.lastName?.[0]}
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-white">
-              Welcome, {user.firstName} {user.lastName}
-            </h1>
-            <p className="text-sm text-gray-400">
-              {candidacy ? (
-                <>
-                  {candidacy.party || 'Independent'} ·{' '}
-                  <span className="text-violet-400 font-medium">{candidacy.status}</span>
-                </>
-              ) : (
-                'Contestant account'
-              )}
-            </p>
-          </div>
-        </div>
-        {!candidacy && (
-          <Link
-            to="/contestant/apply"
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-violet-600 transition"
+    <div className="min-h-screen">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => navigate('/contestant/profile-campaign')}
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition"
           >
-            <PlusCircle size={16} />
-            Apply Now
-          </Link>
-        )}
-      </div>
+            <ArrowLeft size={18} /> Back to Profile
+          </button>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <RefreshCw size={12} className={competitors.length ? 'animate-spin' : ''} />
+            <span>Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}</span>
+          </div>
+        </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0B1020] p-6">
-          <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-violet-500/20 blur-xl"></div>
-          <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* LEFT COLUMN: Election details + candidate cards */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{election.title}</h1>
+              <p className="text-gray-400 text-sm md:text-base">{election.description}</p>
+              <div className="flex flex-wrap gap-4 mt-4 text-xs text-gray-500">
+                <div className="flex items-center gap-1">
+                  <Calendar size={14} /> {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Users size={14} /> {election.candidates?.length || 0} Candidates
+                </div>
+                <div className="flex items-center gap-1">
+                  <Vote size={14} /> {election.totalVotes?.toLocaleString() || 0} Votes
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                  election.status === 'ACTIVE'
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : election.status === 'UPCOMING'
+                    ? 'bg-amber-500/20 text-amber-300'
+                    : 'bg-gray-500/20 text-gray-300'
+                }`}>
+                  {election.status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                  {election.status}
+                </span>
+                {pricePerVote === 0 && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-300">Free</span>
+                )}
+                {isActive && timeLeft && timeLeft.total > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-cyan-400 bg-white/5 rounded-full px-3 py-1">
+                    <Clock size={12} />
+                    <span className="font-mono">{formatCountdown(timeLeft)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div>
-              <p className="text-gray-400 text-sm">
-                {candidacy ? 'Total Votes Received' : 'Available Elections'}
-              </p>
-              <p className="text-3xl font-bold text-white mt-2">
-                {candidacy ? candidacy.votesReceived.toLocaleString() : activeElections.length}
-              </p>
-            </div>
-            <Vote className="text-violet-400" size={32} />
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0B1020] p-6">
-          <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-emerald-500/20 blur-xl"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">
-                {candidacy ? 'Total Election Votes' : 'Past Elections'}
-              </p>
-              <p className="text-3xl font-bold text-white mt-2">
-                {candidacy ? (candidacy.election?.totalVotes?.toLocaleString() || 0) : '0'}
-              </p>
-            </div>
-            <BarChart3 className="text-emerald-400" size={32} />
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0B1020] p-6">
-          <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-cyan-500/20 blur-xl"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">
-                {candidacy ? 'Vote Share' : 'Your Status'}
-              </p>
-              <p className="text-3xl font-bold text-white mt-2">
-                {candidacy
-                  ? candidacy.election?.totalVotes
-                    ? ((candidacy.votesReceived / candidacy.election.totalVotes) * 100).toFixed(1) + '%'
-                    : '0%'
-                  : 'Not Applied'}
-              </p>
-            </div>
-            <Users className="text-cyan-400" size={32} />
-          </div>
-        </div>
-      </div>
-
-      {/* Election Info */}
-      {candidacy && (
-        <div className="rounded-2xl border border-white/10 bg-[#0B1020] p-6 mb-8">
-          <h3 className="text-lg font-semibold text-white mb-2">
-            Election: {candidacy.election?.title || 'N/A'}
-          </h3>
-          <p className="text-sm text-gray-400">
-            {candidacy.election?.description || 'No description available.'}
-          </p>
-          <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
-            <Clock size={14} />
-            Ends {candidacy.election?.endDate ? new Date(candidacy.election.endDate).toLocaleDateString() : 'N/A'}
-          </div>
-        </div>
-      )}
-
-      {/* LIVE RANKING SECTION */}
-      {candidacy && competitors.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-[#0B1020] p-6 mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <Trophy className="text-yellow-400" size={24} />
-              <h3 className="text-lg font-semibold text-white">Live Ranking</h3>
-              {competitorsLoading && (
-                <RefreshCw size={14} className="text-gray-400 animate-spin ml-2" />
-              )}
-            </div>
-            <div className="text-xs text-gray-500">
-              Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-left">
-                  <th className="pb-3 font-medium text-gray-400">Rank</th>
-                  <th className="pb-3 font-medium text-gray-400">Candidate</th>
-                  <th className="pb-3 font-medium text-gray-400">Party/Organization</th>
-                  <th className="pb-3 font-medium text-gray-400 text-right">Votes</th>
-                  <th className="pb-3 font-medium text-gray-400 text-right">Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {competitors.map((competitor, idx) => {
-                  const isCurrentUser = competitor.user.id === user?.id;
-                  const totalVotes = candidacy.election?.totalVotes || 1;
-                  const share = (competitor.votesReceived / totalVotes) * 100;
+              <h2 className="text-xl font-semibold text-white mb-4">Candidates</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {election.candidates?.map((candidate) => {
+                  const isCopied = copiedCandidateId === candidate.id;
+                  const share = ((candidate.votesReceived || 0) / totalVotes) * 100;
                   return (
-                    <tr
-                      key={competitor.id}
-                      className={`border-b border-white/5 ${
-                        isCurrentUser ? 'bg-violet-500/10' : ''
-                      }`}
+                    <div
+                      key={candidate.id}
+                      className="group rounded-xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-4 transition hover:border-violet-500/30 hover:bg-white/[0.05]"
                     >
-                      <td className="py-3 font-medium text-white">
-                        {idx === 0 && <Trophy size={14} className="inline text-yellow-400 mr-1" />}
-                        #{idx + 1}
-                      </td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
-                            {competitor.user.firstName[0]}{competitor.user.lastName[0]}
-                          </div>
-                          <div>
-                            <p className={`font-medium ${isCurrentUser ? 'text-violet-400' : 'text-white'}`}>
-                              {competitor.user.firstName} {competitor.user.lastName}
-                              {isCurrentUser && <span className="ml-2 text-xs text-violet-400">(You)</span>}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-3">
+                        {/* Square candidate image */}
+                        <div className="h-12 w-12 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-lg overflow-hidden flex-shrink-0">
+                          {candidate.avatarUrl ? (
+                            <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            `${candidate.user?.firstName?.[0]}${candidate.user?.lastName?.[0]}`
+                          )}
                         </div>
-                      </td>
-                      <td className="py-3 text-gray-300">
-                        {competitor.party || 'Independent'}
-                      </td>
-                      <td className="py-3 text-right font-mono text-white">
-                        {competitor.votesReceived.toLocaleString()}
-                      </td>
-                      <td className="py-3 text-right text-gray-300">
-                        {share.toFixed(1)}%
-                      </td>
-                    </tr>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-white truncate">
+                            {candidate.user?.firstName} {candidate.user?.lastName}
+                          </h3>
+                          <p className="text-gray-400 text-xs truncate">{candidate.party || 'Independent'}</p>
+                          {candidate.slogan && (
+                            <p className="text-gray-500 text-xs mt-1 line-clamp-1 italic">"{candidate.slogan}"</p>
+                          )}
+                          {isActive && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs text-gray-400 mb-0.5">
+                                <span>Vote share</span>
+                                <span>{share.toFixed(1)}%</span>
+                              </div>
+                              <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
+                                  style={{ width: `${share}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {!isActive && election.status === 'ENDED' && (
+                            <div className="mt-2 text-center text-sm">
+                              <span className="text-white font-medium">{share.toFixed(1)}%</span>
+                              <span className="text-gray-500 text-xs"> vote share</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => handleShareCandidate(candidate)}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition"
+                        >
+                          {isCopied ? <CheckCircle size={14} className="text-emerald-400" /> : <Share2 size={14} />}
+                          <span>{isCopied ? 'Copied!' : 'Share'}</span>
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+                {(!election.candidates || election.candidates.length === 0) && (
+                  <div className="col-span-full text-center py-8 text-gray-500">No candidates yet.</div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Optional: show current user's rank badge */}
-          <div className="mt-4 flex justify-end">
-            <div className="text-xs text-gray-400 flex items-center gap-1">
-              <UserCheck size={12} />
-              Your current rank: <span className="text-white font-bold">#{getCurrentUserRank()}</span>
-            </div>
-          </div>
-        </div>
-      )}
+          {/* RIGHT COLUMN: Leaderboard */}
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <Trophy size={20} className="text-yellow-400" /> Leaderboard
+                </h2>
+                {currentUserRank > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <UserCheck size={12} />
+                    Your rank: <span className="text-white font-bold">#{currentUserRank}</span>
+                  </div>
+                )}
+              </div>
 
-      {/* Apply Prompt or Quick Links */}
-      {!candidacy ? (
-        <div className="rounded-2xl border border-white/10 bg-[#0B1020] p-6">
-          <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-              <Shield size={24} className="text-violet-400" />
+              {/* Desktop ranking – no vote count, only share % */}
+              <div className="hidden sm:block">
+                <div className="space-y-3">
+                  {competitors.map((comp, idx) => {
+                    const isYou = comp.user.id === user?.id;
+                    const share = ((comp.votesReceived || 0) / totalVotes) * 100;
+                    return (
+                      <div
+                        key={comp.id}
+                        className={`flex items-center justify-between p-3 rounded-xl transition ${
+                          isYou ? 'bg-violet-500/10 border border-violet-500/30' : 'hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 text-center font-bold text-white">
+                            {idx === 0 && <Trophy size={14} className="inline text-yellow-400 mr-1" />}
+                            #{idx + 1}
+                          </div>
+                          <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                            {comp.avatarUrl ? (
+                              <img src={comp.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              `${comp.user.firstName[0]}${comp.user.lastName[0]}`
+                            )}
+                          </div>
+                          <div>
+                            <span className={`text-sm font-medium ${isYou ? 'text-violet-400' : 'text-white'}`}>
+                              {comp.user.firstName} {comp.user.lastName} {isYou && '(You)'}
+                            </span>
+                            <p className="text-xs text-gray-400">{comp.party || 'Independent'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-white">{share.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mobile ranking cards – also only share % */}
+              <div className="sm:hidden space-y-3">
+                {competitors.map((comp, idx) => {
+                  const isYou = comp.user.id === user?.id;
+                  const share = ((comp.votesReceived || 0) / totalVotes) * 100;
+                  return (
+                    <div
+                      key={comp.id}
+                      className={`rounded-xl border border-white/10 p-3 ${isYou ? 'bg-violet-500/10 border-violet-500/30' : 'bg-white/[0.02]'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-white text-sm">#{idx + 1}</div>
+                          <div className="h-8 w-8 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                            {comp.avatarUrl ? <img src={comp.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : `${comp.user.firstName[0]}${comp.user.lastName[0]}`}
+                          </div>
+                          <div>
+                            <span className={`text-sm font-medium ${isYou ? 'text-violet-400' : 'text-white'}`}>
+                              {comp.user.firstName} {comp.user.lastName}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-white">{share.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      {isYou && <p className="text-xs text-violet-400 mt-1">You</p>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {competitors.length === 0 && (
+                <div className="text-center py-8 text-gray-500">No contestants yet.</div>
+              )}
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Ready to run?</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Apply for an election to start your campaign and appear on the ballot.
-              </p>
-              <Link
-                to="/contestant/apply"
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-violet-600 transition"
-              >
-                Apply for Candidacy <ArrowRight size={16} />
-              </Link>
+
+            {/* Campaign snapshot – keep total votes but that's fine */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5">
+              <h3 className="text-lg font-semibold text-white mb-3">Campaign Snapshot</h3>
+              <div className="grid grid-cols-2 gap-3 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-white">{election.totalVotes?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-gray-400">Total Votes</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">{election.candidates?.length || 0}</p>
+                  <p className="text-xs text-gray-400">Contestants</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            to="/contestant/campaign"
-            className="rounded-2xl border border-white/10 bg-[#0B1020] p-6 hover:border-violet-500/30 transition flex items-center justify-between group"
-          >
-            <div>
-              <h3 className="text-lg font-semibold text-white">Campaign</h3>
-              <p className="text-sm text-gray-400">Manage your manifesto and media</p>
-            </div>
-            <ArrowRight className="text-gray-400 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link
-            to="/contestant/analytics"
-            className="rounded-2xl border border-white/10 bg-[#0B1020] p-6 hover:border-violet-500/30 transition flex items-center justify-between group"
-          >
-            <div>
-              <h3 className="text-lg font-semibold text-white">Analytics</h3>
-              <p className="text-sm text-gray-400">View detailed vote trends</p>
-            </div>
-            <ArrowRight className="text-gray-400 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

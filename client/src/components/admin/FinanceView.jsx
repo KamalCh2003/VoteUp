@@ -11,42 +11,51 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 export default function FinanceView() {
-  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [revenueData, setRevenueData] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [topVoters, setTopVoters] = useState([]);
+  const [recentPayments, setRecentPayments] = useState([]);
   const toast = useToast();
 
   useEffect(() => {
-    // Fetch all data in parallel
-    Promise.all([
-      api.get('/payments/history'),
-      api.get('/admin/finance/revenue-trend'),
-      api.get('/admin/finance/payment-methods'),
-      api.get('/admin/finance/top-voters'),
-    ])
-      .then(
-        ([
-          paymentsRes,
-          revenueRes,
-          methodsRes,
-          votersRes,
-        ]) => {
-          setPayments(paymentsRes.data.payments || []);
-          setRevenueData(revenueRes.data.revenueData || []);
-          setPaymentMethods(methodsRes.data.methods || []);
-          setTopVoters(votersRes.data.topVoters || []);
-        }
-      )
-      .catch(() => toast.error('Failed to load finance data'));
+    const fetchData = async () => {
+      try {
+        const [revenueRes, methodsRes, votersRes, paymentsRes] = await Promise.all([
+          api.get('/admin/finance/revenue-trend'),
+          api.get('/admin/finance/payment-methods'),
+          api.get('/admin/finance/top-voters'),
+          api.get('/admin/finance/recent-payments'),
+        ]);
+        setRevenueData(revenueRes.data.revenueData || []);
+        setPaymentMethods(methodsRes.data.methods || []);
+        setTopVoters(votersRes.data.topVoters || []);
+        setRecentPayments(paymentsRes.data.payments || []);
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to load finance data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const totalRevenue = payments
-    .filter((p) => p.status === 'COMPLETED')
+  // Calculate totals from the fetched data
+  const totalRevenue = recentPayments
+    .filter(p => p.status === 'COMPLETED')
     .reduce((sum, p) => sum + p.amount, 0);
-  const totalTransactions = payments.length;
-  const refunds = payments.filter((p) => p.status === 'REFUNDED').length;
+  const totalTransactions = recentPayments.length;
+  const refunds = recentPayments.filter(p => p.status === 'REFUNDED').length;
   const avgTransaction = totalTransactions ? totalRevenue / totalTransactions : 0;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-400" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -56,18 +65,6 @@ export default function FinanceView() {
           <DollarSign size={24} className="text-emerald-400" />
           Finance & Revenue
         </h2>
-        <div className="flex items-center gap-2 bg-white/5 rounded-xl border border-white/10 p-1">
-          {['This Month', 'This Year', 'All Time'].map((period) => (
-            <button
-              key={period}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                period === 'This Month' ? 'bg-violet-500 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {period}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Stat Cards */}
@@ -78,11 +75,8 @@ export default function FinanceView() {
             <div>
               <p className="text-xs text-gray-400">Total Revenue</p>
               <h3 className="text-2xl font-bold text-white mt-1">
-                ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </h3>
-              <p className="text-xs text-emerald-400 mt-2 flex items-center gap-1">
-                <ArrowUpRight size={12} /> +12.5%
-              </p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
               <DollarSign size={22} className="text-emerald-400" />
@@ -96,9 +90,6 @@ export default function FinanceView() {
             <div>
               <p className="text-xs text-gray-400">Transactions</p>
               <h3 className="text-2xl font-bold text-white mt-1">{totalTransactions}</h3>
-              <p className="text-xs text-violet-400 mt-2 flex items-center gap-1">
-                <ShoppingCart size={12} /> All time
-              </p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
               <CreditCard size={22} className="text-violet-400" />
@@ -112,9 +103,6 @@ export default function FinanceView() {
             <div>
               <p className="text-xs text-gray-400">Refunds</p>
               <h3 className="text-2xl font-bold text-white mt-1">{refunds}</h3>
-              <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
-                <ArrowDownRight size={12} /> Processed
-              </p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-red-500/20 flex items-center justify-center">
               <RefreshCw size={22} className="text-red-400" />
@@ -128,11 +116,8 @@ export default function FinanceView() {
             <div>
               <p className="text-xs text-gray-400">Avg. Transaction</p>
               <h3 className="text-2xl font-bold text-white mt-1">
-                ${avgTransaction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${avgTransaction.toFixed(2)}
               </h3>
-              <p className="text-xs text-cyan-400 mt-2 flex items-center gap-1">
-                <TrendingUp size={12} /> Per payment
-              </p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
               <Wallet size={22} className="text-cyan-400" />
@@ -143,7 +128,7 @@ export default function FinanceView() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Revenue Trend (Line Chart) */}
+        {/* Revenue Trend */}
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <TrendingUp size={18} className="text-emerald-400" />
@@ -173,7 +158,7 @@ export default function FinanceView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Payment Methods (Pie Chart) */}
+        {/* Payment Methods */}
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Smartphone size={18} className="text-violet-400" />
@@ -194,14 +179,7 @@ export default function FinanceView() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  background: '#1c1c32',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '12px',
-                }}
-                labelStyle={{ color: '#eeeeff' }}
-              />
+              <Tooltip />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -228,9 +206,6 @@ export default function FinanceView() {
                     <p className="text-xs text-gray-400">{voter.votes} votes</p>
                   </div>
                 </div>
-                <span className="text-emerald-400 font-semibold">
-                  {/* Optional: show amount if you add it to the query */}
-                </span>
               </div>
             ))}
             {topVoters.length === 0 && (
@@ -239,7 +214,7 @@ export default function FinanceView() {
           </div>
         </div>
 
-        {/* Recent Transactions Table */}
+        {/* Recent Transactions */}
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <ShoppingCart size={18} className="text-violet-400" />
@@ -256,13 +231,13 @@ export default function FinanceView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {payments.slice(0, 6).map((p) => (
+                {recentPayments.slice(0, 6).map((p) => (
                   <tr key={p.id} className="hover:bg-white/[0.05] transition">
                     <td className="py-3 px-4 text-gray-500 text-xs">
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 text-gray-300">
-                      {p.user?.firstName || 'N/A'}
+                      {p.user?.firstName || p.user?.email || 'N/A'}
                     </td>
                     <td className="py-3 px-4 text-white font-medium">
                       ${p.amount.toFixed(2)}

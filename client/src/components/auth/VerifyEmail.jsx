@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+// src/components/auth/VerifyEmail.jsx
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 
@@ -14,15 +16,30 @@ export default function VerifyEmail() {
   const [resending, setResending] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
+  const { setAuth } = useAuth();
+
+  const getDashboardPath = (role) => {
+    switch (role) {
+      case 'VOTER':
+        return '/voter/dashboard';
+      case 'CONTESTANT':
+        return '/contestant/dashboard';
+      default:
+        return '/dashboard';
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (otp.length !== 6) return toast.error('Please enter the 6-digit code');
     setLoading(true);
     try {
-      await api.post('/auth/verify-otp', { email, otp });
-      toast.success('Email verified! You can now log in.');
-      navigate('/login');
+      const { data } = await api.post('/auth/verify-otp', { email, otp });
+      const { accessToken, refreshToken, user } = data;
+      setAuth(user, accessToken, refreshToken);
+      toast.success('Email verified! Logging you in...');
+      const dashboardPath = getDashboardPath(user.role);
+      navigate(dashboardPath);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Verification failed');
     } finally {

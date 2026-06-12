@@ -1,3 +1,4 @@
+// src/components/admin/AdminHome.jsx
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -8,39 +9,41 @@ import {
   Bell,
   X,
   ChevronRight,
-  BarChart3,
   ShieldCheck,
   Settings,
   Trophy,
+  CreditCard,
+  Eye,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import LogoutConfirmModal from "../common/LogoutConfirmModal";
 
-// Import child components (all existing ones)
 import DashboardOverview from "./DashboardOverview";
 import UserManager from "./UserManager";
-import CandidateManager from "./CandidateManager";
+import ContestantManagement from "./CandidateManager";
 import ElectionManager from "./ElectionManager";
 import FinanceView from "./FinanceView";
 import AuditLogs from "./AuditLogs";
 import SystemSettings from "./SystemSettings";
 import Leaderboard from "./Leaderboard";
+import VoteVerifier from "./VoteVerifier";
 
-const AdminHome = () => {
+export default function AdminHome() {
   const { logout } = useAuth();
+
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Expanded menu with all sections
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "leaderboard", label: "Leaderboard", icon: Trophy },
-    { id: "users", label: "Users", icon: Users },
-    { id: "candidates", label: "Candidates", icon: UserCheck },
     { id: "elections", label: "Elections", icon: Vote },
-    { id: "finance", label: "Finance", icon: BarChart3 },
+    { id: "candidates", label: "Contestants", icon: UserCheck },
+    { id: "users", label: "Users", icon: Users },
+    { id: "vote-verifier", label: "Vote Verifier", icon: Eye },
+    { id: "finance", label: "Payments", icon: CreditCard },
     { id: "audit", label: "Audit Logs", icon: ShieldCheck },
     { id: "settings", label: "Settings", icon: Settings },
   ];
@@ -54,9 +57,11 @@ const AdminHome = () => {
       case "users":
         return <UserManager />;
       case "candidates":
-        return <CandidateManager />;
+        return <ContestantManagement />;
       case "elections":
         return <ElectionManager />;
+      case "vote-verifier":
+        return <VoteVerifier />;
       case "finance":
         return <FinanceView />;
       case "audit":
@@ -68,26 +73,23 @@ const AdminHome = () => {
     }
   };
 
-  const activeTabLabel =
-    menuItems.find((item) => item.id === activeTab)?.label || "Dashboard";
+  const activeTitle = menuItems.find((m) => m.id === activeTab)?.label || "Dashboard";
 
   return (
     <div className="flex min-h-screen bg-[#050816] text-white">
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside className="w-[280px] bg-[#0B1020] border-r border-white/10 flex flex-col justify-between px-5 py-6">
         <div>
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
               <Vote size={22} />
             </div>
             <div>
-              <h2 className="font-bold text-lg">VoteChain</h2>
+              <h2 className="font-bold text-lg">VoteUp</h2>
               <p className="text-xs text-gray-400">Admin Panel</p>
             </div>
           </div>
 
-          {/* Navigation */}
           <div className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -95,59 +97,44 @@ const AdminHome = () => {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-300 ${
+                  className={`group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${
                     activeTab === item.id
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20"
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
                       : "text-gray-400 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon size={20} />
-                    <span className="font-medium">{item.label}</span>
+                    <Icon size={18} />
+                    <span>{item.label}</span>
                   </div>
-                  <ChevronRight
-                    size={16}
-                    className={`transition-transform ${
-                      activeTab === item.id
-                        ? "translate-x-1"
-                        : "group-hover:translate-x-1"
-                    }`}
-                  />
+                  <ChevronRight size={16} />
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Logout Button */}
         <button
           onClick={() => setShowLogoutModal(true)}
-          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all"
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-500/10"
         >
-          <LogOut size={20} />
-          <span className="font-medium">Logout</span>
+          <LogOut size={18} />
+          Logout
         </button>
       </aside>
 
-      {/* Main Content */}
+      {/* MAIN CONTENT */}
       <main className="flex-1 overflow-hidden">
-        {/* Topbar – functional, no search bar */}
-        <header className="h-20 border-b border-white/10 bg-[#0B1020]/70 backdrop-blur-xl px-8 flex items-center justify-between">
-          {/* Left side: active page title */}
-          <h1 className="text-xl font-semibold text-white">{activeTabLabel}</h1>
-
-          {/* Right: Notification + Profile */}
+        <header className="h-20 border-b border-white/10 bg-[#0B1020]/70 backdrop-blur-xl px-8 flex justify-between items-center">
+          <h1 className="text-xl font-semibold">{activeTitle}</h1>
           <div className="flex items-center gap-4">
-            {/* Notification Bell */}
             <button
               onClick={() => setShowNotifications(true)}
-              className="relative h-11 w-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"
+              className="relative h-11 w-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center"
             >
               <Bell size={18} />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-purple-500 rounded-full"></span>
+              <span className="absolute top-2 right-2 h-2 w-2 bg-purple-500 rounded-full" />
             </button>
-
-            {/* Admin Profile */}
             <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-3 py-2">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold">
                 A
@@ -160,59 +147,35 @@ const AdminHome = () => {
           </div>
         </header>
 
-        {/* Content Area */}
         <div className="p-8 overflow-auto h-[calc(100vh-80px)]">
           {renderContent()}
         </div>
       </main>
 
-      {/* Notification Popup (Foreground) */}
+      {/* NOTIFICATION MODAL */}
       {showNotifications && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 fade-in">
-            {/* Close button */}
+          <div className="relative w-full max-w-md bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl p-6">
             <button
               onClick={() => setShowNotifications(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition"
             >
               <X size={20} />
             </button>
-
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Bell size={18} className="text-violet-400" />
-              Notifications
+              <Bell size={18} className="text-violet-400" /> Notifications
             </h2>
-
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <p className="text-sm font-medium text-white">
-                  New candidate application
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Mike Kim applied for Sports Captain
-                </p>
+                <p className="text-sm font-medium text-white">New vote recorded</p>
+                <p className="text-xs text-gray-400 mt-1">A user just voted in "Spring 2025 Election"</p>
                 <p className="text-xs text-gray-500 mt-2">2 minutes ago</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <p className="text-sm font-medium text-white">Election ended</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Student Council 2025 has finished
-                </p>
-                <p className="text-xs text-gray-500 mt-2">1 hour ago</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <p className="text-sm font-medium text-white">Payment received</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  NPR 5,000 from Aarav Sharma
-                </p>
-                <p className="text-xs text-gray-500 mt-2">3 hours ago</p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Logout Confirmation Modal */}
       <LogoutConfirmModal
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
@@ -223,6 +186,4 @@ const AdminHome = () => {
       />
     </div>
   );
-};
-
-export default AdminHome;
+}

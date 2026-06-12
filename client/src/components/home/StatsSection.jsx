@@ -1,26 +1,43 @@
+// src/components/home/StatsSection.jsx
 import { useEffect, useState } from 'react';
-import { Users, Vote, TrendingUp, ShieldCheck } from 'lucide-react';
+import { Users, Vote, Calendar, ShieldCheck } from 'lucide-react';
 import api from '../../services/api';
 
 export default function StatsSection() {
   const [stats, setStats] = useState({
     totalVoters: 0,
     totalVotes: 0,
-    activeElections: 0,
+    totalElections: 0,
     securityLevel: '100%',
     uptime: '99.9%',
   });
 
   useEffect(() => {
-    api.get('/public/stats')
-      .then(({ data }) => setStats(data))
-      .catch(() => {});
+    const fetchStats = async () => {
+      try {
+        const [publicStats, electionsRes] = await Promise.all([
+          api.get('/public/stats'),
+          api.get('/elections') // gets all elections (no status filter)
+        ]);
+        const totalElections = electionsRes.data.elections?.length || 0;
+        setStats({
+          totalVoters: publicStats.data.totalVoters || 0,
+          totalVotes: publicStats.data.totalVotes || 0,
+          totalElections: totalElections,
+          securityLevel: publicStats.data.securityLevel || '100%',
+          uptime: publicStats.data.uptime || '99.9%',
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchStats();
   }, []);
 
   const statsData = [
     { title: 'Voters', value: stats.totalVoters.toLocaleString(), icon: Users, color: 'from-violet-500 to-purple-600' },
     { title: 'Votes Cast', value: stats.totalVotes.toLocaleString(), icon: Vote, color: 'from-cyan-500 to-blue-600' },
-    { title: 'Active Elections', value: stats.activeElections, icon: TrendingUp, color: 'from-emerald-500 to-green-600' },
+    { title: 'Total Elections', value: stats.totalElections.toLocaleString(), icon: Calendar, color: 'from-emerald-500 to-green-600' },
     { title: 'Secure', value: stats.securityLevel, icon: ShieldCheck, color: 'from-pink-500 to-rose-600' },
   ];
 

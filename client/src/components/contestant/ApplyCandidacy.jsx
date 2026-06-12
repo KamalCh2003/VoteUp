@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IdCard, Vote, PartyPopper, Quote, FileText, Loader2 } from 'lucide-react';
+import { IdCard, Vote, PartyPopper, Quote, FileText, Loader2, Upload, X } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +11,8 @@ export default function ApplyCandidacy() {
   const toast = useToast();
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [form, setForm] = useState({
     electionId: '',
     candidateNumber: '',
@@ -29,19 +31,53 @@ export default function ApplyCandidacy() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Only image files are allowed');
+        return;
+      }
+      setProfileImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setProfileImage(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.electionId) return toast.error('Please select an election');
     if (!form.candidateNumber) return toast.error('Candidate ID is required');
     if (!form.party) return toast.error('Party / Affiliation is required');
+    if (!profileImage) return toast.error('Profile image is required');
 
     setLoading(true);
     try {
-      await api.post('/candidates/apply', form);
+      const formData = new FormData();
+      formData.append('electionId', form.electionId);
+      formData.append('candidateNumber', form.candidateNumber);
+      formData.append('party', form.party);
+      formData.append('slogan', form.slogan);
+      formData.append('bio', form.bio);
+      formData.append('profileImage', profileImage);
+
+      await api.post('/candidates/apply', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       toast.success('Application submitted successfully!');
-      navigate('/contestant/dashboard');
+      navigate('/contestant/profile-campaign');
     } catch (err) {
+      // Backend will return 400 if candidate number is duplicate
       toast.error(err.response?.data?.error || 'Application failed');
     } finally {
       setLoading(false);
@@ -85,7 +121,7 @@ export default function ApplyCandidacy() {
             </select>
           </div>
 
-          {/* Candidate ID */}
+          {/* Candidate Number */}
           <div>
             <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
               <IdCard size={16} className="text-cyan-400" /> Candidate ID *
@@ -115,6 +151,46 @@ export default function ApplyCandidacy() {
               required
               className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
             />
+          </div>
+
+          {/* Profile Image Upload */}
+          <div>
+            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
+              <Upload size={16} className="text-blue-400" /> Profile Image *
+            </label>
+            <div className="flex items-center gap-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Profile preview"
+                    className="h-20 w-20 rounded-full object-cover border-2 border-violet-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X size={12} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-gray-400">
+                  <Upload size={24} />
+                </div>
+              )}
+              <label className="cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-gray-300 hover:bg-white/10 transition">
+                Choose Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  required={!profileImage}
+                />
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Recommended: Square image, max 5MB (JPG, PNG, WEBP)</p>
           </div>
 
           {/* Slogan */}

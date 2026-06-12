@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X, Calendar, Clock, Users, Image as ImageIcon, Type, AlignLeft,
-  Tag, Shield, Loader2, Vote, Phone, Mail, User, DollarSign
+  Tag, Shield, Loader2, Vote, Phone, Mail, User, DollarSign,
+  CreditCard, Gift, FileText
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
-export default function AddElectionModal({ open, onClose, onSuccess }) {
+export default function AddElectionModal({ open, onClose, onSuccess, election }) {
+  const isEdit = !!election;
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -16,19 +21,52 @@ export default function AddElectionModal({ open, onClose, onSuccess }) {
     endDate: '',
     endTime: '17:00',
     maxCandidates: 10,
-    maxVoters: 0,        // 0 = unlimited
-    votePrice: 100,      // new: base price per vote in NPR
-    electionType: 'public',
+    maxVoters: 0,
+    votePrice: 100,
     rules: '',
-    banner: null,
     organizerName: '',
     organizerEmail: '',
     organizerPhone: '',
+    banner: null,
   });
-  const [loading, setLoading] = useState(false);
-  const toast = useToast();
 
-  if (!open) return null;
+  const [votingType, setVotingType] = useState('paid'); // 'free' or 'paid'
+
+  useEffect(() => {
+    if (open && isEdit && election) {
+      const start = election.startDate ? new Date(election.startDate) : null;
+      const end = election.endDate ? new Date(election.endDate) : null;
+      const price = election.votePrice ?? 100;
+
+      setForm({
+        title: election.title || '',
+        description: election.description || '',
+        category: election.category || 'Academic',
+        startDate: start && !isNaN(start.getTime()) ? start.toISOString().split('T')[0] : '',
+        startTime: start && !isNaN(start.getTime()) ? start.toTimeString().slice(0,5) : '08:00',
+        endDate: end && !isNaN(end.getTime()) ? end.toISOString().split('T')[0] : '',
+        endTime: end && !isNaN(end.getTime()) ? end.toTimeString().slice(0,5) : '17:00',
+        maxCandidates: election.maxCandidates || 10,
+        maxVoters: election.maxVoters || 0,
+        votePrice: price,
+        rules: election.rules || '',
+        organizerName: election.organizerName || '',
+        organizerEmail: election.organizerEmail || '',
+        organizerPhone: election.organizerPhone || '',
+        banner: null,
+      });
+      setVotingType(price > 0 ? 'paid' : 'free');
+    } else if (open && !isEdit) {
+      setForm({
+        title: '', description: '', category: 'Academic',
+        startDate: '', startTime: '08:00', endDate: '', endTime: '17:00',
+        maxCandidates: 10, maxVoters: 0, votePrice: 100,
+        rules: '', organizerName: '', organizerEmail: '', organizerPhone: '',
+        banner: null,
+      });
+      setVotingType('paid');
+    }
+  }, [open, isEdit, election]);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -39,6 +77,15 @@ export default function AddElectionModal({ open, onClose, onSuccess }) {
     }
   };
 
+  const handleVotingTypeChange = (type) => {
+    setVotingType(type);
+    if (type === 'free') {
+      setForm((prev) => ({ ...prev, votePrice: 0 }));
+    } else if (type === 'paid' && form.votePrice === 0) {
+      setForm((prev) => ({ ...prev, votePrice: 100 }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -46,45 +93,59 @@ export default function AddElectionModal({ open, onClose, onSuccess }) {
       return toast.error('Title, start date, and end date are required.');
     }
 
-    const formData = new FormData();
-    Object.keys(form).forEach((key) => {
-      if (key === 'banner' && form.banner) {
-        formData.append('banner', form.banner);
-      } else if (key !== 'banner') {
-        formData.append(key, form[key]);
-      }
-    });
+    const startTimeStr = form.startTime || '00:00';
+    const endTimeStr = form.endTime || '23:59';
+    const startDateTime = new Date(`${form.startDate}T${startTimeStr}`);
+    const endDateTime = new Date(`${form.endDate}T${endTimeStr}`);
 
-    // Combine date & time
-    const startDateTime = new Date(`${form.startDate}T${form.startTime}`);
-    const endDateTime = new Date(`${form.endDate}T${form.endTime}`);
-    formData.set('startDate', startDateTime.toISOString());
-    formData.set('endDate', endDateTime.toISOString());
-    formData.delete('startTime');
-    formData.delete('endTime');
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      return toast.error('Invalid date or time format.');
+    }
+
+    const payload = {
+      title: form.title,
+      description: form.description,
+      category: form.category,
+      startDate: startDateTime.toISOString(),
+      endDate: endDateTime.toISOString(),
+      maxCandidates: Number(form.maxCandidates),
+      maxVoters: Number(form.maxVoters),
+      votePrice: Number(form.votePrice),
+      rules: form.rules || null,
+      organizerName: form.organizerName || null,
+      organizerEmail: form.organizerEmail || null,
+      organizerPhone: form.organizerPhone || null,
+    };
+
+    let request;
+    if (form.banner) {
+      const formData = new FormData();
+      Object.keys(payload).forEach(key => formData.append(key, payload[key]));
+      formData.append('banner', form.banner);
+      const url = isEdit ? `/elections/${election.id}` : '/elections';
+      const method = isEdit ? 'put' : 'post';
+      request = api[method](url, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    } else {
+      const url = isEdit ? `/elections/${election.id}` : '/elections';
+      const method = isEdit ? 'put' : 'post';
+      request = api[method](url, payload);
+    }
 
     setLoading(true);
     try {
-      const config = form.banner
-        ? { headers: { 'Content-Type': 'multipart/form-data' } }
-        : {};
-      await api.post('/elections', formData, config);
-      toast.success('Election created successfully!');
-      setForm({
-        title: '', description: '', category: 'Academic',
-        startDate: '', startTime: '08:00', endDate: '', endTime: '17:00',
-        maxCandidates: 10, maxVoters: 0, votePrice: 100,
-        electionType: 'public', rules: '', banner: null,
-        organizerName: '', organizerEmail: '', organizerPhone: '',
-      });
+      await request;
+      toast.success(isEdit ? 'Election updated successfully!' : 'Election created successfully!');
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Creation failed');
+      console.error(err);
+      toast.error(err.response?.data?.error || (isEdit ? 'Update failed' : 'Creation failed'));
     } finally {
       setLoading(false);
     }
   };
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -98,8 +159,12 @@ export default function AddElectionModal({ open, onClose, onSuccess }) {
             <Vote size={20} className="text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Create New Election</h2>
-            <p className="text-sm text-gray-400">Fill in the complete details for the election</p>
+            <h2 className="text-xl font-bold text-white">
+              {isEdit ? 'Edit Election' : 'Create New Election'}
+            </h2>
+            <p className="text-sm text-gray-400">
+              {isEdit ? 'Update the election details' : 'Fill in the complete details for the election'}
+            </p>
           </div>
         </div>
 
@@ -107,284 +172,98 @@ export default function AddElectionModal({ open, onClose, onSuccess }) {
           {/* Title & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-sm text-gray-300 mb-1">
-                <Type size={14} className="inline mr-1.5" /> Election Title *
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-                placeholder="Student Council President 2025"
-              />
+              <label className="block text-sm text-gray-300 mb-1">Election Title *</label>
+              <input type="text" name="title" value={form.title} onChange={handleChange} required className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" />
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Tag size={14} className="inline mr-1.5" /> Category
-              </label>
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              >
-                <option>Academic</option>
-                <option>Sports</option>
-                <option>Lifestyle</option>
-                <option>Culture</option>
-                <option>Technology</option>
-                <option>Other</option>
+              <label className="block text-sm text-gray-300 mb-1">Category</label>
+              <select name="category" value={form.category} onChange={handleChange} className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white">
+                <option>Singing</option> <option>Dance</option><option>Cooking</option><option>Art</option>
+               <option>Debate</option><option>Academic</option><option>Sports</option><option>Lifestyle</option>
+                <option>Culture</option><option>Technology</option><option>Other</option>
               </select>
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              <AlignLeft size={14} className="inline mr-1.5" /> Description
-            </label>
-            <textarea
-              name="description"
-              rows="3"
-              value={form.description}
-              onChange={handleChange}
-              className="w-full bg-[#12121b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 resize-none"
-              placeholder="Describe the purpose and scope of this election..."
-            />
+            <label className="block text-sm text-gray-300 mb-1">Description</label>
+            <textarea name="description" rows="3" value={form.description} onChange={handleChange} className="w-full bg-[#12121b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white resize-none" />
           </div>
 
           {/* Date & Time */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Calendar size={14} className="inline mr-1.5" /> Start Date *
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                value={form.startDate}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Clock size={14} className="inline mr-1.5" /> Start Time
-              </label>
-              <input
-                type="time"
-                name="startTime"
-                value={form.startTime}
-                onChange={handleChange}
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Calendar size={14} className="inline mr-1.5" /> End Date *
-              </label>
-              <input
-                type="date"
-                name="endDate"
-                value={form.endDate}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Clock size={14} className="inline mr-1.5" /> End Time
-              </label>
-              <input
-                type="time"
-                name="endTime"
-                value={form.endTime}
-                onChange={handleChange}
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
-            </div>
+            <div><label className="block text-sm text-gray-300 mb-1">Start Date *</label><input type="date" name="startDate" value={form.startDate} onChange={handleChange} required className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" /></div>
+            <div><label className="block text-sm text-gray-300 mb-1">Start Time</label><input type="time" name="startTime" value={form.startTime} onChange={handleChange} className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" /></div>
+            <div><label className="block text-sm text-gray-300 mb-1">End Date *</label><input type="date" name="endDate" value={form.endDate} onChange={handleChange} required className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" /></div>
+            <div><label className="block text-sm text-gray-300 mb-1">End Time</label><input type="time" name="endTime" value={form.endTime} onChange={handleChange} className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" /></div>
           </div>
 
-          {/* Capacity Settings + Vote Price */}
+          {/* Capacity + Vote Type + Price */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div><label className="block text-sm text-gray-300 mb-1">Max Candidates</label><input type="number" name="maxCandidates" value={form.maxCandidates} onChange={handleChange} min="1" max="50" className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" /></div>
+            <div><label className="block text-sm text-gray-300 mb-1">Max Voters </label><input type="number" name="maxVoters" value={form.maxVoters} onChange={handleChange} min="0" placeholder="0 = unlimited" className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" /></div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Users size={14} className="inline mr-1.5" /> Max Candidates
-              </label>
-              <input
-                type="number"
-                name="maxCandidates"
-                value={form.maxCandidates}
-                onChange={handleChange}
-                min="1"
-                max="50"
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
+              <label className="block text-sm text-gray-300 mb-1">Vote Type</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => handleVotingTypeChange('free')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition ${votingType === 'free' ? 'bg-emerald-500 text-white' : 'bg-white/10 text-gray-300'}`}><Gift size={16}/> Free</button>
+                <button type="button" onClick={() => handleVotingTypeChange('paid')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition ${votingType === 'paid' ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-300'}`}><CreditCard size={16}/> Paid</button>
+              </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Users size={14} className="inline mr-1.5" /> Max Voters
-              </label>
-              <input
-                type="number"
-                name="maxVoters"
-                value={form.maxVoters}
-                onChange={handleChange}
-                min="0"
-                placeholder="0 = unlimited"
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <Shield size={14} className="inline mr-1.5" /> Type
-              </label>
-              <select
-                name="electionType"
-                value={form.electionType}
-                onChange={handleChange}
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              >
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                <DollarSign size={14} className="inline mr-1.5" /> Vote Price (रू)
-              </label>
-              <input
-                type="number"
-                name="votePrice"
-                value={form.votePrice}
-                onChange={handleChange}
-                min="0"
-                step="1"
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              />
+              <label className="block text-sm text-gray-300 mb-1">Vote Price (रू)</label>
+              <input type="number" name="votePrice" value={form.votePrice} onChange={handleChange} min="0" step="1" disabled={votingType === 'free'} className={`w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white ${votingType === 'free' ? 'opacity-50' : ''}`} />
+              {votingType === 'free' && <p className="text-xs text-gray-500 mt-1">Free elections do not charge voters.</p>}
             </div>
           </div>
 
           {/* Rules */}
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              <AlignLeft size={14} className="inline mr-1.5" /> Election Rules / Terms
-            </label>
-            <textarea
-              name="rules"
-              rows="3"
-              value={form.rules}
-              onChange={handleChange}
-              className="w-full bg-[#12121b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 resize-none"
-              placeholder="Any specific rules or terms for this election..."
-            />
+            <label className="block text-sm text-gray-300 mb-1">Election Rules / Terms</label>
+            <textarea name="rules" rows="3" value={form.rules} onChange={handleChange} className="w-full bg-[#12121b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white resize-none" placeholder="Any specific rules or terms..." />
           </div>
 
-          {/* Banner Upload */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              <ImageIcon size={14} className="inline mr-1.5" /> Banner Image
-            </label>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 bg-[#12121b] cursor-pointer hover:bg-white/5 transition">
-                <ImageIcon size={16} className="text-gray-400" />
-                <span className="text-sm text-gray-400">{form.banner ? form.banner.name : 'Choose file'}</span>
-                <input
-                  type="file"
-                  name="banner"
-                  accept="image/*"
-                  onChange={handleChange}
-                  className="hidden"
-                />
-              </label>
-              {form.banner && (
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, banner: null })}
-                  className="text-red-400 text-sm hover:underline"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Recommended: 1200×600px. JPG, PNG, or WebP.</p>
-          </div>
-
-          {/* Organizer Info */}
+          {/* Organizer Details */}
           <div className="border-t border-white/10 pt-5">
             <h3 className="text-sm font-semibold text-gray-200 mb-3 flex items-center gap-1.5">
               <User size={14} /> Organizer Details
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-gray-300 mb-1">
-                  <User size={14} className="inline mr-1.5" /> Name
-                </label>
-                <input
-                  type="text"
-                  name="organizerName"
-                  value={form.organizerName}
-                  onChange={handleChange}
-                  className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-                  placeholder="Election Committee"
-                />
+                <label className="block text-sm text-gray-300 mb-1">Name</label>
+                <input type="text" name="organizerName" value={form.organizerName} onChange={handleChange} className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" placeholder="Election Committee" />
               </div>
               <div>
-                <label className="block text-sm text-gray-300 mb-1">
-                  <Mail size={14} className="inline mr-1.5" /> Email
-                </label>
-                <input
-                  type="email"
-                  name="organizerEmail"
-                  value={form.organizerEmail}
-                  onChange={handleChange}
-                  className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-                  placeholder="organizer@example.com"
-                />
+                <label className="block text-sm text-gray-300 mb-1">Email</label>
+                <input type="email" name="organizerEmail" value={form.organizerEmail} onChange={handleChange} className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" placeholder="organizer@example.com" />
               </div>
               <div>
-                <label className="block text-sm text-gray-300 mb-1">
-                  <Phone size={14} className="inline mr-1.5" /> Phone
-                </label>
-                <input
-                  type="tel"
-                  name="organizerPhone"
-                  value={form.organizerPhone}
-                  onChange={handleChange}
-                  className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-                  placeholder="+977 9800000000"
-                />
+                <label className="block text-sm text-gray-300 mb-1">Phone</label>
+                <input type="tel" name="organizerPhone" value={form.organizerPhone} onChange={handleChange} className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white" placeholder="+977 9800000000" />
               </div>
             </div>
           </div>
 
+          {/* Banner Upload */}
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Banner Image</label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 bg-[#12121b] cursor-pointer">
+                <ImageIcon size={16} className="text-gray-400" />
+                <span className="text-sm text-gray-400">{form.banner ? form.banner.name : 'Choose file'}</span>
+                <input type="file" name="banner" accept="image/*" onChange={handleChange} className="hidden" />
+              </label>
+              {form.banner && <button type="button" onClick={() => setForm({ ...form, banner: null })} className="text-red-400 text-sm hover:underline">Remove</button>}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Recommended: 1200×600px. JPG, PNG, or WebP.</p>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5 transition text-sm"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-70 transition text-white text-sm font-semibold"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Creating...
-                </>
-              ) : (
-                <>
-                  <Vote size={16} /> Create Election
-                </>
-              )}
+            <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5 transition text-sm">Cancel</button>
+            <button type="submit" disabled={loading} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-70 transition text-white text-sm font-semibold">
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Vote size={16} />}
+              {loading ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Election' : 'Create Election')}
             </button>
           </div>
         </form>

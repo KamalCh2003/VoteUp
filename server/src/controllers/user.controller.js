@@ -64,3 +64,31 @@ exports.uploadAvatar = async (req, res) => {
     res.status(500).json({ error: 'Upload failed' });
   }
 };
+
+exports.getVoteHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const votes = await prisma.vote.findMany({
+      where: { userId },
+      include: {
+        election: {
+          select: { title: true, status: true, votePrice: true },
+        },
+        candidate: {
+          select: {
+            id: true,
+            avatarUrl: true,
+            user: {
+              select: { firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+      orderBy: { votedAt: 'desc' },
+    });
+    res.json({ votes });
+  } catch (err) {
+    console.error('Get vote history error:', err);
+    res.status(500).json({ error: 'Failed to fetch vote history' });
+  }
+};

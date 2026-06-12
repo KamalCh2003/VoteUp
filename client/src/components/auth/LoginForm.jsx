@@ -1,22 +1,29 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
+// src/components/auth/LoginForm.jsx
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import AuthLayout from './AuthLayout';
 
 export default function LoginForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
-  const [role, setRole] = useState('VOTER');
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    contestantId: '',
-    adminKey: '',
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    if (error === 'google_auth_failed') {
+      toast.error('Google authentication failed. Please try again.');
+      window.history.replaceState({}, document.title, '/login');
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,29 +31,29 @@ export default function LoginForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.email || !formData.password) {
       return toast.error('Please fill all required fields');
     }
-
+    setLoading(true);
     try {
-      setLoading(true);
-      // Backend only uses email + password; role tabs are visual only
       const user = await login(formData.email, formData.password);
       toast.success('Login Successful');
-
-      // Navigate based on actual role returned from server
-      switch (user.role) {
-        case 'ADMIN':
-          navigate('/admin');
-          break;
-        case 'CONTESTANT':
-          navigate('/contestant/dashboard');
-          break;
-        case 'VOTER':
-        default:
-          navigate('/voter/home');
-          break;
+      
+      const urlParams = new URLSearchParams(location.search);
+      const from = urlParams.get('from');
+      if (from) {
+        navigate(decodeURIComponent(from));
+      } else {
+        switch (user.role) {
+          case 'ADMIN':
+            navigate('/admin');
+            break;
+          case 'CONTESTANT':
+            navigate('/contestant/profile-campaign');
+            break;
+          default:
+            navigate('/voter/home');
+        }
       }
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Login failed');
@@ -55,194 +62,113 @@ export default function LoginForm() {
     }
   };
 
+  const handleGoogleLogin = () => {
+    setGoogleLoading(true);
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    window.location.href = `${apiUrl}/auth/google`;
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-4 overflow-hidden">
-      {/* Login Card */}
-      <div className="w-full max-w-[420px] bg-[#070711] border border-white/10 rounded-[28px] p-5 lg:p-6 shadow-2xl">
-        {/* Logo */}
-        <div className="flex justify-center mb-3">
-          <div className="w-10 h-10 rounded-2xl bg-zinc-800 flex items-center justify-center">
-            <ShieldCheck className="text-green-400" size={22} />
-          </div>
-        </div>
-
-        {/* Heading */}
-        <h1 className="text-white text-2xl lg:text-3xl font-bold text-center">
-          Welcome back
-        </h1>
-        <p className="text-gray-400 text-center mt-1 mb-5 text-sm">
-          Sign in to your VoteChain account
-        </p>
-
-        <button
-          type="button"
-          onClick={() => toast.error('Google login not implemented yet')}
-          className="w-full h-11 flex items-center justify-center gap-3 rounded-full border border-white/10 bg-[#141420] hover:bg-[#1a1a2a] transition-all text-white text-sm font-medium"
-        >
-          <img
-            src="https://www.svgrepo.com/show/475656/google-color.svg"
-            alt="google"
-            className="w-4 h-4"
+    <AuthLayout title="Welcome Back" subtitle="Sign in to continue voting for your favorites." backTo="/">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-gray-700 text-sm mb-1">Email Address</label>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
           />
-          Continue with Google
-        </button>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-[1px] bg-white/10"></div>
-          <p className="text-xs text-gray-500 whitespace-nowrap">
-            or continue with email
-          </p>
-          <div className="flex-1 h-[1px] bg-white/10"></div>
         </div>
-
-        {/* Role Tabs */}
-        <div className="bg-[#10101a] border border-white/10 rounded-2xl p-1 flex mb-5">
-          <button
-            type="button"
-            onClick={() => setRole('VOTER')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              role === 'VOTER' ? 'bg-purple-500 text-white' : 'text-gray-400'
-            }`}
-          >
-            Voter
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole('CONTESTANT')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              role === 'CONTESTANT' ? 'bg-purple-500 text-white' : 'text-gray-400'
-            }`}
-          >
-            Contestant
-          </button>
-          {/* <button
-            type="button"
-            onClick={() => setRole('ADMIN')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              role === 'ADMIN' ? 'bg-purple-500 text-white' : 'text-gray-400'
-            }`}
-          >
-            Admin
-          </button> */}
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          {/* Email */}
-          <div>
-            <label className="block text-gray-300 text-xs mb-1.5">
-              Email address
-            </label>
+        <div>
+          <label className="block text-gray-700 text-sm mb-1">Password</label>
+          <div className="relative">
             <input
-              type="email"
-              name="email"
-              placeholder="you@example.com"
-              value={formData.email}
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              placeholder="Enter your password"
+              value={formData.password}
               onChange={handleChange}
               required
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
             />
-          </div>
-
-          {/* Contestant ID (visual only, not sent) */}
-          {role === 'CONTESTANT' && (
-            <div>
-              <label className="block text-gray-300 text-xs mb-1.5">
-                Contestant ID
-              </label>
-              <input
-                type="text"
-                name="contestantId"
-                placeholder="Enter contestant ID (optional)"
-                value={formData.contestantId}
-                onChange={handleChange}
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-            </div>
-          )}
-
-          {/* Admin Key (visual only, not sent) */}
-          {role === 'ADMIN' && (
-            <div>
-              <label className="block text-gray-300 text-xs mb-1.5">
-                Admin Security Key
-              </label>
-              <input
-                type="password"
-                name="adminKey"
-                placeholder="Enter admin key (optional)"
-                value={formData.adminKey}
-                onChange={handleChange}
-                className="w-full h-11 bg-[#12121b] border border-red-500/20 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-red-500"
-              />
-            </div>
-          )}
-
-          {/* Password */}
-          <div>
-            <label className="block text-gray-300 text-xs mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 pr-11 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"
-              >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Remember & Forgot */}
-          <div className="flex items-center justify-between text-xs">
-            <label className="flex items-center gap-2 text-gray-400">
-              <input type="checkbox" className="accent-purple-500" />
-              Remember me
-            </label>
-            <Link
-              to="/forgot-password"
-              className="text-purple-400 hover:text-purple-300"
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500"
             >
-              Forgot password?
-            </Link>
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
           </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-11 bg-purple-500 hover:bg-purple-600 disabled:opacity-70 transition-all rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2 mt-1"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={16} />
-                Signing In...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
-
-        {/* Bottom */}
-        <p className="text-center text-gray-400 mt-5 text-sm">
-          No account?{' '}
-          <Link to="/register" className="text-purple-400 hover:text-purple-300">
-            Sign up free
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2 text-gray-600">
+            <input type="checkbox" className="accent-violet-500" /> Remember me
+          </label>
+          <Link to="/forgot-password" className="text-violet-600 hover:underline">
+            Forgot password?
           </Link>
-        </p>
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
+        >
+          {loading ? <Loader2 className="animate-spin" size={16} /> : 'Login'}
+        </button>
+      </form>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">Or continue with</span>
+        </div>
       </div>
-    </div>
+
+      <button
+        onClick={handleGoogleLogin}
+        disabled={googleLoading}
+        className="w-full h-11 flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 transition"
+      >
+        {googleLoading ? (
+          <Loader2 className="animate-spin" size={16} />
+        ) : (
+          <>
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              />
+            </svg>
+            Sign in with Google
+          </>
+        )}
+      </button>
+
+      <div className="mt-6 text-center">
+        <p className="text-gray-600 text-sm">
+          New to VoteUp?{' '}
+          <Link to="/register" className="text-violet-600 hover:underline">Create an account</Link>
+        </p>
+        <p className="text-xs text-gray-400 mt-4">Secure & Encrypted voting</p>
+      </div>
+    </AuthLayout>
   );
 }

@@ -1,54 +1,173 @@
+// services/auth.service.js
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { hashPassword, comparePassword } = require("../utils/hash");
 const { generateTokens } = require("../utils/jwt");
 const ApiError = require("../utils/error");
+const { sendVerificationOtp } = require("./email.service");
+const crypto = require("crypto");
 
-const registerUser = async ({
-  name,
+const generateOtp = () => crypto.randomInt(100000, 999999).toString();
+
+// ─────────────────────────────────────────────────────────────
+//  REGISTER with OTP (email verification)
+// ─────────────────────────────────────────────────────────────
+const registerWithOtp = async ({
+  firstName,
+  lastName,
   email,
   password,
   role = "VOTER",
   contestantId,
-  electionId,
 }) => {
-  // Validations
-  if (!name) throw new ApiError(400, "Full name is required");
+  // Validation
+  if (!firstName || !lastName) throw new ApiError(400, "First and last name are required");
   if (!email) throw new ApiError(400, "Email is required");
   if (!password) throw new ApiError(400, "Password is required");
+  if (password.length < 8) throw new ApiError(400, "Password must be at least 8 characters");
 
+  // Check existing user
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new ApiError(409, "Email already registered");
 
+  // Hash password and create user (unverified)
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, role },
+    data: {
+      firstName,
+      lastName,
+      email,
+      passwordHash,
+      role,
+      isVerified: false,
+      wallet: { create: { balance: 0 } },
+    },
   });
 
-  if (role === "CANDIDATE") {
+  // If role is CONTESTANT, create candidate record
+  if (role === "CONTESTANT") {
     if (!contestantId) throw new ApiError(400, "Contestant ID is required");
-
-    if (electionId) {
-      const election = await prisma.election.findUnique({
-        where: { id: electionId },
-      });
-      if (!election) throw new ApiError(404, "Election not found");
-    }
-
     const existingCandidate = await prisma.candidate.findUnique({
       where: { contestantId },
     });
-    if (existingCandidate)
-      throw new ApiError(409, "Contestant ID already taken");
-
+    if (existingCandidate) throw new ApiError(409, "Contestant ID already taken");
     await prisma.candidate.create({
       data: {
         contestantId,
-        name,
+        name: `${firstName} ${lastName}`,
         userId: user.id,
-        electionId: electionId || null,
       },
     });
+  }
+
+  // Generate and store OTP
+  const otp = generateOtp();
+  await prisma.verificationToken.create({
+    data: {
+      userId: user.id,
+      token: otp,
+      type: "EMAIL_VERIFY",
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    },
+  });
+
+  // Send OTP email (may return devOtp in development)
+  const emailResult = await sendVerificationOtp(email, otp);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    },
+    devOtp: emailResult.devOtp || null,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────
+//  VERIFY OTP and auto‑login (returns JWT tokens)
+// ─────────────────────────────────────────────────────────────
+const verifyOtpAndLogin = async (email, otp) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new ApiError(404, "User not found");
+
+  const tokenRecord = await prisma.verificationToken.findFirst({
+    where: {
+      userId: user.id,
+      token: otp,
+      type: "EMAIL_VERIFY",
+      used: false,
+      expiresAt: { gte: new Date() },
+    },
+  });
+  if (!tokenRecord) throw new ApiError(400, "Invalid or expired OTP");
+
+  // Mark user as verified and token as used
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { isVerified: true } }),
+    prisma.verificationToken.update({ where: { id: tokenRecord.id }, data: { used: true } }),
+  ]);
+
+  // Generate JWT tokens
+  const tokens = generateTokens(user.id);
+  await prisma.refreshToken.create({
+    data: {
+      token: tokens.refreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  return { user, tokens };
+};
+
+// ─────────────────────────────────────────────────────────────
+//  RESEND OTP
+// ─────────────────────────────────────────────────────────────
+const resendOtp = async (email) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new ApiError(404, "User not found");
+
+  // Invalidate any existing unused OTPs
+  await prisma.verificationToken.updateMany({
+    where: { userId: user.id, type: "EMAIL_VERIFY", used: false },
+    data: { used: true },
+  });
+
+  const otp = generateOtp();
+  await prisma.verificationToken.create({
+    data: {
+      userId: user.id,
+      token: otp,
+      type: "EMAIL_VERIFY",
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  });
+
+  const emailResult = await sendVerificationOtp(email, otp);
+  return { devOtp: emailResult.devOtp || null };
+};
+
+// ─────────────────────────────────────────────────────────────
+//  STANDARD LOGIN (email + password)
+// ─────────────────────────────────────────────────────────────
+const loginUser = async ({ email, password }) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new ApiError(401, "Invalid email or password");
+
+  // If user has no passwordHash, they registered via Google
+  if (!user.passwordHash) {
+    throw new ApiError(401, "This account uses Google login. Please sign in with Google.");
+  }
+
+  const valid = await comparePassword(password, user.passwordHash);
+  if (!valid) throw new ApiError(401, "Invalid email or password");
+
+  // Optionally block unverified users (you may want to allow login only after verification)
+  if (!user.isVerified) {
+    throw new ApiError(403, "Please verify your email before logging in.");
   }
 
   const tokens = generateTokens(user.id);
@@ -63,53 +182,9 @@ const registerUser = async ({
   return { user, tokens };
 };
 
-const loginUser = async ({ email, password }) => {
-  console.log("[LOGIN] Step 1: received", {
-    email: email?.substring(0, 3) + "***",
-  });
-  try {
-    console.log("[LOGIN] Step 2: querying user");
-    const user = await prisma.user.findUnique({ where: { email } });
-    console.log("[LOGIN] Step 3: user found?", !!user);
-
-    if (!user) {
-      console.log("[LOGIN] Step 4: no user, throwing 401");
-      throw new ApiError(401, "Invalid email or password");
-    }
-
-    // If user registered via Google (no passwordHash), they cannot log in with password
-    if (!user.passwordHash) {
-      console.log("[LOGIN] Step 4b: user has no passwordHash (Google login only)");
-      throw new ApiError(401, "This account uses Google login. Please sign in with Google.");
-    }
-
-    console.log("[LOGIN] Step 5: comparing password");
-    const valid = await comparePassword(password, user.passwordHash);
-    console.log("[LOGIN] Step 6: password valid?", valid);
-
-    if (!valid) throw new ApiError(401, "Invalid email or password");
-
-    console.log("[LOGIN] Step 7: generating tokens");
-    const tokens = generateTokens(user.id);
-    console.log("[LOGIN] Step 8: tokens generated");
-
-    console.log("[LOGIN] Step 9: saving refresh token");
-    await prisma.refreshToken.create({
-      data: {
-        token: tokens.refreshToken,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
-    console.log("[LOGIN] Step 10: success, returning user + tokens");
-
-    return { user, tokens };
-  } catch (error) {
-    console.error("[LOGIN] ERROR at step:", error);
-    throw error;
-  }
-};
-
+// ─────────────────────────────────────────────────────────────
+//  REFRESH TOKEN (rotation)
+// ─────────────────────────────────────────────────────────────
 const refreshTokens = async (oldRefreshToken) => {
   const tokenDoc = await prisma.refreshToken.findUnique({
     where: { token: oldRefreshToken },
@@ -117,14 +192,16 @@ const refreshTokens = async (oldRefreshToken) => {
   });
 
   if (!tokenDoc || tokenDoc.revoked || tokenDoc.expiresAt < new Date()) {
-    throw new ApiError(401, "Invalid refresh token");
+    throw new ApiError(401, "Invalid or expired refresh token");
   }
 
+  // Revoke the old token
   await prisma.refreshToken.update({
     where: { id: tokenDoc.id },
     data: { revoked: true },
   });
 
+  // Generate new tokens
   const tokens = generateTokens(tokenDoc.userId);
   await prisma.refreshToken.create({
     data: {
@@ -137,20 +214,16 @@ const refreshTokens = async (oldRefreshToken) => {
   return { user: tokenDoc.user, tokens };
 };
 
-/**
- * Handle Google OAuth login: generate app tokens for the authenticated user.
- * @param {Object} googleUser 
- * @returns {Promise<{user: Object, tokens: Object}>}
- */
+// ─────────────────────────────────────────────────────────────
+//  GOOGLE LOGIN (called after Passport authentication)
+// ─────────────────────────────────────────────────────────────
 const googleLogin = async (googleUser) => {
   const user = await prisma.user.findUnique({
     where: { id: googleUser.id },
   });
-
   if (!user) throw new ApiError(404, "User not found");
 
   const tokens = generateTokens(user.id);
-
   await prisma.refreshToken.create({
     data: {
       token: tokens.refreshToken,
@@ -162,4 +235,11 @@ const googleLogin = async (googleUser) => {
   return { user, tokens };
 };
 
-module.exports = { registerUser, loginUser, refreshTokens, googleLogin };
+module.exports = {
+  registerWithOtp,
+  verifyOtpAndLogin,
+  resendOtp,
+  loginUser,
+  refreshTokens,
+  googleLogin,
+};

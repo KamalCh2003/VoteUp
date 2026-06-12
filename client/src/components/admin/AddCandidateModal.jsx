@@ -1,77 +1,113 @@
 import { useState, useEffect } from 'react';
-import { X, UserPlus, Hash, Building2, Vote, Mail, Shield, Loader2 } from 'lucide-react';
+import { X, UserPlus, Hash, Building2, Vote, Mail, Shield, Loader2, Upload, XCircle } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 export default function AddCandidateModal({ open, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [elections, setElections] = useState([]);
+  const [allCandidates, setAllCandidates] = useState([]);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    nationalId: '',
-    candidateNumber: '',  // e.g. "CN-001"
+    candidateNumber: '',
     party: '',
     electionId: '',
     slogan: '',
     bio: '',
   });
+  const [candidateNumberError, setCandidateNumberError] = useState('');
   const toast = useToast();
 
   useEffect(() => {
     if (open) {
-      // Fetch upcoming / active elections for the dropdown
-      api.get('/elections')
+      api.get('/elections', { params: { status: 'UPCOMING' } })
         .then(({ data }) => setElections(data.elections || []))
         .catch(() => toast.error('Could not load elections'));
+      api.get('/admin/candidates')
+        .then(({ data }) => setAllCandidates(data.candidates || []))
+        .catch(() => console.warn('Could not fetch candidates for validation'));
     }
-  }, [open]);
+  }, [open, toast]);
+
+  // Validate candidateNumber uniqueness per election
+  useEffect(() => {
+    if (!form.electionId || !form.candidateNumber) {
+      setCandidateNumberError('');
+      return;
+    }
+    const isDuplicate = allCandidates.some(
+      (c) => c.electionId === form.electionId && c.candidateNumber === form.candidateNumber
+    );
+    if (isDuplicate) {
+      setCandidateNumberError(`Candidate number "${form.candidateNumber}" already exists in this election.`);
+    } else {
+      setCandidateNumberError('');
+    }
+  }, [form.candidateNumber, form.electionId, allCandidates]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Only image files are allowed');
+        return;
+      }
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeAvatar = () => {
+    setAvatarFile(null);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic validation
     if (!form.firstName || !form.lastName || !form.email || !form.party || !form.electionId) {
       return toast.error('Please fill all required fields (name, email, party, election).');
+    }
+    if (candidateNumberError) {
+      return toast.error(candidateNumberError);
     }
 
     try {
       setLoading(true);
+      const payload = new FormData();
+      payload.append('firstName', form.firstName);
+      payload.append('lastName', form.lastName);
+      payload.append('email', form.email);
+      payload.append('party', form.party);
+      payload.append('electionId', form.electionId);
+      payload.append('slogan', form.slogan);
+      payload.append('bio', form.bio);
+      payload.append('candidateNumber', form.candidateNumber);
+      if (avatarFile) payload.append('avatar', avatarFile);
 
-      // 1. Create user account if not exists (simulate - backend register expects certain fields)
-      // For simplicity, we assume admin registers a new voter account and then creates a candidate.
-      // Alternatively, we can use an existing user ID. We'll let backend handle linking.
-
-      // Build payload for candidate application
-      const candidatePayload = {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.email,
-        nationalId: form.nationalId || `ADMIN-ADDED-${Date.now()}`,
-        password: 'TempPass@123', // backend will need a password; we can auto-generate or require admin to set
-        role: 'CONTESTANT',       // set role to contestant
-        party: form.party,
-        electionId: form.electionId,
-        slogan: form.slogan,
-        bio: form.bio,
-        candidateNumber: form.candidateNumber, // optional custom field
-      };
-
-      // In production, you'd create the user first, then the candidate.
-      // But our existing `/candidates/apply` expects the user to be already authenticated.
-      // We'll create a new endpoint or call registration then candidacy. For now, simulate a success toast.
-      await api.post('/candidates/apply', candidatePayload);
-
+      await api.post('/admin/create-candidate', payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       toast.success('Candidate added successfully!');
       setForm({
-        firstName: '', lastName: '', email: '', nationalId: '', candidateNumber: '', party: '', electionId: '', slogan: '', bio: '',
+        firstName: '', lastName: '', email: '', candidateNumber: '', party: '', electionId: '', slogan: '', bio: '',
       });
+      setAvatarFile(null);
+      setAvatarPreview(null);
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -86,7 +122,6 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-lg mx-4 bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
-        {/* Close button */}
         <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition text-gray-400 hover:text-white">
           <X size={20} />
         </button>
@@ -103,8 +138,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Personal details */}
+        <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-300 mb-1">First Name *</label>
@@ -150,20 +184,6 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">National ID</label>
-              <div className="relative">
-                <Shield size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  name="nationalId"
-                  value={form.nationalId}
-                  onChange={handleChange}
-                  className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-                  placeholder="VT-2024-0001"
-                />
-              </div>
-            </div>
-            <div>
               <label className="block text-sm text-gray-300 mb-1">Candidate Number</label>
               <div className="relative">
                 <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -172,14 +192,16 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                   name="candidateNumber"
                   value={form.candidateNumber}
                   onChange={handleChange}
-                  className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+                  className={`w-full h-11 pl-10 bg-[#12121b] border rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 ${
+                    candidateNumberError ? 'border-red-500' : 'border-white/10'
+                  }`}
                   placeholder="CN-001"
                 />
               </div>
+              {candidateNumberError && (
+                <p className="text-xs text-red-400 mt-1">{candidateNumberError}</p>
+              )}
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-300 mb-1">Organization / Party *</label>
               <div className="relative">
@@ -195,6 +217,9 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm text-gray-300 mb-1">Election *</label>
               <div className="relative">
@@ -204,7 +229,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                   value={form.electionId}
                   onChange={handleChange}
                   required
-                  className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 appearance-none cursor-pointer"
+                  className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500 appearance-none cursor-pointer"
                 >
                   <option value="">Select election...</option>
                   {elections.map((e) => (
@@ -241,6 +266,45 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
             />
           </div>
 
+          {/* Avatar Upload */}
+          <div>
+            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
+              <Upload size={16} className="text-blue-400" /> Profile Image
+            </label>
+            <div className="flex items-center gap-4">
+              {avatarPreview ? (
+                <div className="relative">
+                  <img
+                    src={avatarPreview}
+                    alt="Profile preview"
+                    className="h-20 w-20 rounded-full object-cover border-2 border-violet-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeAvatar}
+                    className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600"
+                  >
+                    <XCircle size={12} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-gray-400">
+                  <Upload size={24} />
+                </div>
+              )}
+              <label className="cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-gray-300 hover:bg-white/10 transition">
+                Choose Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Recommended: Square image, max 5MB (JPG, PNG, WEBP)</p>
+          </div>
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -251,18 +315,11 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!candidateNumberError}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-70 transition text-white text-sm font-semibold"
             >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Adding...
-                </>
-              ) : (
-                <>
-                  <UserPlus size={16} /> Add Candidate
-                </>
-              )}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+              {loading ? 'Adding...' : 'Add Candidate'}
             </button>
           </div>
         </form>

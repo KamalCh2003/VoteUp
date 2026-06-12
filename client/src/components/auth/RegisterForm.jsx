@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+// src/components/auth/RegisterForm.jsx
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import AuthLayout from './AuthLayout';
 
 export default function RegisterForm() {
   const navigate = useNavigate();
@@ -13,7 +15,6 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [elections, setElections] = useState([]);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -24,274 +25,171 @@ export default function RegisterForm() {
     confirmPassword: '',
   });
 
-  const [selectedElectionId, setSelectedElectionId] = useState('');
-
-  useEffect(() => {
-    if (role === 'CONTESTANT') {
-      api.get('/elections')
-        .then(({ data }) => setElections(data.elections || []))
-        .catch(() => toast.error('Could not load elections'));
-    } else {
-      setSelectedElectionId('');
-    }
-  }, [role]);
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+      return toast.error('Please fill all required fields');
+    }
+    if (role === 'CONTESTANT' && !formData.contestantId) {
+      return toast.error('Contestant ID is required');
+    }
+    if (formData.password.length < 8) return toast.error('Password must be at least 8 characters');
+    if (formData.password !== formData.confirmPassword) return toast.error('Passwords do not match');
 
-  if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
-    return toast.error('Please fill all required fields');
-  }
-  if (role === 'CONTESTANT' && !formData.contestantId) {
-    return toast.error('Contestant ID is required');
-  }
-  if (formData.password.length < 8) {
-    return toast.error('Password must be at least 8 characters');
-  }
-  if (formData.password !== formData.confirmPassword) {
-    return toast.error('Passwords do not match');
-  }
-
-  try {
     setLoading(true);
-    const payload = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      role,
-    };
-
-    if (role === 'CONTESTANT') {
-      payload.contestantId = formData.contestantId;
-      if (selectedElectionId) {
-        payload.electionId = selectedElectionId;
+    try {
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role,
+      };
+      if (role === 'CONTESTANT') {
+        payload.contestantId = formData.contestantId;
       }
+      const response = await register(payload);
+      if (response.devOtp) {
+        toast.success(`OTP (dev): ${response.devOtp}`);
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}&otp=${response.devOtp}`);
+      } else {
+        toast.success('Account created! Check your email for the verification code.');
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Registration failed');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const response = await register(payload);
-    if (response.devOtp) {
-      toast.success(`OTP (dev): ${response.devOtp}`);
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}&otp=${response.devOtp}`);
-    } else {
-      toast.success('Account created! Check your email for the verification code.');
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
-    }
-  } catch (err) {
-    toast.error(err?.response?.data?.error || 'Registration failed');
-  } finally {
-    setLoading(false);
-  }
-};
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-3 overflow-hidden">
-      <div className="w-full max-w-[430px] bg-[#070711] border border-white/10 rounded-[28px] p-5 lg:p-6 shadow-2xl">
-        {/* Logo */}
-        <div className="flex justify-center mb-1">
-          <div className="w-11 h-11 rounded-2xl bg-zinc-800 flex items-center justify-center">
-            <ShieldCheck className="text-green-400" size={22} />
-          </div>
-        </div>
-
-        <h1 className="text-white text-2xl lg:text-3xl font-bold text-center">
-          Create your account
-        </h1>
-        <p className="text-gray-400 text-center mt-1 mb-5 text-sm">
-          Join thousands of verified voters on VoteChain
-        </p>
-
-        {/* Role Tabs */}
-        <div className="bg-[#10101a] border border-white/10 rounded-2xl p-1 flex mb-5">
-          <button
-            type="button"
-            onClick={() => setRole('VOTER')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              role === 'VOTER' ? 'bg-purple-500 text-white' : 'text-gray-400'
-            }`}
-          >
-            Voter
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole('CONTESTANT')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              role === 'CONTESTANT' ? 'bg-purple-500 text-white' : 'text-gray-400'
-            }`}
-          >
-            Contestant
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Name Fields */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-gray-300 text-xs mb-1.5">
-                First name
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                placeholder="John"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-300 text-xs mb-1.5">
-                Last name
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Doe"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-gray-300 text-xs mb-1.5">
-              Email address
-            </label>
-            <input
-              type="email"
-              name="email"
-              placeholder="you@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-            />
-          </div>
-
-          {/* Contestant ID (only for contestant role) */}
-          {role === 'CONTESTANT' && (
-            <div>
-              <label className="block text-gray-300 text-xs mb-1.5">
-                Contestant ID
-              </label>
-              <input
-                type="text"
-                name="contestantId"
-                placeholder="ID provided by admin"
-                value={formData.contestantId}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-            </div>
-          )}
-
-          {/* Election selection (contestant only) */}
-          {role === 'CONTESTANT' && (
-            <div>
-              <label className="block text-gray-300 text-xs mb-1.5">
-                Select Election (optional)
-              </label>
-              <select
-                value={selectedElectionId}
-                onChange={(e) => setSelectedElectionId(e.target.value)}
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
-              >
-                <option value="">-- No election (optional) --</option>
-                {elections.map((election) => (
-                  <option key={election.id} value={election.id}>
-                    {election.title} ({election.status})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Password */}
-          <div>
-            <label className="block text-gray-300 text-xs mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="Min 8 characters"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 pr-11 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"
-              >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-gray-300 text-xs mb-1.5">
-              Confirm password
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                placeholder="Re-enter password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 pr-11 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"
-              >
-                {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Security Notice */}
-          <div className="border border-green-500/20 bg-green-500/5 rounded-xl p-3 flex gap-3">
-            <ShieldCheck size={16} className="text-green-400 mt-0.5 flex-shrink-0" />
-            <p className="text-gray-300 text-xs leading-relaxed">
-              Your identity is verified securely and never shared.
-            </p>
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-11 bg-purple-500 hover:bg-purple-600 disabled:opacity-70 transition-all rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2 mt-1"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={16} />
-                Creating...
-              </>
-            ) : (
-              'Create Account'
-            )}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-400 mt-5 text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-purple-400 hover:text-purple-300">
-            Sign in
-          </Link>
-        </p>
+    <AuthLayout title="Create an account" subtitle="Join thousands of verified voters" backTo="/">
+      <div className="flex gap-2 mb-5 bg-gray-100 border border-gray-200 rounded-2xl p-1">
+        <button
+          type="button"
+          onClick={() => setRole('VOTER')}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+            role === 'VOTER' ? 'bg-violet-600 text-white' : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          Voter
+        </button>
+        <button
+          type="button"
+          onClick={() => setRole('CONTESTANT')}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+            role === 'CONTESTANT' ? 'bg-violet-600 text-white' : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          Contestant
+        </button>
       </div>
-    </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="text"
+            name="firstName"
+            placeholder="First name"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          />
+          <input
+            type="text"
+            name="lastName"
+            placeholder="Last name"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          />
+        </div>
+
+        <input
+          type="email"
+          name="email"
+          placeholder="Email address"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+        />
+
+        {role === 'CONTESTANT' && (
+          <input
+            type="text"
+            name="contestantId"
+            placeholder="Contestant ID"
+            value={formData.contestantId}
+            onChange={handleChange}
+            required
+            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          />
+        )}
+
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            placeholder="Password (min 8 characters)"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500"
+          >
+            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        </div>
+
+        <div className="relative">
+          <input
+            type={showConfirmPassword ? 'text' : 'password'}
+            name="confirmPassword"
+            placeholder="Confirm password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500"
+          >
+            {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+          </button>
+        </div>
+
+        <div className="border border-violet-200 bg-violet-50 rounded-xl p-3 flex gap-3">
+          <ShieldCheck size={16} className="text-violet-500 mt-0.5 flex-shrink-0" />
+          <p className="text-gray-600 text-xs leading-relaxed">Your identity is verified securely and never shared.</p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2 mt-1"
+        >
+          {loading ? <Loader2 className="animate-spin" size={16} /> : 'Create Account'}
+        </button>
+      </form>
+
+      <p className="text-center text-gray-500 mt-5 text-sm">
+        Already have an account?{' '}
+        <Link to="/login" className="text-violet-600 hover:underline">Sign in</Link>
+      </p>
+    </AuthLayout>
   );
 }

@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const session = require('express-session');
+const passport = require('passport');
 const { generalLimiter } = require('./middleware/rateLimiter');
+require('./config/passport');
 
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
@@ -20,6 +23,17 @@ app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', creden
 app.use(express.json({ limit: '10mb' }));
 app.use(generalLimiter);
 
+// Session & Passport (required for Google OAuth)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'voteup-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/elections', electionRoutes);
@@ -31,6 +45,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/public', publicRoutes);
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err);
   const status = err.statusCode || 500;

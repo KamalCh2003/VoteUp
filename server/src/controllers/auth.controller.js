@@ -3,6 +3,9 @@ const { v4: uuidv4 } = require('uuid');
 const prisma = require('../config/database');
 const { generateToken, generateRefreshToken } = require('../config/jwt');
 const emailService = require('../services/email.service');
+const passport = require('passport');
+
+
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -40,7 +43,6 @@ exports.register = async (req, res) => {
       },
     });
 
-    // Send OTP – returns { devOtp } if email couldn't be sent
     const emailResult = await emailService.sendVerificationOtp(email, otp);
 
     let message = 'Registration successful. Check your email for the verification code.';
@@ -61,7 +63,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ─── VERIFY OTP ───────────────────────────────
+// ─── VERIFY OTP (auto‑login after verification) ───
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -86,7 +88,24 @@ exports.verifyOtp = async (req, res) => {
       prisma.verificationToken.update({ where: { id: vToken.id }, data: { used: true } }),
     ]);
 
-    res.json({ message: 'Email verified successfully' });
+    // Generate tokens after successful verification
+    const payload = { userId: user.id, email: user.email, role: user.role };
+    const accessToken = generateToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    res.json({
+      message: 'Email verified successfully',
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isVerified: true,
+      },
+    });
   } catch (err) {
     console.error('OTP verification error:', err);
     res.status(500).json({ error: 'Verification failed' });
@@ -100,7 +119,6 @@ exports.resendOtp = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ error: 'User not found' });
 
-    // Invalidate old tokens
     await prisma.verificationToken.updateMany({
       where: { userId: user.id, type: 'EMAIL_VERIFY', used: false },
       data: { used: true },
@@ -135,14 +153,13 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-// ─── LOGIN (block unverified) ─────────────────
+// ─── LOGIN (unchanged) ─────────────────────────
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // Block login if not verified
     if (!user.isVerified) {
       return res.status(403).json({
         error: 'Please verify your email before logging in.',
@@ -175,7 +192,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// ─── FORGOT / RESET PASSWORD (unchanged) ──────
+// ─── FORGOT / RESET PASSWORD ───────────────────
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -233,4 +250,33 @@ exports.refreshToken = async (req, res) => {
   } catch (err) {
     res.status(401).json({ error: 'Invalid refresh token' });
   }
+};
+
+// ─── GOOGLE OAUTH ───────────────────────────────
+exports.googleAuth = passport.authenticate('google', { scope: ['profile', 'email'] });
+
+exports.googleCallback = (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user) => {
+    if (err || !user) {
+      return res.redirect(`${process.env.CLIENT_URL}/login?error=google_auth_failed`);
+    }
+
+    const payload = { userId: user.id, email: user.email, role: user.role };
+    const accessToken = generateToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    const userData = encodeURIComponent(
+      JSON.stringify({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isVerified: user.isVerified,
+      })
+    );
+
+    const redirectUrl = `${process.env.CLIENT_URL}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}&user=${userData}`;
+    res.redirect(redirectUrl);
+  })(req, res, next);
 };

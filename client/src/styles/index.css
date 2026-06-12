@@ -34,20 +34,14 @@
   --t: #1a1a3a;
   --t2: #5050a0;
   --t3: #9090c0;
+  --a: #7c6fff;
+  --a2: #00d4aa;
+  --a3: #ff6b8a;
+  --a4: #f5a623;
 }
 
 body {
   background-color: var(--bg);
   color: var(--t);
   font-family: 'Inter', system-ui, sans-serif;
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  body {
-    @apply bg-white text-gray-900 dark:bg-black dark:text-white;
-  }
 }

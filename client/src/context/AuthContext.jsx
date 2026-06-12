@@ -29,9 +29,14 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (formData) => {
-    // Send registration data to backend (which now sends an OTP email)
     const { data } = await api.post('/auth/register', formData);
-    return data; // contains { message, email }
+    return data;
+  };
+
+  const setAuth = (userData, accessToken, refreshToken) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    setUser(userData);
   };
 
   const logout = () => {
@@ -40,7 +45,10 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ 
+      user, loading, login, register, logout, setAuth,
+      isAuthenticated: !!user 
+    }}>
       {children}
     </AuthContext.Provider>
   );

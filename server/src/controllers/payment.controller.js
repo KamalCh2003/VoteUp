@@ -1,3 +1,4 @@
+const axios = require('axios');
 const paymentService = require('../services/payment.service');
 const prisma = require('../config/database');
 
@@ -11,6 +12,7 @@ exports.createIntent = async (req, res) => {
     });
     res.json({ clientSecret: intent.client_secret });
   } catch (err) {
+    console.error('createIntent error:', err);
     res.status(500).json({ error: 'Payment intent creation failed' });
   }
 };
@@ -19,11 +21,11 @@ exports.confirmPayment = async (req, res) => {
   try {
     const { paymentIntentId } = req.body;
     const intent = await paymentService.retrievePaymentIntent(paymentIntentId);
-    if (intent.status !== 'succeeded') return res.status(400).json({ error: 'Payment not successful' });
-
+    if (intent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment not successful' });
+    }
     const { userId, type, candidateId } = intent.metadata;
     const amount = intent.amount / 100;
-
     const payment = await prisma.payment.create({
       data: {
         userId,
@@ -34,25 +36,132 @@ exports.confirmPayment = async (req, res) => {
         candidateId: candidateId || null,
       },
     });
-
-    if (type === 'WALLET_TOPUP') {
-      await prisma.wallet.update({
-        where: { userId },
-        data: { balance: { increment: amount } },
-      });
-    }
-
     res.json({ payment });
   } catch (err) {
+    console.error('confirmPayment error:', err);
     res.status(500).json({ error: 'Confirmation failed' });
   }
 };
 
-exports.getWallet = async (req, res) => {
+exports.processVotePayment = async (req, res) => {
   try {
-    const wallet = await prisma.wallet.findUnique({ where: { userId: req.user.id } });
-    res.json({ wallet });
+    const { electionId, candidateId, quantity } = req.body;
+    const userId = req.user.id;
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      select: { votePrice: true },
+    });
+    if (!election) {
+      return res.status(404).json({ error: 'Election not found' });
+    }
+    const amount = election.votePrice * quantity;
+    if (amount <= 0) {
+      return res.status(400).json({ error: 'Invalid payment amount' });
+    }
+    const payment = await prisma.payment.create({
+      data: {
+        userId,
+        amount,
+        type: 'VOTE_PURCHASE',
+        status: 'COMPLETED',
+        candidateId,
+      },
+    });
+    res.json({ paymentId: payment.id });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch wallet' });
+    console.error('processVotePayment error:', err);
+    res.status(500).json({ error: err.message || 'Payment processing failed' });
+  }
+};
+
+exports.initiateKhaltiPayment = async (req, res) => {
+  try {
+    const { electionId, candidateId, quantity } = req.body;
+    const userId = req.user.id;
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+      select: { votePrice: true, title: true },
+    });
+    if (!election) return res.status(404).json({ error: 'Election not found' });
+    const amount = election.votePrice * quantity;
+    const purchaseOrderId = `${electionId}_${Date.now()}`;
+    const returnUrl = `${process.env.CLIENT_URL}/payment/callback`;
+    const khaltiRes = await axios.post(
+      'https://dev.khalti.com/api/v2/epayment/initiate/',
+      {
+        return_url: returnUrl,
+        website_url: process.env.CLIENT_URL,
+        amount: amount * 100,
+        purchase_order_id: purchaseOrderId,
+        purchase_order_name: `Vote for ${candidateId}`,
+      },
+      {
+        headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` },
+      }
+    );
+    const payment = await prisma.payment.create({
+      data: {
+        userId,
+        amount,
+        type: 'VOTE_PURCHASE',
+        status: 'PENDING',
+        stripePaymentIntentId: khaltiRes.data.pidx,
+        candidateId,
+      },
+    });
+    res.json({ paymentUrl: khaltiRes.data.payment_url, paymentId: payment.id });
+  } catch (err) {
+    console.error('Khalti initiate error:', err);
+    res.status(500).json({ error: 'Failed to initiate payment' });
+  }
+};
+
+exports.verifyKhaltiPayment = async (req, res) => {
+  try {
+    const { pidx, transaction_id, status } = req.body;
+    const userId = req.user.id;
+    if (!pidx || !status) {
+      return res.status(400).json({ error: 'Missing pidx or status' });
+    }
+    const payment = await prisma.payment.findFirst({
+      where: {
+        stripePaymentIntentId: pidx,
+        userId,
+        status: 'PENDING',
+        type: 'VOTE_PURCHASE',
+      },
+    });
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment record not found' });
+    }
+    if (status !== 'Completed') {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: 'FAILED' },
+      });
+      return res.status(400).json({ error: 'Payment was not completed' });
+    }
+    const verifyRes = await axios.post(
+      'https://dev.khalti.com/api/v2/epayment/lookup/',
+      { pidx },
+      {
+        headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` },
+      }
+    );
+    if (verifyRes.data.status !== 'Completed') {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: 'FAILED' },
+      });
+      return res.status(400).json({ error: 'Payment verification failed' });
+    }
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: 'COMPLETED' },
+    });
+    res.json({ paymentId: payment.id });
+  } catch (err) {
+    console.error('Khalti verify error:', err);
+    res.status(500).json({ error: 'Verification failed: ' + err.message });
   }
 };
