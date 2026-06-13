@@ -6,68 +6,82 @@ const WhoCanUse = () => {
       icon: GraduationCap,
       title: "Schools & Colleges",
       desc: "Run student elections, CR voting, contests, and academic polls with full transparency.",
-      glow: "from-blue-500/20 to-purple-500/10",
+      glow: "from-blue-500/10 to-purple-500/5",
     },
     {
       icon: Building2,
       title: "Organizations & Companies",
       desc: "Make internal decisions, leadership voting, and surveys fast, fair, and secure.",
-      glow: "from-purple-500/20 to-pink-500/10",
+      glow: "from-purple-500/10 to-pink-500/5",
     },
     {
       icon: Mic2,
       title: "Events & Creators",
       desc: "Host live voting for shows, competitions, awards, and audience engagement.",
-      glow: "from-pink-500/20 to-orange-500/10",
+      glow: "from-pink-500/10 to-orange-500/5",
     },
     {
       icon: Users,
       title: "Communities & NGOs",
       desc: "Enable democratic decision-making for communities, groups, and social projects.",
-      glow: "from-green-500/20 to-blue-500/10",
+      glow: "from-green-500/10 to-blue-500/5",
     },
   ];
 
   return (
     <section className="relative py-20 overflow-hidden">
-      {/* <div className="absolute inset-0">
-        <div className="absolute w-[400px] h-[400px] bg-purple-500/20 blur-[120px] rounded-full top-10 left-10"></div>
-        <div className="absolute w-[400px] h-[400px] bg-pink-500/20 blur-[120px] rounded-full bottom-10 right-10"></div>
-      </div> */}
-
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
         <div className="text-center mb-14">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white">
+          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900">
             Who Can Use{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-pink-500">
               VoteUp
             </span>
             ?
           </h2>
-          <p className="text-gray-400 mt-4 max-w-2xl mx-auto">
-            A powerful, flexible voting platform built for everyone — from small groups to large organizations.
+
+          <p className="text-gray-600 mt-4 max-w-2xl mx-auto text-lg">
+            A powerful, flexible voting platform built for everyone — from
+            small groups to large organizations.
           </p>
         </div>
 
+        {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {data.map((item, i) => {
             const Icon = item.icon;
+
             return (
               <div
                 key={i}
-                className={`group relative p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden hover:scale-[1.03] transition-all duration-300`}
+                className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-br ${item.glow}`} />
-                <div className="relative z-10 w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition">
-                  <Icon className="text-purple-300" size={22} />
+                {/* Hover Glow */}
+                <div
+                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-br ${item.glow}`}
+                />
+
+                {/* Icon */}
+                <div className="relative z-10 mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-violet-50 group-hover:bg-violet-100 transition">
+                  <Icon
+                    className="text-violet-600"
+                    size={24}
+                  />
                 </div>
-                <h3 className="relative z-10 text-white text-lg font-semibold mb-2 group-hover:text-purple-300 transition">
+
+                {/* Title */}
+                <h3 className="relative z-10 text-gray-900 text-lg font-semibold mb-3">
                   {item.title}
                 </h3>
-                <p className="relative z-10 text-gray-400 text-sm leading-relaxed">
+
+                {/* Description */}
+                <p className="relative z-10 text-gray-600 text-sm leading-relaxed">
                   {item.desc}
                 </p>
-                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-purple-500/0 via-purple-500/40 to-pink-500/0 opacity-0 group-hover:opacity-100 transition" />
+
+                {/* Bottom Accent */}
+                <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-violet-500 via-pink-500 to-violet-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center" />
               </div>
             );
           })}

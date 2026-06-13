@@ -36,8 +36,6 @@ export default function ElectionDetails() {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [processingPayment, setProcessingPayment] = useState(false);
-
-  // State for free vote confirmation modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmCandidateId, setConfirmCandidateId] = useState(null);
   const [confirmCandidate, setConfirmCandidate] = useState(null);
@@ -130,14 +128,11 @@ export default function ElectionDetails() {
       navigate(`/login?from=${encodeURIComponent(returnUrl)}`);
       return;
     }
-
     if (user.role !== "VOTER") {
       toast.error("Only voters can cast votes");
       return;
     }
-
     const candidate = election.candidates.find((c) => c.id === candidateId);
-
     if (pricePerVote === 0) {
       if (hasVoted) {
         toast.error("You have already voted in this free election");
@@ -195,35 +190,30 @@ export default function ElectionDetails() {
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-violet-400" size={48} />
+        <Loader2 className="animate-spin text-violet-600" size={48} />
       </div>
     );
   if (!election)
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Election not found</h2>
-          <Link to="/elections" className="text-violet-400 hover:underline">Back to Elections</Link>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Election not found</h2>
+          <Link to="/elections" className="text-violet-600 hover:underline">Back to Elections</Link>
         </div>
       </div>
     );
 
   return (
     <div className="min-h-screen">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl" />
-      </div>
-
       <div className="relative max-w-6xl mx-auto px-6 py-10">
-        <Link to="/elections" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition">
+        <Link to="/elections" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 transition">
           <ArrowLeft size={18} /> Back to Elections
         </Link>
 
         {/* Election Header */}
         <div className="mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{election.title}</h1>
-          <p className="text-gray-400 text-lg">{election.description}</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">{election.title}</h1>
+          <p className="text-gray-600 text-lg">{election.description}</p>
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Calendar size={16} /> {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}
@@ -235,21 +225,21 @@ export default function ElectionDetails() {
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border ${
               election.status === "ACTIVE"
-                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                 : election.status === "UPCOMING"
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                : "bg-gray-500/20 text-gray-300 border-gray-500/30"
+                ? "bg-amber-100 text-amber-700 border-amber-200"
+                : "bg-gray-100 text-gray-700 border-gray-200"
             }`}>
-              {election.status === "ACTIVE" && <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />}
+              {election.status === "ACTIVE" && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
               {election.status}
             </span>
             {pricePerVote === 0 && (
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-300">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                 Free Election
               </span>
             )}
             {isActive && timeLeft && timeLeft.total > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-cyan-400 bg-white/5 rounded-full px-3 py-1 border border-cyan-500/20">
+              <div className="flex items-center gap-1.5 text-xs text-cyan-600  rounded-full px-3 py-1 border border-gray-200">
                 <Clock size={14} />
                 <span className="font-mono">{formatCountdown(timeLeft)}</span>
               </div>
@@ -257,8 +247,8 @@ export default function ElectionDetails() {
           </div>
         </div>
 
-        {/* Candidates Grid */}
-        <h2 className="text-2xl font-bold text-white mb-6">Candidates</h2>
+        {/* Candidates Grid – gray cards */}
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Candidates</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {election.candidates?.map((candidate) => {
             const isCopied = copiedCandidateId === candidate.id;
@@ -280,19 +270,19 @@ export default function ElectionDetails() {
             return (
               <div
                 key={candidate.id}
-                className="group relative flex flex-col items-center text-center rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-6 transition-all duration-300 hover:border-violet-500/30 hover:bg-white/[0.05] hover:-translate-y-1"
+                className="group relative flex flex-col items-center text-center rounded-2xl border border-gray-200 bg-gray-100 p-6 transition-all duration-300 hover:shadow-md hover:border-violet-300 hover:-translate-y-1"
               >
-                <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4 overflow-hidden">
+                <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-4 overflow-hidden">
                   {candidate.avatarUrl ? (
                     <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     `${candidate.user?.firstName?.[0]}${candidate.user?.lastName?.[0]}`
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-white group-hover:text-violet-400 transition">
+                <h3 className="text-xl font-bold text-gray-800 group-hover:text-violet-600 transition">
                   {candidate.user?.firstName} {candidate.user?.lastName}
                 </h3>
-                <p className="text-gray-400 text-sm mt-1">{candidate.party || "Independent"}</p>
+                <p className="text-gray-500 text-sm mt-1">{candidate.party || "Independent"}</p>
                 {candidate.slogan && (
                   <p className="text-gray-500 text-xs mt-2 italic line-clamp-2">"{candidate.slogan}"</p>
                 )}
@@ -303,8 +293,8 @@ export default function ElectionDetails() {
                       disabled={voteDisabled || votingCandidateId === candidate.id}
                       className={`flex items-center gap-2 px-5 py-2 rounded-xl font-medium transition ${
                         !voteDisabled && !(votingCandidateId === candidate.id)
-                          ? "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg"
-                          : "bg-gray-600/50 text-gray-400 cursor-not-allowed"
+                          ? "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md"
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
                       }`}
                     >
                       {votingCandidateId === candidate.id ? (
@@ -315,14 +305,14 @@ export default function ElectionDetails() {
                       {votingCandidateId === candidate.id ? "Processing..." : voteButtonText}
                     </button>
                   ) : election.status === "ENDED" ? (
-                    <div className="text-center text-gray-400 text-sm">Election ended</div>
+                    <div className="text-center text-gray-500 text-sm">Election ended</div>
                   ) : null}
                   <button
                     onClick={() => handleShare(candidate)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-gray-300 hover:text-white"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition text-gray-600 hover:text-gray-800"
                     title="Share candidate profile"
                   >
-                    {isCopied ? <CheckCircle size={16} className="text-emerald-400" /> : <Share2 size={16} />}
+                    {isCopied ? <CheckCircle size={16} className="text-emerald-500" /> : <Share2 size={16} />}
                     <span className="text-sm">{isCopied ? "Copied!" : "Share"}</span>
                   </button>
                 </div>
@@ -335,44 +325,44 @@ export default function ElectionDetails() {
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal (unchanged – already light theme) */}
       {showPaymentModal && selectedCandidate && pricePerVote > 0 && user && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-md bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden">
             <button
               onClick={() => setShowPaymentModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700"
             >
               <X size={20} />
             </button>
             <div className="p-6">
               <div className="text-center mb-6">
-                <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-3 overflow-hidden">
+                <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-3 overflow-hidden">
                   {selectedCandidate.avatarUrl ? (
                     <img src={selectedCandidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     `${selectedCandidate.user?.firstName?.[0]}${selectedCandidate.user?.lastName?.[0]}`
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-white">
+                <h3 className="text-xl font-bold text-gray-800">
                   {selectedCandidate.user?.firstName} {selectedCandidate.user?.lastName}
                 </h3>
-                <p className="text-gray-400 text-sm">{selectedCandidate.party || "Independent"}</p>
+                <p className="text-gray-500 text-sm">{selectedCandidate.party || "Independent"}</p>
                 <p className="text-gray-500 text-xs mt-1">"{selectedCandidate.slogan}"</p>
               </div>
-              <div className="bg-white/5 rounded-xl p-4 mb-4">
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-gray-300">Price per vote</span>
-                  <span className="text-white font-semibold">रू {pricePerVote}</span>
+                  <span className="text-gray-600">Price per vote</span>
+                  <span className="text-gray-800 font-semibold">रू {pricePerVote}</span>
                 </div>
-                <div className="flex items-center justify-between bg-[#12121b] border border-white/10 rounded-xl p-3">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-8 w-8 rounded-lg bg-white/5 hover:bg-white/10 text-white"><Minus size={16} /></button>
-                  <span className="text-xl font-bold text-white">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="h-8 w-8 rounded-lg bg-white/5 hover:bg-white/10 text-white"><Plus size={16} /></button>
+                <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl p-3">
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-8 w-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"><Minus size={16} /></button>
+                  <span className="text-xl font-bold text-gray-800">{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} className="h-8 w-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"><Plus size={16} /></button>
                 </div>
-                <div className="flex justify-between mt-3 pt-2 border-t border-white/10">
-                  <span className="text-gray-300 font-medium">Total</span>
-                  <span className="text-violet-400 font-bold">रू {totalAmount}</span>
+                <div className="flex justify-between mt-3 pt-2 border-t border-gray-200">
+                  <span className="text-gray-600 font-medium">Total</span>
+                  <span className="text-violet-600 font-bold">रू {totalAmount}</span>
                 </div>
               </div>
               <button
@@ -388,22 +378,20 @@ export default function ElectionDetails() {
         </div>
       )}
 
-      {/* Custom Confirmation Modal for Free Elections – Icon removed */}
+      {/* Confirmation Modal (unchanged) */}
       {showConfirmModal && confirmCandidate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-md bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden">
             <button
               onClick={() => setShowConfirmModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700"
             >
               <X size={20} />
             </button>
             <div className="p-6">
               <div className="text-center mb-6">
-                <h3 className="text-xl font-bold text-white">Confirm Your Vote</h3>
-                <p className="text-gray-300 text-sm mt-2">
-                  You are about to vote for:
-                </p>
+                <h3 className="text-xl font-bold text-gray-800">Confirm Your Vote</h3>
+                <p className="text-gray-600 text-sm mt-2">You are about to vote for:</p>
                 <div className="mt-3 flex flex-col items-center">
                   <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden mb-2">
                     {confirmCandidate.avatarUrl ? (
@@ -414,19 +402,17 @@ export default function ElectionDetails() {
                       </span>
                     )}
                   </div>
-                  <p className="text-white font-semibold text-lg">
+                  <p className="text-gray-800 font-semibold text-lg">
                     {confirmCandidate.user?.firstName} {confirmCandidate.user?.lastName}
                   </p>
-                  <p className="text-gray-400 text-sm">{confirmCandidate.party || "Independent"}</p>
+                  <p className="text-gray-500 text-sm">{confirmCandidate.party || "Independent"}</p>
                 </div>
-                <p className="text-amber-400 text-xs mt-4">
-                  This action cannot be undone
-                </p>
+                <p className="text-amber-600 text-xs mt-4">This action cannot be undone</p>
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConfirmModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5 transition"
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>

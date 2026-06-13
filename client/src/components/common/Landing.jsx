@@ -6,17 +6,24 @@ import FeaturesSection from '../home/FeaturesSection';
 
 export default function Landing() {
   return (
-    <div className="min-h-screen overflow-hidden text-white">
-      {/* Background Glow */}
-      <div className="fixed inset-0 -z-10 ">
-        <div className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-violet-700/20 blur-[140px]" />
-        <div className="absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[140px]" />
+    <div className="min-h-screen overflow-hidden text-gray-900">
+      {/* Light Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-violet-200/40 blur-[140px]" />
+
+        <div className="absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-cyan-200/40 blur-[140px]" />
+
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-gray-50 to-white" />
       </div>
 
       <HeroSection />
+
       <StatsSection />
+
       <LiveElectionSection />
+
       <WhoCanUse />
+
       <FeaturesSection />
     </div>
   );

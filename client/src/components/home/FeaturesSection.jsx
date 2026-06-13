@@ -5,55 +5,60 @@ const features = [
     title: "End-to-end encrypted",
     description: "All votes are encrypted at rest and in transit using 256-bit SSL.",
     icon: Shield,
-    color: "text-violet-400",
+    color: "text-violet-600",
+    bg: "bg-violet-50",
   },
   {
     title: "Real-time analytics",
     description: "Live vote counts and demographic insights as votes are cast.",
     icon: BarChart3,
-    color: "text-cyan-400",
+    color: "text-cyan-600",
+    bg: "bg-cyan-50",
   },
   {
     title: "Vote from anywhere",
     description: "Mobile-first, fully responsive design works on any device.",
     icon: Globe,
-    color: "text-pink-400",
+    color: "text-pink-600",
+    bg: "bg-pink-50",
   },
   {
     title: "Full audit trail",
     description: "Complete transparency — every vote is logged, nothing is hidden.",
     icon: ClipboardList,
-    color: "text-yellow-400",
+    color: "text-amber-600",
+    bg: "bg-amber-50",
   },
 ];
 
 export default function FeaturesSection() {
   return (
     <section className="mx-auto max-w-7xl px-6 pb-16">
-      <h2 className="mb-6 flex items-center gap-2 text-2xl font-semibold">
-        <span className="h-3 w-3 border border-blue-500"></span>
+      <h2 className="mb-8 flex items-center gap-3 text-3xl font-bold text-gray-900">
+        <span className="h-3 w-3 rounded-sm bg-violet-600"></span>
         Why VoteUp?
       </h2>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         {features.map((feature, index) => {
           const Icon = feature.icon;
+
           return (
             <div
               key={index}
-              className="group rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:border-violet-500/20"
+              className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-violet-200"
             >
               <div
-                className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/40 ${feature.color}`}
+                className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${feature.bg} ${feature.color}`}
               >
-                <Icon size={20} />
+                <Icon size={22} />
               </div>
 
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-gray-900">
                 {feature.title}
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
+              <p className="mt-2 text-sm leading-6 text-gray-600">
                 {feature.description}
               </p>
             </div>

@@ -1,3 +1,4 @@
+// src/components/contestant/ApplyCandidacy.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IdCard, Vote, PartyPopper, Quote, FileText, Loader2, Upload, X } from 'lucide-react';
@@ -77,7 +78,6 @@ export default function ApplyCandidacy() {
       toast.success('Application submitted successfully!');
       navigate('/contestant/profile-campaign');
     } catch (err) {
-      // Backend will return 400 if candidate number is duplicate
       toast.error(err.response?.data?.error || 'Application failed');
     } finally {
       setLoading(false);
@@ -85,15 +85,15 @@ export default function ApplyCandidacy() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-6">
-      <div className="w-full max-w-xl bg-[#070711] border border-white/10 rounded-3xl p-6 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center px-4 py-6">
+      <div className="w-full max-w-xl bg-white border border-gray-200 rounded-3xl shadow-xl p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-md">
             <Vote size={22} className="text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white">Apply for Candidacy</h2>
-            <p className="text-sm text-gray-400">
+            <h2 className="text-2xl font-bold text-gray-800">Apply for Candidacy</h2>
+            <p className="text-sm text-gray-500">
               Welcome, {user?.firstName || 'User'}. Fill the details to run for an election.
             </p>
           </div>
@@ -102,15 +102,15 @@ export default function ApplyCandidacy() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Election Selection */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <Vote size={16} className="text-violet-400" /> Select Election *
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <Vote size={16} className="text-violet-500" /> Select Election *
             </label>
             <select
               name="electionId"
               value={form.electionId}
               onChange={handleChange}
               required
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500"
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
             >
               <option value="">-- Choose an election --</option>
               {elections.map((el) => (
@@ -123,8 +123,8 @@ export default function ApplyCandidacy() {
 
           {/* Candidate Number */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <IdCard size={16} className="text-cyan-400" /> Candidate ID *
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <IdCard size={16} className="text-cyan-600" /> Candidate ID *
             </label>
             <input
               type="text"
@@ -133,14 +133,14 @@ export default function ApplyCandidacy() {
               value={form.candidateNumber}
               onChange={handleChange}
               required
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
             />
           </div>
 
           {/* Party */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <PartyPopper size={16} className="text-pink-400" /> Party / Affiliation *
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <PartyPopper size={16} className="text-pink-600" /> Party / Affiliation *
             </label>
             <input
               type="text"
@@ -149,14 +149,14 @@ export default function ApplyCandidacy() {
               value={form.party}
               onChange={handleChange}
               required
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
             />
           </div>
 
           {/* Profile Image Upload */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <Upload size={16} className="text-blue-400" /> Profile Image *
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <Upload size={16} className="text-blue-600" /> Profile Image *
             </label>
             <div className="flex items-center gap-4">
               {imagePreview ? (
@@ -175,11 +175,11 @@ export default function ApplyCandidacy() {
                   </button>
                 </div>
               ) : (
-                <div className="h-20 w-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-gray-400">
+                <div className="h-20 w-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
                   <Upload size={24} />
                 </div>
               )}
-              <label className="cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-gray-300 hover:bg-white/10 transition">
+              <label className="cursor-pointer bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition">
                 Choose Image
                 <input
                   type="file"
@@ -195,8 +195,8 @@ export default function ApplyCandidacy() {
 
           {/* Slogan */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <Quote size={16} className="text-yellow-400" /> Slogan
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <Quote size={16} className="text-yellow-600" /> Slogan
             </label>
             <input
               type="text"
@@ -204,14 +204,14 @@ export default function ApplyCandidacy() {
               placeholder="A short, catchy phrase"
               value={form.slogan}
               onChange={handleChange}
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
             />
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <FileText size={16} className="text-green-400" /> Bio
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <FileText size={16} className="text-green-600" /> Bio
             </label>
             <textarea
               name="bio"
@@ -219,7 +219,7 @@ export default function ApplyCandidacy() {
               placeholder="Tell voters about yourself…"
               value={form.bio}
               onChange={handleChange}
-              className="w-full bg-[#12121b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 resize-none"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 resize-none"
             />
           </div>
 
@@ -227,7 +227,7 @@ export default function ApplyCandidacy() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-70 transition-all rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
+            className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-70 transition-all rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
           >
             {loading ? (
               <>

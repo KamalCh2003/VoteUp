@@ -1,7 +1,7 @@
-// client/src/components/layout/ContestantNavbar.jsx
+// src/components/layout/ContestantNavbar.jsx
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Vote, LogOut, Menu, X } from 'lucide-react';
+import { Vote, LogOut, Menu, X, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ContestantNavbar() {
@@ -9,23 +9,23 @@ export default function ContestantNavbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
-    `transition hover:text-white ${
-      isActive ? 'text-violet-400 font-semibold' : 'text-zinc-300'
+    `transition hover:text-gray-800 ${
+      isActive ? 'text-violet-600 font-semibold' : 'text-gray-600'
     }`;
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           {/* Logo */}
           <NavLink to="/contestant/dashboard" className="flex items-center gap-3 text-2xl font-bold">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20 text-violet-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
               <Vote size={22} />
             </div>
-            <span>
-              Vote<span className="text-violet-400">Up</span>
+            <span className="text-gray-800">
+              Vote<span className="text-violet-600">Up</span>
             </span>
           </NavLink>
 
@@ -41,12 +41,12 @@ export default function ContestantNavbar() {
 
           {/* Desktop User Section */}
           <div className="hidden items-center gap-4 md:flex">
-            <div className="text-sm text-zinc-300">
+            <div className="text-sm text-gray-600">
               Welcome, {user?.firstName || 'Contestant'}
             </div>
             <button
               onClick={logout}
-              className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-500/20 hover:text-purple-300"
+              className="flex items-center gap-2 rounded-xl border border-gray-300 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
             >
               <LogOut size={16} />
               Logout
@@ -56,7 +56,7 @@ export default function ContestantNavbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="rounded-lg p-2 text-white transition hover:bg-white/10 md:hidden"
+            className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 md:hidden"
             aria-label="Open menu"
           >
             <Menu size={24} />
@@ -68,14 +68,14 @@ export default function ContestantNavbar() {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={closeMobileMenu}
           />
-          <div className="absolute right-0 top-0 h-full w-64 bg-[#0B1020] border-l border-white/10 shadow-2xl animate-in slide-in-from-right">
+          <div className="absolute right-0 top-0 h-full w-64 bg-white border-l border-gray-200 shadow-xl animate-in slide-in-from-right">
             <div className="flex justify-end p-4">
               <button
                 onClick={closeMobileMenu}
-                className="rounded-lg p-2 text-white hover:bg-white/10"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
                 aria-label="Close menu"
               >
                 <X size={24} />
@@ -87,14 +87,14 @@ export default function ContestantNavbar() {
                 className={linkClass}
                 onClick={closeMobileMenu}
               >
-                Profile & Campaign
+                Profile
               </NavLink>
               <NavLink
                 to="/contestant/dashboard"
                 className={linkClass}
                 onClick={closeMobileMenu}
               >
-                <LayoutDashboard size={16} className="inline mr-2" /> Dashboard
+                 Dashboard
               </NavLink>
               <NavLink
                 to="/contestant/analytics"
@@ -110,8 +110,8 @@ export default function ContestantNavbar() {
               >
                 History
               </NavLink>
-              <hr className="border-white/10 my-2" />
-              <div className="text-sm text-zinc-300 px-2">
+              <hr className="border-gray-200 my-2" />
+              <div className="text-sm text-gray-600 px-2">
                 Welcome, {user?.firstName || 'Contestant'}
               </div>
               <button
@@ -119,7 +119,7 @@ export default function ContestantNavbar() {
                   closeMobileMenu();
                   logout();
                 }}
-                className="flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-500/20 hover:text-purple-300"
+                className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
               >
                 <LogOut size={16} />
                 Logout

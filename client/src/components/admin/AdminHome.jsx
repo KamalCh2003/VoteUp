@@ -28,6 +28,7 @@ import AuditLogs from "./AuditLogs";
 import SystemSettings from "./SystemSettings";
 import Leaderboard from "./Leaderboard";
 import VoteVerifier from "./VoteVerifier";
+import NotificationCenter from "./NotificationCenter";
 
 export default function AdminHome() {
   const { logout } = useAuth();
@@ -46,6 +47,7 @@ export default function AdminHome() {
     { id: "finance", label: "Payments", icon: CreditCard },
     { id: "audit", label: "Audit Logs", icon: ShieldCheck },
     { id: "settings", label: "Settings", icon: Settings },
+    { id: "notifications", label: "Notifications", icon: Bell },
   ];
 
   const renderContent = () => {
@@ -68,6 +70,8 @@ export default function AdminHome() {
         return <AuditLogs />;
       case "settings":
         return <SystemSettings />;
+      case "notifications":
+        return <NotificationCenter />;
       default:
         return <DashboardOverview />;
     }
@@ -76,17 +80,17 @@ export default function AdminHome() {
   const activeTitle = menuItems.find((m) => m.id === activeTab)?.label || "Dashboard";
 
   return (
-    <div className="flex min-h-screen bg-[#050816] text-white">
+    <div className="flex min-h-screen bg-gray-100 text-gray-800">
       {/* SIDEBAR */}
-      <aside className="w-[280px] bg-[#0B1020] border-r border-white/10 flex flex-col justify-between px-5 py-6">
+      <aside className="w-[280px] bg-white border-r border-gray-200 flex flex-col justify-between px-5 py-6 shadow-sm">
         <div>
           <div className="flex items-center gap-3 mb-10">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
-              <Vote size={22} />
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-sm">
+              <Vote size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-lg">VoteUp</h2>
-              <p className="text-xs text-gray-400">Admin Panel</p>
+              <h2 className="font-bold text-xl text-gray-800">VoteUp</h2>
+              <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
           </div>
 
@@ -99,15 +103,15 @@ export default function AdminHome() {
                   onClick={() => setActiveTab(item.id)}
                   className={`group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${
                     activeTab === item.id
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      ? "bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon size={18} />
                     <span>{item.label}</span>
                   </div>
-                  <ChevronRight size={16} />
+                  <ChevronRight size={16} className={activeTab === item.id ? "text-purple-500" : "text-gray-400"} />
                 </button>
               );
             })}
@@ -116,7 +120,7 @@ export default function AdminHome() {
 
         <button
           onClick={() => setShowLogoutModal(true)}
-          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-500/10"
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition"
         >
           <LogOut size={18} />
           Logout
@@ -125,23 +129,23 @@ export default function AdminHome() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-hidden">
-        <header className="h-20 border-b border-white/10 bg-[#0B1020]/70 backdrop-blur-xl px-8 flex justify-between items-center">
-          <h1 className="text-xl font-semibold">{activeTitle}</h1>
+        <header className="h-20 border-b border-gray-200 bg-white/90 backdrop-blur-md px-8 flex justify-between items-center shadow-sm">
+          <h1 className="text-xl font-semibold text-gray-800">{activeTitle}</h1>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setShowNotifications(true)}
-              className="relative h-11 w-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center"
+              onClick={() => setActiveTab("notifications")}
+              className="relative h-11 w-11 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition"
             >
-              <Bell size={18} />
+              <Bell size={18} className="text-gray-600" />
               <span className="absolute top-2 right-2 h-2 w-2 bg-purple-500 rounded-full" />
             </button>
-            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-3 py-2">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold">
+            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white">
                 A
               </div>
               <div>
-                <h4 className="text-sm font-semibold">Admin</h4>
-                <p className="text-xs text-gray-400">Administrator</p>
+                <h4 className="text-sm font-semibold text-gray-800">Admin</h4>
+                <p className="text-xs text-gray-500">Administrator</p>
               </div>
             </div>
           </div>
@@ -151,30 +155,6 @@ export default function AdminHome() {
           {renderContent()}
         </div>
       </main>
-
-      {/* NOTIFICATION MODAL */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl p-6">
-            <button
-              onClick={() => setShowNotifications(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition"
-            >
-              <X size={20} />
-            </button>
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Bell size={18} className="text-violet-400" /> Notifications
-            </h2>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <p className="text-sm font-medium text-white">New vote recorded</p>
-                <p className="text-xs text-gray-400 mt-1">A user just voted in "Spring 2025 Election"</p>
-                <p className="text-xs text-gray-500 mt-2">2 minutes ago</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <LogoutConfirmModal
         open={showLogoutModal}

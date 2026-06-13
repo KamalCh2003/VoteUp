@@ -1,84 +1,225 @@
 // client/src/components/layout/Footer.jsx
+
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Mail, Phone, MapPin } from 'lucide-react';
-import { FaFacebook, FaTwitter, FaInstagram, FaGithub } from 'react-icons/fa';
+import { Vote, Mail, Phone, MapPin } from 'lucide-react';
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaLinkedinIn,
+  FaGithub,
+} from 'react-icons/fa';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#070711] border-t border-white/10 mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {/* Brand */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <ShieldCheck className="text-purple-400" size={22} />
+    <footer className="mt-24 border-t border-gray-200 bg-white">
+      {/* Top CTA */}
+      <div className="border-b border-gray-200">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 to-purple-600 p-8 md:p-12">
+            <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-white">
+                  Ready to launch your next election?
+                </h2>
+
+                <p className="mt-3 max-w-2xl text-violet-100">
+                  Create secure elections, manage contestants, track votes
+                  in real-time, and engage your community with confidence.
+                </p>
               </div>
-              <h2 className="text-white text-xl font-bold">VoteChain</h2>
+
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 font-semibold text-violet-700 shadow-lg transition hover:scale-105"
+              >
+                Get Started Free
+              </Link>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Secure and transparent online voting platform designed for trusted elections, contests, and digital voting systems.
+          </div>
+        </div>
+      </div>
+
+      {/* Main Footer */}
+      <div className="mx-auto max-w-7xl px-6 py-16">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
+          {/* Brand */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                <Vote size={22} />
+              </div>
+
+              <h2 className="text-2xl font-bold text-gray-900">
+                Vote<span className="text-violet-600">Up</span>
+              </h2>
+            </div>
+
+            <p className="mt-5 max-w-md text-sm leading-7 text-gray-600">
+              VoteUp is a modern digital voting platform designed for
+              elections, competitions, student unions, awards, organizations,
+              and community engagement with transparency and security.
             </p>
-            <div className="flex items-center gap-3 mt-5">
-              <a href="#" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500 transition-all"><FaFacebook size={16} /></a>
-              <a href="#" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500 transition-all"><FaTwitter size={16} /></a>
-              <a href="#" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500 transition-all"><FaInstagram size={16} /></a>
-              <a href="#" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-500 transition-all"><FaGithub size={16} /></a>
+
+            <div className="mt-6 flex items-center gap-3">
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600"
+              >
+                <FaFacebookF size={14} />
+              </a>
+
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600"
+              >
+                <FaInstagram size={14} />
+              </a>
+
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600"
+              >
+                <FaLinkedinIn size={14} />
+              </a>
+
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-600"
+              >
+                <FaGithub size={14} />
+              </a>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Product */}
           <div>
-            <h3 className="text-white font-semibold mb-5">Quick Links</h3>
+            <h3 className="mb-5 font-semibold text-gray-900">
+              Product
+            </h3>
+
             <ul className="space-y-3 text-sm">
-              <li><Link className="text-gray-400 hover:text-purple-400" to="/">Home</Link></li>
-              <li><Link className="text-gray-400 hover:text-purple-400" to="/login">Login</Link></li>
-              <li><Link className="text-gray-400 hover:text-purple-400" to="/register">Register</Link></li>
-              <li><Link className="text-gray-400 hover:text-purple-400" to="/about">About</Link></li>
+              <li>
+                <Link
+                  to="/elections"
+                  className="text-gray-600 hover:text-violet-600"
+                >
+                  Elections
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/results"
+                  className="text-gray-600 hover:text-violet-600"
+                >
+                  Results
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/register"
+                  className="text-gray-600 hover:text-violet-600"
+                >
+                  Create Election
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/about"
+                  className="text-gray-600 hover:text-violet-600"
+                >
+                  About
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Features */}
           <div>
-            <h3 className="text-white font-semibold mb-5">Features</h3>
-            <ul className="space-y-3 text-sm text-gray-400">
-              <li>Secure Authentication</li>
-              <li>Real-time Voting</li>
+            <h3 className="mb-5 font-semibold text-gray-900">
+              Features
+            </h3>
+
+            <ul className="space-y-3 text-sm text-gray-600">
+              <li>Secure Voting</li>
+              <li>Live Results</li>
               <li>Contest Management</li>
+              <li>Candidate Profiles</li>
               <li>Admin Dashboard</li>
-              <li>Blockchain Transparency</li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-5">Contact</h3>
+            <h3 className="mb-5 font-semibold text-gray-900">
+              Contact
+            </h3>
+
             <div className="space-y-4 text-sm">
-              <div className="flex items-start gap-3">
-                <Mail className="text-purple-400 mt-0.5" size={16} />
-                <p className="text-gray-400">support@votechain.com</p>
+              <div className="flex gap-3">
+                <Mail
+                  size={16}
+                  className="mt-0.5 text-violet-600"
+                />
+                <span className="text-gray-600">
+                  support@voteup.com
+                </span>
               </div>
-              <div className="flex items-start gap-3">
-                <Phone className="text-purple-400 mt-0.5" size={16} />
-                <p className="text-gray-400">+977 9800000000</p>
+
+              <div className="flex gap-3">
+                <Phone
+                  size={16}
+                  className="mt-0.5 text-violet-600"
+                />
+                <span className="text-gray-600">
+                  +977 9800000000
+                </span>
               </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="text-purple-400 mt-0.5" size={16} />
-                <p className="text-gray-400">Kathmandu, Nepal</p>
+
+              <div className="flex gap-3">
+                <MapPin
+                  size={16}
+                  className="mt-0.5 text-violet-600"
+                />
+                <span className="text-gray-600">
+                  Kathmandu, Nepal
+                </span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-gray-500 text-sm text-center sm:text-left">
-            © 2026 VoteChain. All rights reserved.
+      {/* Bottom */}
+      <div className="border-t border-gray-200">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm md:flex-row">
+          <p className="text-gray-500">
+            © 2026 VoteUp. All rights reserved.
           </p>
-          <div className="flex items-center gap-5 text-sm">
-            <Link to="/privacy" className="text-gray-500 hover:text-purple-400">Privacy Policy</Link>
-            <Link to="/terms" className="text-gray-500 hover:text-purple-400">Terms of Service</Link>
+
+          <div className="flex items-center gap-6">
+            <Link
+              to="/privacy"
+              className="text-gray-500 hover:text-violet-600"
+            >
+              Privacy Policy
+            </Link>
+
+            <Link
+              to="/terms"
+              className="text-gray-500 hover:text-violet-600"
+            >
+              Terms of Service
+            </Link>
+
+            <Link
+              to="/cookies"
+              className="text-gray-500 hover:text-violet-600"
+            >
+              Cookies
+            </Link>
           </div>
         </div>
       </div>

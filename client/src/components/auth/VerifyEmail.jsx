@@ -21,9 +21,9 @@ export default function VerifyEmail() {
   const getDashboardPath = (role) => {
     switch (role) {
       case 'VOTER':
-        return '/voter/dashboard';
+        return '/voter/home';
       case 'CONTESTANT':
-        return '/contestant/dashboard';
+        return '/contestant/profile-campaign';
       default:
         return '/dashboard';
     }
@@ -65,16 +65,16 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-3 overflow-hidden">
-      <div className="w-full max-w-[380px] bg-[#070711] border border-white/10 rounded-[28px] p-5 lg:p-6 shadow-2xl text-center">
+    <div className="min-h-screen flex items-center justify-center px-4 py-3 overflow-hidden">
+      <div className="w-full max-w-[380px] bg-white border border-gray-200 rounded-[28px] p-5 lg:p-6 shadow-xl text-center">
         <div className="flex justify-center mb-3">
-          <div className="w-11 h-11 rounded-2xl bg-zinc-800 flex items-center justify-center">
-            <ShieldCheck className="text-green-400" size={22} />
+          <div className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center">
+            <ShieldCheck className="text-green-600" size={22} />
           </div>
         </div>
-        <h2 className="text-white text-xl font-bold mb-2">Check your email</h2>
-        <p className="text-gray-400 text-sm mb-6">
-          We sent a 6‑digit code to <span className="text-purple-400">{email}</span>
+        <h2 className="text-gray-800 text-xl font-bold mb-2">Check your email</h2>
+        <p className="text-gray-500 text-sm mb-6">
+          We sent a 6‑digit code to <span className="text-violet-600">{email}</span>
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -92,7 +92,7 @@ export default function VerifyEmail() {
                   if (e.target.value && i < 5) document.getElementById(`otp-${i + 1}`)?.focus();
                 }}
                 id={`otp-${i}`}
-                className="w-12 h-14 bg-[#12121b] border border-white/10 rounded-xl text-center text-white text-xl font-semibold outline-none focus:border-purple-500"
+                className="w-12 h-14 bg-gray-50 border border-gray-200 rounded-xl text-center text-gray-800 text-xl font-semibold outline-none focus:border-violet-500"
               />
             ))}
           </div>
@@ -102,9 +102,9 @@ export default function VerifyEmail() {
           </Button>
         </form>
 
-        <div className="mt-4 text-sm text-gray-400">
+        <div className="mt-4 text-sm text-gray-500">
           Didn't receive the code?{' '}
-          <button onClick={handleResend} disabled={resending} className="text-purple-400 hover:underline">
+          <button onClick={handleResend} disabled={resending} className="text-violet-600 hover:underline">
             {resending ? 'Sending…' : 'Resend'}
           </button>
         </div>

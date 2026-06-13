@@ -1,3 +1,4 @@
+// src/components/admin/AuditLogs.jsx
 import { useState, useEffect } from 'react';
 import { Search, Filter, ChevronDown, ChevronRight, Shield, Clock } from 'lucide-react';
 import api from '../../services/api';
@@ -16,7 +17,6 @@ export default function AuditLogs() {
       .catch(() => toast.error('Failed to load audit logs'));
   }, []);
 
-  // Extract unique event types for filter
   const eventTypes = ['ALL', ...new Set(logs.map(l => l.event))];
 
   const filtered = logs.filter(log => {
@@ -34,14 +34,13 @@ export default function AuditLogs() {
   };
 
   return (
-    <div>
+    <div className="bg-gray-50 p-6 rounded-xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Shield size={24} className="text-violet-400" />
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <Shield size={24} className="text-violet-600" />
           Audit Logs
         </h2>
         <div className="flex items-center gap-3">
-          {/* Search */}
           <div className="relative w-full sm:w-72">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -49,20 +48,18 @@ export default function AuditLogs() {
               placeholder="Search logs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500/50 transition"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 transition"
             />
           </div>
-
-          {/* Event filter */}
           <div className="relative">
             <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <select
               value={eventFilter}
               onChange={(e) => setEventFilter(e.target.value)}
-              className="pl-10 pr-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white outline-none focus:border-purple-500/50 appearance-none cursor-pointer"
+              className="pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500 appearance-none cursor-pointer"
             >
               {eventTypes.map(type => (
-                <option key={type} value={type} className="bg-[#1c1c32] text-white">
+                <option key={type} value={type} className="bg-white text-gray-800">
                   {type === 'ALL' ? 'All Events' : type}
                 </option>
               ))}
@@ -71,28 +68,27 @@ export default function AuditLogs() {
         </div>
       </div>
 
-      {/* Logs Table */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-white/[0.03]">
-                <th className="text-left py-4 px-6 font-medium text-gray-400">Time</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-400">Event</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-400">User</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-400">Result</th>
-                <th className="text-right py-4 px-6 font-medium text-gray-400">Details</th>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Time</th>
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Event</th>
+                <th className="text-left py-4 px-6 font-medium text-gray-500">User</th>
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Result</th>
+                <th className="text-right py-4 px-6 font-medium text-gray-500">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-gray-100">
               {filtered.map((log) => (
                 <>
                   <tr
                     key={log.id}
-                    className="hover:bg-white/[0.05] transition cursor-pointer"
+                    className="hover:bg-gray-50 transition cursor-pointer"
                     onClick={() => toggleExpand(log.id)}
                   >
-                    <td className="py-4 px-6 text-gray-400 text-xs whitespace-nowrap">
+                    <td className="py-4 px-6 text-gray-500 text-xs whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <Clock size={13} />
                         {new Date(log.createdAt).toLocaleString()}
@@ -100,43 +96,42 @@ export default function AuditLogs() {
                     </td>
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                        log.event.includes('LOGIN') ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' :
-                        log.event.includes('VOTE') ? 'bg-violet-500/20 text-violet-300 border-violet-500/30' :
-                        log.event.includes('PAYMENT') ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
-                        log.event.includes('FAILED') ? 'bg-red-500/20 text-red-300 border-red-500/30' :
-                        'bg-gray-500/20 text-gray-300 border-gray-500/30'
+                        log.event.includes('LOGIN') ? 'bg-cyan-100 text-cyan-700 border-cyan-200' :
+                        log.event.includes('VOTE') ? 'bg-violet-100 text-violet-700 border-violet-200' :
+                        log.event.includes('PAYMENT') ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        log.event.includes('FAILED') ? 'bg-red-100 text-red-700 border-red-200' :
+                        'bg-gray-100 text-gray-700 border-gray-200'
                       }`}>
                         {log.event}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-gray-300">{log.user?.email || 'System'}</td>
+                    <td className="py-4 px-6 text-gray-700">{log.user?.email || 'System'}</td>
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                        log.result === 'OK' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
-                        log.result === 'Blocked' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
-                        'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        log.result === 'OK' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        log.result === 'Blocked' ? 'bg-red-100 text-red-700 border-red-200' :
+                        'bg-amber-100 text-amber-700 border-amber-200'
                       }`}>
                         {log.result}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <button className="text-gray-400 hover:text-white transition">
+                      <button className="text-gray-500 hover:text-gray-700 transition">
                         {expandedId === log.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       </button>
                     </td>
                   </tr>
-                  {/* Expandable row */}
                   {expandedId === log.id && (
-                    <tr key={`${log.id}-details`} className="bg-white/[0.02]">
-                      <td colSpan={5} className="py-4 px-6 text-gray-400 text-xs">
+                    <tr key={`${log.id}-details`} className="bg-gray-50">
+                      <td colSpan={5} className="py-4 px-6 text-gray-600 text-xs">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex gap-2">
                             <span className="text-gray-500">IP:</span>
-                            <span className="text-white">{log.ipAddress || 'N/A'}</span>
+                            <span className="text-gray-800">{log.ipAddress || 'N/A'}</span>
                           </div>
                           <div className="flex gap-2">
                             <span className="text-gray-500">Details:</span>
-                            <span className="text-white">{log.details || 'No additional details'}</span>
+                            <span className="text-gray-800">{log.details || 'No additional details'}</span>
                           </div>
                         </div>
                       </td>

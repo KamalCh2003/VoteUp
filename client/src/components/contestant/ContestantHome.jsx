@@ -19,25 +19,30 @@ export default function ContestantHome() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-violet-400" size={48} />
+        <Loader2 className="animate-spin text-violet-500" size={48} />
       </div>
     );
   }
 
-  // If already a candidate (any status), redirect to the main dashboard
   if (candidacy) {
     return <Navigate to="/contestant/dashboard" replace />;
   }
 
-  // Otherwise, show the "apply for candidacy" prompt
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-white">
       <div className="text-center max-w-md">
-        <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-violet-500/20 flex items-center justify-center">
-          <Shield size={28} className="text-violet-400" />
+        <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-violet-100 flex items-center justify-center">
+          <Shield size={28} className="text-violet-600" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">You are not a candidate yet</h2>
-        <p className="text-gray-400 mb-6">Apply for an election to start your campaign.</p>
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          You are not a candidate yet
+        </h2>
+
+        <p className="text-gray-600 mb-6">
+          Apply for an election to start your campaign.
+        </p>
+
         <Link
           to="/contestant/apply"
           className="inline-flex items-center gap-2 rounded-xl bg-violet-500 px-6 py-3 text-sm font-medium text-white hover:bg-violet-600 transition"

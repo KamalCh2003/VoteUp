@@ -1,3 +1,4 @@
+// src/components/admin/AddCandidateModal.jsx
 import { useState, useEffect } from 'react';
 import { X, UserPlus, Hash, Building2, Vote, Mail, Shield, Loader2, Upload, XCircle } from 'lucide-react';
 import api from '../../services/api';
@@ -33,7 +34,6 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
     }
   }, [open, toast]);
 
-  // Validate candidateNumber uniqueness per election
   useEffect(() => {
     if (!form.electionId || !form.candidateNumber) {
       setCandidateNumberError('');
@@ -121,8 +121,8 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg mx-4 bg-[#0B1020] border border-white/10 rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition text-gray-400 hover:text-white">
+      <div className="relative w-full max-w-lg mx-4 bg-white border border-gray-200 rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700">
           <X size={20} />
         </button>
 
@@ -132,8 +132,8 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
               <UserPlus size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Add New Candidate</h2>
-              <p className="text-sm text-gray-400">Fill in the details to register a contestant.</p>
+              <h2 className="text-xl font-bold text-gray-800">Add New Candidate</h2>
+              <p className="text-sm text-gray-500">Fill in the details to register a contestant.</p>
             </div>
           </div>
         </div>
@@ -141,33 +141,33 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
         <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">First Name *</label>
+              <label className="block text-sm text-gray-700 mb-1">First Name *</label>
               <input
                 type="text"
                 name="firstName"
                 value={form.firstName}
                 onChange={handleChange}
                 required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+                className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
                 placeholder="John"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">Last Name *</label>
+              <label className="block text-sm text-gray-700 mb-1">Last Name *</label>
               <input
                 type="text"
                 name="lastName"
                 value={form.lastName}
                 onChange={handleChange}
                 required
-                className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+                className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
                 placeholder="Doe"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Email Address *</label>
+            <label className="block text-sm text-gray-700 mb-1">Email Address *</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -176,7 +176,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                 value={form.email}
                 onChange={handleChange}
                 required
-                className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+                className="w-full h-11 pl-10 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
                 placeholder="candidate@example.com"
               />
             </div>
@@ -184,7 +184,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">Candidate Number</label>
+              <label className="block text-sm text-gray-700 mb-1">Candidate Number</label>
               <div className="relative">
                 <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -192,18 +192,18 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                   name="candidateNumber"
                   value={form.candidateNumber}
                   onChange={handleChange}
-                  className={`w-full h-11 pl-10 bg-[#12121b] border rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 ${
-                    candidateNumberError ? 'border-red-500' : 'border-white/10'
+                  className={`w-full h-11 pl-10 bg-gray-50 border rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 ${
+                    candidateNumberError ? 'border-red-500' : 'border-gray-200'
                   }`}
                   placeholder="CN-001"
                 />
               </div>
               {candidateNumberError && (
-                <p className="text-xs text-red-400 mt-1">{candidateNumberError}</p>
+                <p className="text-xs text-red-600 mt-1">{candidateNumberError}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">Organization / Party *</label>
+              <label className="block text-sm text-gray-700 mb-1">Organization / Party *</label>
               <div className="relative">
                 <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -212,7 +212,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                   value={form.party}
                   onChange={handleChange}
                   required
-                  className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+                  className="w-full h-11 pl-10 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
                   placeholder="Progressive Alliance"
                 />
               </div>
@@ -221,7 +221,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
 
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">Election *</label>
+              <label className="block text-sm text-gray-700 mb-1">Election *</label>
               <div className="relative">
                 <Vote size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <select
@@ -229,7 +229,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                   value={form.electionId}
                   onChange={handleChange}
                   required
-                  className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white outline-none focus:border-purple-500 appearance-none cursor-pointer"
+                  className="w-full h-11 pl-10 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 appearance-none cursor-pointer"
                 >
                   <option value="">Select election...</option>
                   {elections.map((e) => (
@@ -243,33 +243,32 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Slogan</label>
+            <label className="block text-sm text-gray-700 mb-1">Slogan</label>
             <input
               type="text"
               name="slogan"
               value={form.slogan}
               onChange={handleChange}
-              className="w-full h-11 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
               placeholder="Building a better tomorrow"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Bio</label>
+            <label className="block text-sm text-gray-700 mb-1">Bio</label>
             <textarea
               name="bio"
               rows="3"
               value={form.bio}
               onChange={handleChange}
-              className="w-full bg-[#12121b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500 resize-none"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 resize-none"
               placeholder="Short biography..."
             />
           </div>
 
-          {/* Avatar Upload */}
           <div>
-            <label className="block text-gray-300 text-sm mb-1.5 flex items-center gap-1.5">
-              <Upload size={16} className="text-blue-400" /> Profile Image
+            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
+              <Upload size={16} className="text-violet-500" /> Profile Image
             </label>
             <div className="flex items-center gap-4">
               {avatarPreview ? (
@@ -288,11 +287,11 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                   </button>
                 </div>
               ) : (
-                <div className="h-20 w-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-gray-400">
+                <div className="h-20 w-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
                   <Upload size={24} />
                 </div>
               )}
-              <label className="cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-gray-300 hover:bg-white/10 transition">
+              <label className="cursor-pointer bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition">
                 Choose Image
                 <input
                   type="file"
@@ -309,14 +308,14 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5 transition text-sm"
+              className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !!candidateNumberError}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-70 transition text-white text-sm font-semibold"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 transition text-white text-sm font-semibold"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
               {loading ? 'Adding...' : 'Add Candidate'}

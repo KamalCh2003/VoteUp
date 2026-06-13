@@ -57,8 +57,11 @@ router.get('/finance/revenue-trend', ctrl.getRevenueTrend);
 router.get('/finance/payment-methods', ctrl.getPaymentMethods);
 router.get('/finance/top-voters', ctrl.getTopVoters);
 router.get('/finance/recent-payments', ctrl.getRecentPayments);
+router.get('/votes/trend', ctrl.getVoteTrend);
 
 // Audit logs
 router.get('/audit-logs', ctrl.getAuditLogs);
+router.get('/notifications', ctrl.getNotifications);
+router.patch('/notifications/:id/read', ctrl.markNotificationRead);
 
 module.exports = router;

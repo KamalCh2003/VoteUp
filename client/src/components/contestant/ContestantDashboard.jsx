@@ -124,7 +124,7 @@ export default function ContestantDashboard() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="animate-spin text-violet-400" size={48} />
+        <Loader2 className="animate-spin text-violet-600" size={48} />
       </div>
     );
   }
@@ -132,8 +132,8 @@ export default function ContestantDashboard() {
   if (!election) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-400">You are not part of any election yet.</p>
-        <Link to="/contestant/apply" className="text-violet-400 hover:underline mt-2 inline-block">
+        <p className="text-gray-500">You are not part of any election yet.</p>
+        <Link to="/contestant/apply" className="text-violet-600 hover:underline mt-2 inline-block">
           Apply now
         </Link>
       </div>
@@ -147,20 +147,15 @@ export default function ContestantDashboard() {
 
   return (
     <div className="min-h-screen">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl" />
-      </div>
-
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate('/contestant/profile-campaign')}
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition"
           >
             <ArrowLeft size={18} /> Back to Profile
           </button>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
             <RefreshCw size={12} className={competitors.length ? 'animate-spin' : ''} />
             <span>Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}</span>
           </div>
@@ -169,9 +164,9 @@ export default function ContestantDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT COLUMN: Election details + candidate cards */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{election.title}</h1>
-              <p className="text-gray-400 text-sm md:text-base">{election.description}</p>
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">{election.title}</h1>
+              <p className="text-gray-600 text-sm md:text-base">{election.description}</p>
               <div className="flex flex-wrap gap-4 mt-4 text-xs text-gray-500">
                 <div className="flex items-center gap-1">
                   <Calendar size={14} /> {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}
@@ -186,19 +181,19 @@ export default function ContestantDashboard() {
               <div className="flex flex-wrap gap-2 mt-3">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                   election.status === 'ACTIVE'
-                    ? 'bg-emerald-500/20 text-emerald-300'
+                    ? 'bg-emerald-100 text-emerald-700'
                     : election.status === 'UPCOMING'
-                    ? 'bg-amber-500/20 text-amber-300'
-                    : 'bg-gray-500/20 text-gray-300'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-gray-100 text-gray-700'
                 }`}>
-                  {election.status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                  {election.status === 'ACTIVE' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                   {election.status}
                 </span>
                 {pricePerVote === 0 && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-300">Free</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Free</span>
                 )}
                 {isActive && timeLeft && timeLeft.total > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-cyan-400 bg-white/5 rounded-full px-3 py-1">
+                  <div className="flex items-center gap-1 text-xs text-cyan-600 bg-gray-100 rounded-full px-3 py-1">
                     <Clock size={12} />
                     <span className="font-mono">{formatCountdown(timeLeft)}</span>
                   </div>
@@ -207,7 +202,7 @@ export default function ContestantDashboard() {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Candidates</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Candidates</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {election.candidates?.map((candidate) => {
                   const share = ((candidate.votesReceived || 0) / totalVotes) * 100;
@@ -215,11 +210,10 @@ export default function ContestantDashboard() {
                   return (
                     <div
                       key={candidate.id}
-                      className="group rounded-xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-4 transition hover:border-violet-500/30 hover:bg-white/[0.05] w-full aspect-square flex flex-col"
+                      className="group rounded-xl bg-white border border-gray-200 shadow-sm p-4 transition hover:shadow-md hover:border-violet-300 w-full aspect-square flex flex-col"
                     >
-                      {/* Circular avatar */}
                       <div className="flex justify-center mb-2">
-                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg overflow-hidden">
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden">
                           {candidate.avatarUrl ? (
                             <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                           ) : (
@@ -227,10 +221,10 @@ export default function ContestantDashboard() {
                           )}
                         </div>
                       </div>
-                      <h3 className="font-semibold text-white text-center truncate">
+                      <h3 className="font-semibold text-gray-800 text-center truncate">
                         {candidate.user?.firstName} {candidate.user?.lastName}
                       </h3>
-                      <p className="text-gray-400 text-xs text-center truncate">
+                      <p className="text-gray-500 text-xs text-center truncate">
                         {candidate.party || 'Independent'}
                       </p>
                       {candidate.slogan && (
@@ -240,11 +234,11 @@ export default function ContestantDashboard() {
                       )}
                       {isActive && (
                         <div className="mt-auto pt-2">
-                          <div className="flex justify-between text-xs text-gray-400 mb-0.5">
+                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
                             <span>Vote share</span>
                             <span>{share.toFixed(1)}%</span>
                           </div>
-                          <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
+                          <div className="h-1 w-full rounded-full bg-gray-200 overflow-hidden">
                             <div
                               className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
                               style={{ width: `${share}%` }}
@@ -254,16 +248,16 @@ export default function ContestantDashboard() {
                       )}
                       {!isActive && election.status === 'ENDED' && (
                         <div className="mt-auto text-center text-sm">
-                          <span className="text-white font-medium">{share.toFixed(1)}%</span>
+                          <span className="text-gray-800 font-medium">{share.toFixed(1)}%</span>
                           <span className="text-gray-500 text-xs"> vote share</span>
                         </div>
                       )}
                       <div className="mt-3 flex justify-center">
                         <button
                           onClick={() => handleShareCandidate(candidate)}
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition"
+                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition"
                         >
-                          {isCopied ? <CheckCircle size={14} className="text-emerald-400" /> : <Share2 size={14} />}
+                          {isCopied ? <CheckCircle size={14} className="text-emerald-500" /> : <Share2 size={14} />}
                           <span>{isCopied ? 'Copied!' : 'Share'}</span>
                         </button>
                       </div>
@@ -277,22 +271,22 @@ export default function ContestantDashboard() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Leaderboard (unchanged) */}
+          {/* RIGHT COLUMN: Leaderboard */}
           <div className="space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5">
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  <Trophy size={20} className="text-yellow-400" /> Leaderboard
+                <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Trophy size={20} className="text-yellow-600" /> Leaderboard
                 </h2>
                 {currentUserRank > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
                     <UserCheck size={12} />
-                    Your rank: <span className="text-white font-bold">#{currentUserRank}</span>
+                    Your rank: <span className="text-gray-800 font-bold">#{currentUserRank}</span>
                   </div>
                 )}
               </div>
 
-              {/* Desktop ranking – no vote count, only share % */}
+              {/* Desktop ranking */}
               <div className="hidden sm:block">
                 <div className="space-y-3">
                   {competitors.map((comp, idx) => {
@@ -302,12 +296,12 @@ export default function ContestantDashboard() {
                       <div
                         key={comp.id}
                         className={`flex items-center justify-between p-3 rounded-xl transition ${
-                          isYou ? 'bg-violet-500/10 border border-violet-500/30' : 'hover:bg-white/5'
+                          isYou ? 'bg-violet-50 border border-violet-200' : 'hover:bg-gray-50'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 text-center font-bold text-white">
-                            {idx === 0 && <Trophy size={14} className="inline text-yellow-400 mr-1" />}
+                          <div className="w-8 text-center font-bold text-gray-700">
+                            {idx === 0 && <Trophy size={14} className="inline text-yellow-500 mr-1" />}
                             #{idx + 1}
                           </div>
                           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
@@ -318,14 +312,14 @@ export default function ContestantDashboard() {
                             )}
                           </div>
                           <div>
-                            <span className={`text-sm font-medium ${isYou ? 'text-violet-400' : 'text-white'}`}>
+                            <span className={`text-sm font-medium ${isYou ? 'text-violet-700' : 'text-gray-800'}`}>
                               {comp.user.firstName} {comp.user.lastName} {isYou && '(You)'}
                             </span>
-                            <p className="text-xs text-gray-400">{comp.party || 'Independent'}</p>
+                            <p className="text-xs text-gray-500">{comp.party || 'Independent'}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-semibold text-white">{share.toFixed(1)}%</div>
+                          <div className="text-sm font-semibold text-gray-800">{share.toFixed(1)}%</div>
                         </div>
                       </div>
                     );
@@ -341,25 +335,25 @@ export default function ContestantDashboard() {
                   return (
                     <div
                       key={comp.id}
-                      className={`rounded-xl border border-white/10 p-3 ${isYou ? 'bg-violet-500/10 border-violet-500/30' : 'bg-white/[0.02]'}`}
+                      className={`rounded-xl border border-gray-200 p-3 ${isYou ? 'bg-violet-50 border-violet-200' : 'bg-white shadow-sm'}`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="font-bold text-white text-sm">#{idx + 1}</div>
+                          <div className="font-bold text-gray-700 text-sm">#{idx + 1}</div>
                           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                             {comp.avatarUrl ? <img src={comp.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : `${comp.user.firstName[0]}${comp.user.lastName[0]}`}
                           </div>
                           <div>
-                            <span className={`text-sm font-medium ${isYou ? 'text-violet-400' : 'text-white'}`}>
+                            <span className={`text-sm font-medium ${isYou ? 'text-violet-700' : 'text-gray-800'}`}>
                               {comp.user.firstName} {comp.user.lastName}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-semibold text-white">{share.toFixed(1)}%</div>
+                          <div className="text-sm font-semibold text-gray-800">{share.toFixed(1)}%</div>
                         </div>
                       </div>
-                      {isYou && <p className="text-xs text-violet-400 mt-1">You</p>}
+                      {isYou && <p className="text-xs text-violet-600 mt-1">You</p>}
                     </div>
                   );
                 })}
@@ -370,16 +364,16 @@ export default function ContestantDashboard() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-5">
-              <h3 className="text-lg font-semibold text-white mb-3">Campaign Snapshot</h3>
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Campaign Snapshot</h3>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-white">{election.totalVotes?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-gray-400">Total Votes</p>
+                  <p className="text-2xl font-bold text-gray-800">{election.totalVotes?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-gray-500">Total Votes</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">{election.candidates?.length || 0}</p>
-                  <p className="text-xs text-gray-400">Contestants</p>
+                  <p className="text-2xl font-bold text-gray-800">{election.candidates?.length || 0}</p>
+                  <p className="text-xs text-gray-500">Contestants</p>
                 </div>
               </div>
             </div>

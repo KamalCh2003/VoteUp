@@ -1,0 +1,138 @@
+// src/components/admin/NotificationCenter.jsx
+import { useState, useEffect } from 'react';
+import { Bell, CheckCircle, XCircle, Clock, Loader2, Eye, Inbox } from 'lucide-react';
+import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
+
+export default function NotificationCenter() {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const toast = useToast();
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/admin/notifications', { params: { page, limit: 20 } });
+      setNotifications(res.data.notifications || []);
+      setTotal(res.data.total || 0);
+    } catch (err) {
+      toast.error('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [page]);
+
+  const markAsRead = async (id) => {
+    try {
+      await api.patch(`/admin/notifications/${id}/read`);
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    } catch (err) {
+      toast.error('Failed to update notification');
+    }
+  };
+
+  const getIcon = (type) => {
+    switch (type) {
+      case 'VOTE_CONFIRMED':
+        return <CheckCircle size={18} className="text-emerald-600" />;
+      case 'PAYMENT_SUCCESS':
+        return <CheckCircle size={18} className="text-green-600" />;
+      case 'PAYMENT_FAILED':
+        return <XCircle size={18} className="text-red-600" />;
+      default:
+        return <Bell size={18} className="text-violet-600" />;
+    }
+  };
+
+  const totalPages = Math.ceil(total / 20);
+
+  return (
+    <div className="bg-gray-50 p-6 rounded-xl">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <Bell size={24} className="text-violet-600" />
+          Notifications
+        </h2>
+        <span className="text-xs text-gray-500">
+          {notifications.filter(n => !n.isRead).length} unread
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin text-violet-600" size={40} />
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">
+          <Inbox size={48} className="mx-auto mb-4 opacity-30" />
+          <p>No notifications yet.</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className={`rounded-2xl bg-white border border-gray-200 shadow-sm p-5 transition hover:bg-gray-50 ${
+                  !notif.isRead ? 'border-l-4 border-l-violet-500' : ''
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="mt-1">{getIcon(notif.type)}</div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-semibold text-gray-800">{notif.title}</h3>
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <Clock size={12} />
+                        {new Date(notif.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm mt-1">{notif.message}</p>
+                    {!notif.isRead && (
+                      <button
+                        onClick={() => markAsRead(notif.id)}
+                        className="mt-3 text-xs text-violet-600 hover:text-violet-700 transition flex items-center gap-1"
+                      >
+                        <Eye size={12} /> Mark as read
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-8">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 transition"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-sm text-gray-600">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 transition"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

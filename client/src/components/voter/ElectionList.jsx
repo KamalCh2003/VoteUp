@@ -1,7 +1,8 @@
 // src/components/voter/ElectionList.jsx
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, Vote, Clock, ArrowRight, Activity } from 'lucide-react';
+import { Clock, Activity } from 'lucide-react';
 import api from '../../services/api';
 
 export default function ElectionList() {
@@ -13,37 +14,57 @@ export default function ElectionList() {
 
   const getTimeRemaining = (endDate) => {
     const total = Date.parse(endDate) - Date.now();
-    if (total <= 0) return { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
-    const seconds = Math.floor((total / 1000) % 60);
-    const minutes = Math.floor((total / 1000 / 60) % 60);
-    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-    const days = Math.floor(total / (1000 * 60 * 60 * 24));
-    return { total, days, hours, minutes, seconds };
+
+    if (total <= 0) {
+      return {
+        total: 0,
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+      };
+    }
+
+    return {
+      total,
+      days: Math.floor(total / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((total / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((total / (1000 * 60)) % 60),
+      seconds: Math.floor((total / 1000) % 60),
+    };
   };
 
   const formatCountdown = (time) => {
     if (time.total <= 0) return 'Ended';
+
     const parts = [];
+
     if (time.days > 0) parts.push(`${time.days}d`);
     if (time.hours > 0) parts.push(`${time.hours}h`);
     if (time.minutes > 0) parts.push(`${time.minutes}m`);
+
     parts.push(`${time.seconds}s`);
+
     return parts.join(' ');
   };
 
   useEffect(() => {
     Promise.all([
       api.get('/elections', { params: { status: 'ACTIVE' } }),
-      api.get('/elections', { params: { status: 'UPCOMING' } })
+      api.get('/elections', { params: { status: 'UPCOMING' } }),
     ])
       .then(([activeRes, upcomingRes]) => {
         const active = activeRes.data.elections || [];
+
         setActiveElections(active);
         setUpcomingElections(upcomingRes.data.elections || []);
+
         const initial = {};
-        active.forEach(e => {
-          initial[e.id] = getTimeRemaining(e.endDate);
+
+        active.forEach((election) => {
+          initial[election.id] = getTimeRemaining(election.endDate);
         });
+
         setTimeLeft(initial);
       })
       .catch(() => {})
@@ -52,20 +73,25 @@ export default function ElectionList() {
 
   useEffect(() => {
     if (!activeElections.length) return;
+
     const interval = setInterval(() => {
       const updated = {};
-      activeElections.forEach(e => {
-        updated[e.id] = getTimeRemaining(e.endDate);
+
+      activeElections.forEach((election) => {
+        updated[election.id] = getTimeRemaining(election.endDate);
       });
+
       setTimeLeft(updated);
     }, 1000);
+
     return () => clearInterval(interval);
   }, [activeElections]);
 
   const filterElections = (elections) =>
-    elections.filter(e =>
-      e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.category?.toLowerCase().includes(search.toLowerCase())
+    elections.filter(
+      (e) =>
+        e.title.toLowerCase().includes(search.toLowerCase()) ||
+        e.category?.toLowerCase().includes(search.toLowerCase())
     );
 
   const filteredActive = filterElections(activeElections);
@@ -79,30 +105,47 @@ export default function ElectionList() {
 
   const ElectionCard = ({ election, index, type }) => {
     const color = colors[index % colors.length];
-    const remaining = timeLeft[election.id] || { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+    const remaining = timeLeft[election.id] || {
+      total: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+    };
 
     return (
       <Link
         to={`/elections/${election.id}`}
-        className="group relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 transition-all duration-300 hover:-translate-y-1 hover:bg-white/10 cursor-pointer block"
+        className="group relative block rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
       >
-        <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition duration-500 rounded-2xl bg-gradient-to-br ${color} blur-xl`} />
+        <div
+          className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${color} opacity-0 blur-xl transition duration-500 group-hover:opacity-5`}
+        />
+
         <div className="relative z-10">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-white font-semibold text-lg">{election.title}</h3>
-              <p className="text-sm text-zinc-400 mt-1">
-                {election.category} • Ends {new Date(election.endDate).toLocaleDateString()}
+              <h3 className="text-lg font-semibold text-gray-900">
+                {election.title}
+              </h3>
+
+              <p className="mt-1 text-sm text-gray-500">
+                {election.category} • Ends{' '}
+                {new Date(election.endDate).toLocaleDateString()}
               </p>
             </div>
-            <div className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs border ${
-              type === 'active'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-            }`}>
+
+            <div
+              className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
+                type === 'active'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                  : 'border-amber-200 bg-amber-50 text-amber-600'
+              }`}
+            >
               {type === 'active' ? (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                   Live
                 </>
               ) : (
@@ -113,11 +156,15 @@ export default function ElectionList() {
               )}
             </div>
           </div>
+
           {type === 'active' && (
-            <div className="mt-3 flex items-center gap-1.5 text-xs text-cyan-400">
+            <div className="mt-4 flex items-center gap-2 text-xs text-cyan-600">
               <Clock size={14} />
+
               <span className="font-mono">
-                {remaining.total > 0 ? formatCountdown(remaining) : 'Ended'}
+                {remaining.total > 0
+                  ? formatCountdown(remaining)
+                  : 'Ended'}
               </span>
             </div>
           )}
@@ -129,60 +176,88 @@ export default function ElectionList() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-400" />
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-violet-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen overflow-hidden text-white">
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-violet-700/20 blur-[140px]" />
-        <div className="absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[140px]" />
+    <div className="min-h-screen text-gray-900">
+      {/* Background Effects */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-violet-200/40 blur-[140px]" />
+
+        <div className="absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-cyan-200/40 blur-[140px]" />
+
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-gray-50 to-white" />
       </div>
 
       <div className="mx-auto max-w-6xl px-6 pt-10">
-        <div className="relative mb-8">
+        {/* Search */}
+        <div className="mb-10">
           <input
             type="text"
             placeholder="Search elections..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-violet-500/50"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
           />
         </div>
 
+        {/* Active Elections */}
         {filteredActive.length > 0 && (
-          <div className="mb-12">
-            <div className="flex items-center gap-2 text-violet-400 mb-4">
+          <section className="mb-14">
+            <div className="mb-5 flex items-center gap-2 text-violet-600">
               <Activity size={22} />
-              <h2 className="text-2xl font-bold text-white">Live Elections</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Live Elections
+              </h2>
             </div>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredActive.map((election, idx) => (
-                <ElectionCard key={election.id} election={election} index={idx} type="active" />
+                <ElectionCard
+                  key={election.id}
+                  election={election}
+                  index={idx}
+                  type="active"
+                />
               ))}
             </div>
-          </div>
+          </section>
         )}
 
+        {/* Upcoming Elections */}
         {filteredUpcoming.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 text-amber-400 mb-4">
+          <section>
+            <div className="mb-5 flex items-center gap-2 text-amber-600">
               <Clock size={22} />
-              <h2 className="text-2xl font-bold text-white">Upcoming Elections</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Upcoming Elections
+              </h2>
             </div>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredUpcoming.map((election, idx) => (
-                <ElectionCard key={election.id} election={election} index={idx} type="upcoming" />
+                <ElectionCard
+                  key={election.id}
+                  election={election}
+                  index={idx}
+                  type="upcoming"
+                />
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {filteredActive.length === 0 && filteredUpcoming.length === 0 && (
-          <p className="text-zinc-400 text-center mt-10">No elections found.</p>
-        )}
+        {filteredActive.length === 0 &&
+          filteredUpcoming.length === 0 && (
+            <div className="py-20 text-center">
+              <p className="text-gray-500">
+                No elections found.
+              </p>
+            </div>
+          )}
       </div>
     </div>
   );

@@ -20,7 +20,6 @@ exports.apply = async (req, res) => {
     if (!election || election.status !== 'UPCOMING')
       return res.status(400).json({ error: 'Election not open for applications' });
 
-    // Check if the user already has a PENDING or APPROVED candidate for this same election
     const existingInSameElection = await prisma.candidate.findFirst({
       where: { userId, electionId, status: { in: ['PENDING', 'APPROVED'] } },
     });
@@ -28,7 +27,6 @@ exports.apply = async (req, res) => {
       return res.status(400).json({ error: 'You already have an active or pending application for this election' });
     }
 
-    // Count only APPROVED candidates for limit
     const approvedCount = await prisma.candidate.count({
       where: { electionId, status: 'APPROVED' },
     });
@@ -49,6 +47,22 @@ exports.apply = async (req, res) => {
         status: 'PENDING',
       },
     });
+
+    // 🔔 Notify all admins about the new application
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    if (admins.length > 0) {
+      const candidateName = `${req.user.firstName} ${req.user.lastName}`;
+      const electionTitle = election.title;
+      await prisma.notification.createMany({
+        data: admins.map(admin => ({
+          userId: admin.id,
+          title: 'New Candidate Application',
+          message: `${candidateName} has applied for "${electionTitle}". Please review.`,
+          type: 'CANDIDACY_UPDATE',
+          link: '/admin/candidates',
+        })),
+      });
+    }
 
     res.status(201).json({ candidate });
   } catch (err) {
@@ -132,13 +146,11 @@ exports.getDetailedAnalytics = async (req, res) => {
     const totalVotes = candidate.election.totalVotes || 0;
     const share = totalVotes > 0 ? ((candidate.votesReceived / totalVotes) * 100).toFixed(1) : 0;
 
-    // Date range: from election.startDate to min(election.endDate, now)
     let startDate = new Date(candidate.election.startDate);
     let endDate = new Date(candidate.election.endDate);
     const now = new Date();
     if (endDate > now) endDate = now;
 
-    // Create a map of all days in the range
     const dateMap = new Map();
     let current = new Date(startDate);
     current.setHours(0, 0, 0, 0);
@@ -150,7 +162,6 @@ exports.getDetailedAnalytics = async (req, res) => {
       current.setDate(current.getDate() + 1);
     }
 
-    // Fetch votes and aggregate daily
     const votes = await prisma.vote.findMany({
       where: {
         candidateId: candidate.id,
@@ -161,16 +172,13 @@ exports.getDetailedAnalytics = async (req, res) => {
     votes.forEach(v => {
       const dateStr = v.votedAt.toISOString().split('T')[0];
       const qty = v.quantity || 1;
-      if (dateMap.has(dateStr)) {
-        dateMap.set(dateStr, dateMap.get(dateStr) + qty);
-      }
+      if (dateMap.has(dateStr)) dateMap.set(dateStr, dateMap.get(dateStr) + qty);
     });
 
     const voteTrend = Array.from(dateMap.entries())
       .map(([date, votes]) => ({ date, votes }))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Top supporters (aggregated by user name)
     const supporterVotes = await prisma.vote.findMany({
       where: { candidateId: candidate.id },
       include: { user: { select: { firstName: true, lastName: true } } },
@@ -186,7 +194,6 @@ exports.getDetailedAnalytics = async (req, res) => {
       .sort((a, b) => b.votes - a.votes)
       .slice(0, 10);
 
-    // Recent activity (individual votes)
     const recentVotes = await prisma.vote.findMany({
       where: { candidateId: candidate.id },
       include: { user: { select: { firstName: true, lastName: true } } },
@@ -213,8 +220,6 @@ exports.getDetailedAnalytics = async (req, res) => {
   }
 };
 
-
-// candidate.controller.js (add this function anywhere)
 exports.getHistory = async (req, res) => {
   try {
     const userId = req.user.id;

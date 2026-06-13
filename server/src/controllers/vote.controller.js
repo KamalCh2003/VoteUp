@@ -11,7 +11,6 @@ exports.castVote = async (req, res) => {
       return res.status(400).json({ error: 'Election is not active or has ended' });
     }
 
-    // Check voter limit (maxVoters)
     if (election.maxVoters && election.maxVoters > 0) {
       const totalVotesAfter = election.totalVotes + quantity;
       if (totalVotesAfter > election.maxVoters) {
@@ -19,7 +18,7 @@ exports.castVote = async (req, res) => {
       }
     }
 
-    // Free election
+    // ────────────── FREE ELECTION ──────────────
     if (election.votePrice === 0) {
       const existing = await prisma.vote.findFirst({
         where: { userId, electionId },
@@ -30,7 +29,7 @@ exports.castVote = async (req, res) => {
       const finalQuantity = 1;
       const candidate = await prisma.candidate.findFirst({
         where: { id: candidateId, electionId, status: 'APPROVED' },
-        include: { user: true }, // ✅ include user for notification
+        include: { user: true },
       });
       if (!candidate) return res.status(400).json({ error: 'Invalid candidate' });
 
@@ -56,6 +55,7 @@ exports.castVote = async (req, res) => {
         });
       });
 
+      // Notify the voter
       await prisma.notification.create({
         data: {
           userId,
@@ -64,6 +64,22 @@ exports.castVote = async (req, res) => {
           type: 'VOTE_CONFIRMED',
         },
       });
+
+      // 🟢 Notify all admins about the vote
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      if (admins.length > 0) {
+        const candidateName = `${candidate.user.firstName} ${candidate.user.lastName}`;
+        await prisma.notification.createMany({
+          data: admins.map(admin => ({
+            userId: admin.id,
+            title: 'New Vote Cast',
+            message: `A vote was cast for "${candidateName}" in election "${election.title}".`,
+            type: 'VOTE_CONFIRMED',
+            link: '/admin/votes',
+          })),
+        });
+      }
+
       await prisma.auditLog.create({
         data: {
           userId,
@@ -77,7 +93,7 @@ exports.castVote = async (req, res) => {
       return res.status(201).json({ message: 'Vote cast successfully', txHash });
     }
 
-    // Paid election: require a valid, completed payment
+    // ────────────── PAID ELECTION ──────────────
     if (!paymentId) {
       return res.status(400).json({ error: 'Payment required for paid election' });
     }
@@ -87,7 +103,6 @@ exports.castVote = async (req, res) => {
     if (!payment) {
       return res.status(400).json({ error: 'Invalid or unpaid payment' });
     }
-    // Prevent using the same payment more than once
     const existingVoteForPayment = await prisma.vote.findFirst({
       where: { paymentId },
     });
@@ -105,7 +120,7 @@ exports.castVote = async (req, res) => {
     }
     const candidate = await prisma.candidate.findFirst({
       where: { id: candidateId, electionId, status: 'APPROVED' },
-      include: { user: true }, // ✅ include user for notification
+      include: { user: true },
     });
     if (!candidate) return res.status(400).json({ error: 'Invalid candidate' });
 
@@ -132,6 +147,7 @@ exports.castVote = async (req, res) => {
       });
     });
 
+    // Notify the voter
     await prisma.notification.create({
       data: {
         userId,
@@ -140,6 +156,22 @@ exports.castVote = async (req, res) => {
         type: 'VOTE_CONFIRMED',
       },
     });
+
+    // 🟢 Notify all admins about the vote
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    if (admins.length > 0) {
+      const candidateName = `${candidate.user.firstName} ${candidate.user.lastName}`;
+      await prisma.notification.createMany({
+        data: admins.map(admin => ({
+          userId: admin.id,
+          title: 'New Vote Cast',
+          message: `${quantity} vote(s) were cast for "${candidateName}" in election "${election.title}".`,
+          type: 'VOTE_CONFIRMED',
+          link: '/admin/votes',
+        })),
+      });
+    }
+
     await prisma.auditLog.create({
       data: {
         userId,
