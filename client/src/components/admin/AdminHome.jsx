@@ -29,9 +29,7 @@ export default function NotificationCenter() {
   const markAllAsRead = async () => {
     try {
       await api.patch('/admin/notifications/mark-all-read');
-      // After marking all as read, refresh the list and update unread count (if needed)
       fetchNotifications();
-      // Optionally refetch unread count in the header – but it will be updated on next poll
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }
@@ -39,7 +37,7 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     fetchNotifications();
-    markAllAsRead(); // call once when component mounts
+    markAllAsRead();
   }, [page]);
 
   const markAsRead = async (id, e) => {

@@ -270,7 +270,7 @@ export default function ElectionDetails() {
             return (
               <div
                 key={candidate.id}
-                className="group relative flex flex-col items-center text-center rounded-2xl border border-gray-200 bg-gray-100 p-6 transition-all duration-300 hover:shadow-md hover:border-violet-300 hover:-translate-y-1"
+                className="group relative flex flex-col items-center text-center rounded-2xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-md hover:border-violet-300 hover:-translate-y-1"
               >
                 <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-4 overflow-hidden">
                   {candidate.avatarUrl ? (
