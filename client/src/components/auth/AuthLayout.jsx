@@ -46,9 +46,9 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
   }, []);
 
   return (
-    <div className="h-screen w-full flex flex-col items-center justify-start overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col items-center justify-start">
       {/* Back button – leftmost side */}
-      <div className="w-full px-6 pt-6 pb-0">
+      <div className="w-full max-w-6xl mx-auto px-6 pt-6">
         <Link
           to={backTo}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white shadow-sm transition"
@@ -57,8 +57,8 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
         </Link>
       </div>
 
-      {/* Main card – centered with mx-auto */}
-      <div className="flex-1 w-full max-w-6xl mx-auto px-6 overflow-auto py-4">
+      {/* Main card – centered with natural scrolling */}
+      <div className="w-full max-w-6xl mx-auto px-6 py-4">
         <div className="w-full bg-white rounded-3xl shadow-xl overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-2">
             {/* LEFT COLUMN – hidden on mobile, visible on lg+ */}

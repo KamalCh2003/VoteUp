@@ -80,7 +80,7 @@ export default function AdminHome() {
   const activeTitle = menuItems.find((m) => m.id === activeTab)?.label || "Dashboard";
 
   return (
-    <div className="flex min-h-screen bg-gray-100 text-gray-800">
+    <div className="flex min-h-screen bg-gray-50 text-gray-800">
       {/* SIDEBAR */}
       <aside className="w-[280px] bg-white border-r border-gray-200 flex flex-col justify-between px-5 py-6 shadow-sm">
         <div>

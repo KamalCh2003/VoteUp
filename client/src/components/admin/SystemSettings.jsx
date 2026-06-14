@@ -1,4 +1,3 @@
-// src/components/admin/SystemSettings.jsx
 import { useState, useEffect } from 'react';
 import {
   Settings, Shield, Mail, Bell, CreditCard, Globe,
@@ -7,86 +6,93 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
+const DEFAULT_SETTINGS = {
+  // General
+  siteName: 'VoteChain',
+  siteDescription: 'Secure online voting platform',
+  defaultLanguage: 'en',
+  timezone: 'Asia/Kathmandu',
+  maintenanceMode: false,
+
+  // Security
+  twoFactorRequired: false,
+  maxLoginAttempts: 5,
+  sessionTimeout: 30,
+  passwordMinLength: 8,
+  requireEmailVerification: true,
+
+  // Payment
+  candidacyFee: 5000,
+  premiumVoterFee: 1500,
+  currency: 'NPR',
+  enablePayments: true,
+  paymentGateway: 'esewa',
+
+  // Email
+  smtpHost: 'smtp.sendgrid.net',
+  smtpPort: 587,
+  smtpUser: '',
+  smtpPass: '',
+  fromEmail: 'noreply@votechain.com',
+
+  // Notifications
+  notifyNewElection: true,
+  notifyVoteConfirmed: true,
+  notifyCandidateApplied: true,
+  notifyPaymentReceived: true,
+};
+
 export default function SystemSettings() {
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const toast = useToast();
 
-  const [settings, setSettings] = useState({
-    // General
-    siteName: 'VoteChain',
-    siteDescription: 'Secure online voting platform',
-    defaultLanguage: 'en',
-    timezone: 'Asia/Kathmandu',
-    maintenanceMode: false,
-
-    // Security
-    twoFactorRequired: false,
-    maxLoginAttempts: 5,
-    sessionTimeout: 30,
-    passwordMinLength: 8,
-    requireEmailVerification: true,
-
-    // Payment (now in NPR)
-    candidacyFee: 5000,
-    premiumVoterFee: 1500,
-    currency: 'NPR',
-    enablePayments: true,
-    paymentGateway: 'esewa',
-
-    // Email
-    smtpHost: 'smtp.sendgrid.net',
-    smtpPort: 587,
-    smtpUser: '',
-    smtpPass: '',
-    fromEmail: 'noreply@votechain.com',
-
-    // Notifications
-    notifyNewElection: true,
-    notifyVoteConfirmed: true,
-    notifyCandidateApplied: true,
-    notifyPaymentReceived: true,
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
   useEffect(() => {
-    setLoading(true);
-    api.get('/admin/settings')
-      .then(({ data }) => {
-        if (data.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetchSettings();
   }, []);
 
-  const handleChange = (section, field, value) => {
-    setSettings((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleToggle = (field) => {
-    setSettings((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
-  };
-
-  const saveSection = async (fields) => {
+  const fetchSettings = async () => {
     try {
-      const updatedFields = {};
-      fields.forEach((f) => {
-        updatedFields[f] = settings[f];
-      });
-      await api.put('/admin/settings', updatedFields);
-      toast.success('Settings saved successfully');
+      const { data } = await api.get('/admin/settings');
+      setSettings(prev => ({ ...prev, ...data.settings }));
     } catch (err) {
-      toast.error('Failed to save settings');
+      toast.error('Failed to load settings');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-violet-600" size={32} /></div>;
+  const handleChange = (field, value) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleToggle = (field) => {
+    setSettings(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const saveSection = async (fields) => {
+    setSaving(true);
+    try {
+      const payload = {};
+      fields.forEach(f => { payload[f] = settings[f]; });
+      await api.put('/admin/settings', payload);
+      toast.success('Settings saved successfully');
+    } catch (err) {
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="animate-spin text-violet-600" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 p-6 rounded-xl">
@@ -110,7 +116,7 @@ export default function SystemSettings() {
               <input
                 type="text"
                 value={settings.siteName}
-                onChange={(e) => handleChange('general', 'siteName', e.target.value)}
+                onChange={(e) => handleChange('siteName', e.target.value)}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
             </div>
@@ -119,7 +125,7 @@ export default function SystemSettings() {
               <textarea
                 rows="2"
                 value={settings.siteDescription}
-                onChange={(e) => handleChange('general', 'siteDescription', e.target.value)}
+                onChange={(e) => handleChange('siteDescription', e.target.value)}
                 className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-violet-500 resize-none"
               />
             </div>
@@ -128,7 +134,7 @@ export default function SystemSettings() {
                 <label className="block text-sm text-gray-700 mb-1">Language</label>
                 <select
                   value={settings.defaultLanguage}
-                  onChange={(e) => handleChange('general', 'defaultLanguage', e.target.value)}
+                  onChange={(e) => handleChange('defaultLanguage', e.target.value)}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 >
                   <option value="en">English</option>
@@ -139,7 +145,7 @@ export default function SystemSettings() {
                 <label className="block text-sm text-gray-700 mb-1">Timezone</label>
                 <select
                   value={settings.timezone}
-                  onChange={(e) => handleChange('general', 'timezone', e.target.value)}
+                  onChange={(e) => handleChange('timezone', e.target.value)}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 >
                   <option value="Asia/Kathmandu">Asia/Kathmandu (GMT+5:45)</option>
@@ -158,9 +164,11 @@ export default function SystemSettings() {
             </div>
             <button
               onClick={() => saveSection(['siteName', 'siteDescription', 'defaultLanguage', 'timezone', 'maintenanceMode'])}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition"
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-medium transition"
             >
-              <Save size={16} /> Save General
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save General
             </button>
           </div>
         </div>
@@ -186,7 +194,7 @@ export default function SystemSettings() {
               <input
                 type="number"
                 value={settings.maxLoginAttempts}
-                onChange={(e) => handleChange('security', 'maxLoginAttempts', parseInt(e.target.value))}
+                onChange={(e) => handleChange('maxLoginAttempts', parseInt(e.target.value))}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
             </div>
@@ -195,7 +203,7 @@ export default function SystemSettings() {
               <input
                 type="number"
                 value={settings.sessionTimeout}
-                onChange={(e) => handleChange('security', 'sessionTimeout', parseInt(e.target.value))}
+                onChange={(e) => handleChange('sessionTimeout', parseInt(e.target.value))}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
             </div>
@@ -204,7 +212,7 @@ export default function SystemSettings() {
               <input
                 type="number"
                 value={settings.passwordMinLength}
-                onChange={(e) => handleChange('security', 'passwordMinLength', parseInt(e.target.value))}
+                onChange={(e) => handleChange('passwordMinLength', parseInt(e.target.value))}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
             </div>
@@ -219,9 +227,11 @@ export default function SystemSettings() {
             </div>
             <button
               onClick={() => saveSection(['twoFactorRequired', 'maxLoginAttempts', 'sessionTimeout', 'passwordMinLength', 'requireEmailVerification'])}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition"
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-medium transition"
             >
-              <Save size={16} /> Save Security
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save Security
             </button>
           </div>
         </div>
@@ -239,7 +249,7 @@ export default function SystemSettings() {
                 <input
                   type="number"
                   value={settings.candidacyFee}
-                  onChange={(e) => handleChange('payment', 'candidacyFee', parseFloat(e.target.value))}
+                  onChange={(e) => handleChange('candidacyFee', parseFloat(e.target.value))}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 />
               </div>
@@ -248,7 +258,7 @@ export default function SystemSettings() {
                 <input
                   type="number"
                   value={settings.premiumVoterFee}
-                  onChange={(e) => handleChange('payment', 'premiumVoterFee', parseFloat(e.target.value))}
+                  onChange={(e) => handleChange('premiumVoterFee', parseFloat(e.target.value))}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 />
               </div>
@@ -258,7 +268,7 @@ export default function SystemSettings() {
                 <label className="block text-sm text-gray-700 mb-1">Currency</label>
                 <select
                   value={settings.currency}
-                  onChange={(e) => handleChange('payment', 'currency', e.target.value)}
+                  onChange={(e) => handleChange('currency', e.target.value)}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 >
                   <option value="NPR">NPR (रू)</option>
@@ -269,7 +279,7 @@ export default function SystemSettings() {
                 <label className="block text-sm text-gray-700 mb-1">Gateway</label>
                 <select
                   value={settings.paymentGateway}
-                  onChange={(e) => handleChange('payment', 'paymentGateway', e.target.value)}
+                  onChange={(e) => handleChange('paymentGateway', e.target.value)}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 >
                   <option value="esewa">eSewa</option>
@@ -290,9 +300,11 @@ export default function SystemSettings() {
             </div>
             <button
               onClick={() => saveSection(['candidacyFee', 'premiumVoterFee', 'currency', 'paymentGateway', 'enablePayments'])}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition"
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-medium transition"
             >
-              <Save size={16} /> Save Payment
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save Payment
             </button>
           </div>
         </div>
@@ -310,7 +322,7 @@ export default function SystemSettings() {
                 <input
                   type="text"
                   value={settings.smtpHost}
-                  onChange={(e) => handleChange('email', 'smtpHost', e.target.value)}
+                  onChange={(e) => handleChange('smtpHost', e.target.value)}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 />
               </div>
@@ -319,7 +331,7 @@ export default function SystemSettings() {
                 <input
                   type="number"
                   value={settings.smtpPort}
-                  onChange={(e) => handleChange('email', 'smtpPort', parseInt(e.target.value))}
+                  onChange={(e) => handleChange('smtpPort', parseInt(e.target.value))}
                   className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
                 />
               </div>
@@ -329,7 +341,7 @@ export default function SystemSettings() {
               <input
                 type="text"
                 value={settings.smtpUser}
-                onChange={(e) => handleChange('email', 'smtpUser', e.target.value)}
+                onChange={(e) => handleChange('smtpUser', e.target.value)}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
             </div>
@@ -338,7 +350,7 @@ export default function SystemSettings() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={settings.smtpPass}
-                onChange={(e) => handleChange('email', 'smtpPass', e.target.value)}
+                onChange={(e) => handleChange('smtpPass', e.target.value)}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
               <button
@@ -354,15 +366,17 @@ export default function SystemSettings() {
               <input
                 type="email"
                 value={settings.fromEmail}
-                onChange={(e) => handleChange('email', 'fromEmail', e.target.value)}
+                onChange={(e) => handleChange('fromEmail', e.target.value)}
                 className="w-full h-11 bg-white border border-gray-300 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500"
               />
             </div>
             <button
               onClick={() => saveSection(['smtpHost', 'smtpPort', 'smtpUser', 'smtpPass', 'fromEmail'])}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition"
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-medium transition"
             >
-              <Save size={16} /> Save Email
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save Email
             </button>
           </div>
         </div>
@@ -413,9 +427,11 @@ export default function SystemSettings() {
           </div>
           <button
             onClick={() => saveSection(['notifyNewElection', 'notifyVoteConfirmed', 'notifyCandidateApplied', 'notifyPaymentReceived'])}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition mt-4"
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-medium transition mt-4"
           >
-            <Save size={16} /> Save Notifications
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            Save Notifications
           </button>
         </div>
       </div>

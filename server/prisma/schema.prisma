@@ -200,3 +200,10 @@ model VerificationToken {
   used      Boolean   @default(false)
   createdAt DateTime  @default(now())
 }
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json     // stores any type (string, number, boolean, object)
+  updatedAt DateTime @updatedAt
+}
