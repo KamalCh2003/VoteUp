@@ -20,7 +20,6 @@ export default function RegisterForm() {
     firstName: '',
     lastName: '',
     email: '',
-    contestantId: '',
     password: '',
     confirmPassword: '',
   });
@@ -34,9 +33,6 @@ export default function RegisterForm() {
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
       return toast.error('Please fill all required fields');
     }
-    if (role === 'CONTESTANT' && !formData.contestantId) {
-      return toast.error('Contestant ID is required');
-    }
     if (formData.password.length < 8) return toast.error('Password must be at least 8 characters');
     if (formData.password !== formData.confirmPassword) return toast.error('Passwords do not match');
 
@@ -49,9 +45,6 @@ export default function RegisterForm() {
         password: formData.password,
         role,
       };
-      if (role === 'CONTESTANT') {
-        payload.contestantId = formData.contestantId;
-      }
       const response = await register(payload);
       if (response.devOtp) {
         toast.success(`OTP (dev): ${response.devOtp}`);
@@ -121,18 +114,6 @@ export default function RegisterForm() {
           required
           className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
         />
-
-        {role === 'CONTESTANT' && (
-          <input
-            type="text"
-            name="contestantId"
-            placeholder="Contestant ID"
-            value={formData.contestantId}
-            onChange={handleChange}
-            required
-            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-          />
-        )}
 
         <div className="relative">
           <input

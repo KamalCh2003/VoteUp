@@ -132,10 +132,12 @@ export default function ContestantDashboard() {
   if (!election) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500">You are not part of any election yet.</p>
-        <Link to="/contestant/apply" className="text-violet-600 hover:underline mt-2 inline-block">
-          Apply now
-        </Link>
+        <p className="text-2xl sm:text-3xl font-bold text-gray-900">You are not part of any election yet.</p>
+        <button className="mt-4 px-4 py-2 bg-violet-600 rounded hover:bg-violet-700 transition">
+          <Link to="/contestant/apply" className="text-white hover:underline inline-block">
+            Apply now
+          </Link>
+        </button>
       </div>
     );
   }
@@ -148,13 +150,7 @@ export default function ContestantDashboard() {
   return (
     <div className="min-h-screen">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => navigate('/contestant/profile-campaign')}
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition"
-          >
-            <ArrowLeft size={18} /> Back to Profile
-          </button>
+        <div className="flex justify-end mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <RefreshCw size={12} className={competitors.length ? 'animate-spin' : ''} />
             <span>Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : '--:--:--'}</span>
@@ -210,56 +206,58 @@ export default function ContestantDashboard() {
                   return (
                     <div
                       key={candidate.id}
-                      className="group rounded-xl bg-white border border-gray-200 shadow-sm p-4 transition hover:shadow-md hover:border-violet-300 w-full aspect-square flex flex-col"
+                      className="group rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden transition hover:shadow-md hover:border-violet-300 w-full aspect-square flex flex-col items-center p-4"
                     >
-                      <div className="flex justify-center mb-2">
-                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden">
-                          {candidate.avatarUrl ? (
-                            <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                          ) : (
-                            `${candidate.user?.firstName?.[0]}${candidate.user?.lastName?.[0]}`
-                          )}
-                        </div>
+                      {/* Fixed square avatar (96x96) */}
+                      <div className="h-24 w-24 flex-shrink-0 bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-md overflow-hidden rounded-lg">
+                        {candidate.avatarUrl ? (
+                          <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          `${candidate.user?.firstName?.[0]}${candidate.user?.lastName?.[0]}`
+                        )}
                       </div>
-                      <h3 className="font-semibold text-gray-800 text-center truncate">
-                        {candidate.user?.firstName} {candidate.user?.lastName}
-                      </h3>
-                      <p className="text-gray-500 text-xs text-center truncate">
-                        {candidate.party || 'Independent'}
-                      </p>
-                      {candidate.slogan && (
-                        <p className="text-gray-500 text-xs mt-1 text-center line-clamp-2 italic">
-                          "{candidate.slogan}"
+                      {/* Text content */}
+                      <div className="flex-1 flex flex-col justify-center items-center text-center mt-3 w-full">
+                        <h3 className="font-semibold text-gray-800 truncate w-full">
+                          {candidate.user?.firstName} {candidate.user?.lastName}
+                        </h3>
+                        <p className="text-gray-500 text-xs truncate w-full">
+                          {candidate.party || 'Independent'}
                         </p>
-                      )}
-                      {isActive && (
-                        <div className="mt-auto pt-2">
-                          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
-                            <span>Vote share</span>
-                            <span>{share.toFixed(1)}%</span>
+                        {candidate.slogan && (
+                          <p className="text-gray-500 text-xs mt-1 line-clamp-2 italic text-center">
+                            "{candidate.slogan}"
+                          </p>
+                        )}
+                        {isActive && (
+                          <div className="mt-2 w-full">
+                            <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+                              <span>Vote share</span>
+                              <span>{share.toFixed(1)}%</span>
+                            </div>
+                            <div className="h-1 w-full rounded-full bg-gray-200 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
+                                style={{ width: `${share}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1 w-full rounded-full bg-gray-200 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
-                              style={{ width: `${share}%` }}
-                            />
+                        )}
+                        {!isActive && election.status === 'ENDED' && (
+                          <div className="mt-2 text-center text-sm">
+                            <span className="text-gray-800 font-medium">{share.toFixed(1)}%</span>
+                            <span className="text-gray-500 text-xs"> vote share</span>
                           </div>
+                        )}
+                        <div className="mt-2 w-full">
+                          <button
+                            onClick={() => handleShareCandidate(candidate)}
+                            className="flex items-center justify-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition w-full"
+                          >
+                            {isCopied ? <CheckCircle size={14} className="text-emerald-500" /> : <Share2 size={14} />}
+                            <span>{isCopied ? 'Copied!' : 'Share'}</span>
+                          </button>
                         </div>
-                      )}
-                      {!isActive && election.status === 'ENDED' && (
-                        <div className="mt-auto text-center text-sm">
-                          <span className="text-gray-800 font-medium">{share.toFixed(1)}%</span>
-                          <span className="text-gray-500 text-xs"> vote share</span>
-                        </div>
-                      )}
-                      <div className="mt-3 flex justify-center">
-                        <button
-                          onClick={() => handleShareCandidate(candidate)}
-                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition"
-                        >
-                          {isCopied ? <CheckCircle size={14} className="text-emerald-500" /> : <Share2 size={14} />}
-                          <span>{isCopied ? 'Copied!' : 'Share'}</span>
-                        </button>
                       </div>
                     </div>
                   );
@@ -271,7 +269,7 @@ export default function ContestantDashboard() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Leaderboard */}
+          {/* RIGHT COLUMN: Leaderboard (unchanged) */}
           <div className="space-y-6">
             <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
@@ -299,7 +297,7 @@ export default function ContestantDashboard() {
                           isYou ? 'bg-violet-50 border border-violet-200' : 'hover:bg-gray-50'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center  gap-3">
                           <div className="w-8 text-center font-bold text-gray-700">
                             {idx === 0 && <Trophy size={14} className="inline text-yellow-500 mr-1" />}
                             #{idx + 1}

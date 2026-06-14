@@ -9,6 +9,7 @@ import Landing from './components/common/Landing';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import VerifyEmail from './components/auth/VerifyEmail';
 import About from './components/voter/About';
 import VoterHome from './components/voter/VoterHome';
@@ -72,6 +73,7 @@ function AppContent() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
             <Route path="/about" element={<About />} />

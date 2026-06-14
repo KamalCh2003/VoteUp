@@ -1,29 +1,89 @@
+// src/components/auth/ForgotPassword.jsx
 import { useState } from 'react';
 import { forgotPassword } from '../../services/authService';
 import { useToast } from '../../context/ToastContext';
-import Button from '../common/Button';
+import { Loader2 } from 'lucide-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const toast = useToast();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSend = async (isResend = false) => {
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return;
+    }
+    setLoading(true);
     try {
       await forgotPassword(email);
-      toast.success('If email exists, reset link sent');
+      if (!emailSent) setEmailSent(true);
+      toast.success(isResend ? 'Reset link resent successfully!' : 'Reset link sent successfully!');
     } catch (err) {
       toast.error('Error sending email');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleSend(false);
+  };
+
+  const handleResend = () => {
+    handleSend(true);
+  };
+
   return (
-    <div className="max-w-sm mx-auto mt-8">
-      <h2 className="text-lg font-semibold mb-4">Reset Password</h2>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Button type="submit" className="w-full">Send Reset Link</Button>
-      </form>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-6">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
+        <p className="text-gray-500 text-sm mb-6">
+          Enter your email address and we’ll send you a link to reset your password.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 text-sm mb-1">Email Address</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            />
+          </div>
+
+          {!emailSent ? (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" size={16} /> : 'Send Reset Link'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={loading}
+              className="w-full h-11 border border-violet-600 text-violet-600 hover:bg-violet-50 disabled:opacity-70 rounded-full font-semibold text-sm flex items-center justify-center gap-2 transition"
+            >
+              {loading ? <Loader2 className="animate-spin" size={16} /> : 'Resend Reset Link'}
+            </button>
+          )}
+        </form>
+
+        <p className="text-center text-gray-500 text-xs mt-6">
+          Remember your password?{' '}
+          <a href="/login" className="text-violet-600 hover:underline">
+            Sign in
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
