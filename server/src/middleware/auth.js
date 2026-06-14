@@ -1,3 +1,4 @@
+// middleware/auth.js
 const { verifyToken } = require('../config/jwt');
 const prisma = require('../config/database');
 
@@ -11,7 +12,15 @@ const authenticate = async (req, res, next) => {
     const decoded = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true, isActive: true, isVerified: true },
+      select: { 
+        id: true, 
+        email: true, 
+        firstName: true,   // ✅ added
+        lastName: true,    // ✅ added
+        role: true, 
+        isActive: true, 
+        isVerified: true 
+      },
     });
     if (!user || !user.isActive) {
       return res.status(401).json({ error: 'User not found or deactivated' });
@@ -29,7 +38,10 @@ const optionalAuth = async (req, res, next) => {
     try {
       const token = authHeader.split(' ')[1];
       const decoded = verifyToken(token);
-      const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
+      });
       if (user) req.user = user;
     } catch (e) { /* ignore */ }
   }

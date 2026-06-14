@@ -84,19 +84,19 @@ export default function PaymentCallback() {
   }, [searchParams, navigate, toast]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0B1020] to-black flex items-center justify-center p-4">
-      <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-8 text-center max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="bg-white border border-white rounded-2xl p-8 text-center max-w-md w-full">
         {status === 'processing' && (
           <>
             <Loader2 className="animate-spin text-violet-400 w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Processing Payment</h2>
+            <h2 className="text-xl font-semibold text-black mb-2">Processing Payment</h2>
             <p className="text-gray-400">{message}</p>
           </>
         )}
         {status === 'success' && (
           <>
             <CheckCircle className="text-emerald-400 w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Payment Successful</h2>
+            <h2 className="text-xl font-semibold text-black mb-2">Payment Successful</h2>
             <p className="text-gray-400">{message}</p>
             <p className="text-xs text-gray-500 mt-4">Redirecting...</p>
           </>
@@ -104,7 +104,7 @@ export default function PaymentCallback() {
         {status === 'error' && (
           <>
             <XCircle className="text-red-400 w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Payment Failed</h2>
+            <h2 className="text-xl font-semibold text-black mb-2">Payment Failed</h2>
             <p className="text-gray-400">{message}</p>
             <p className="text-xs text-gray-500 mt-4">Redirecting...</p>
           </>

@@ -1,8 +1,30 @@
 // src/components/admin/NotificationCenter.jsx
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, CheckCircle, XCircle, Clock, Loader2, Eye, Inbox } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+
+// Helper: format date as "Today", "Yesterday", "Last week", "1 month ago", etc.
+const formatRelativeDate = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = now.getMonth() - date.getMonth() + 12 * (now.getFullYear() - date.getFullYear());
+  const diffYears = now.getFullYear() - date.getFullYear();
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffWeeks === 1) return 'Last week';
+  if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
+  if (diffMonths === 1) return '1 month ago';
+  if (diffMonths < 12) return `${diffMonths} months ago`;
+  if (diffYears === 1) return '1 year ago';
+  return `${diffYears} years ago`;
+};
 
 export default function NotificationCenter() {
   const [notifications, setNotifications] = useState([]);
@@ -24,11 +46,22 @@ export default function NotificationCenter() {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      await api.patch('/admin/notifications/mark-all-read');
+      fetchNotifications();
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
+    markAllAsRead();
   }, [page]);
 
-  const markAsRead = async (id) => {
+  const markAsRead = async (id, e) => {
+    e.stopPropagation();
     try {
       await api.patch(`/admin/notifications/${id}/read`);
       setNotifications(prev =>
@@ -56,14 +89,10 @@ export default function NotificationCenter() {
 
   return (
     <div className="bg-gray-50 p-6 rounded-xl">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Bell size={24} className="text-violet-600" />
-          Notifications
-        </h2>
-        <span className="text-xs text-gray-500">
+      <div className="flex items-center justify-end text-xs text-gray-500  mb-6">
+  
           {notifications.filter(n => !n.isRead).length} unread
-        </span>
+        
       </div>
 
       {loading ? (
@@ -79,11 +108,13 @@ export default function NotificationCenter() {
         <>
           <div className="space-y-3">
             {notifications.map((notif) => (
-              <div
+              <Link
                 key={notif.id}
-                className={`rounded-2xl bg-white border border-gray-200 shadow-sm p-5 transition hover:bg-gray-50 ${
+                to={notif.link || '#'}
+                className={`block rounded-2xl bg-white border border-gray-200 shadow-sm p-5 transition hover:bg-gray-50 ${
                   !notif.isRead ? 'border-l-4 border-l-violet-500' : ''
                 }`}
+                title={new Date(notif.createdAt).toLocaleString()}
               >
                 <div className="flex items-start gap-4">
                   <div className="mt-1">{getIcon(notif.type)}</div>
@@ -92,13 +123,13 @@ export default function NotificationCenter() {
                       <h3 className="font-semibold text-gray-800">{notif.title}</h3>
                       <span className="text-xs text-gray-500 flex items-center gap-1">
                         <Clock size={12} />
-                        {new Date(notif.createdAt).toLocaleString()}
+                        {formatRelativeDate(notif.createdAt)}
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm mt-1">{notif.message}</p>
                     {!notif.isRead && (
                       <button
-                        onClick={() => markAsRead(notif.id)}
+                        onClick={(e) => markAsRead(notif.id, e)}
                         className="mt-3 text-xs text-violet-600 hover:text-violet-700 transition flex items-center gap-1"
                       >
                         <Eye size={12} /> Mark as read
@@ -106,7 +137,7 @@ export default function NotificationCenter() {
                     )}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

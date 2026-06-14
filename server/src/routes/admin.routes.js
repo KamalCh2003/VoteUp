@@ -41,6 +41,7 @@ router.get('/users', ctrl.getUsers);
 router.delete('/users/:id', ctrl.deleteUser);
 router.patch('/users/:id/role', ctrl.updateUserRole);
 
+
 // Candidate management
 router.post('/create-candidate', upload.single('avatar'), ctrl.createCandidateFromAdmin);
 router.put('/candidates/:id', upload.single('avatar'), ctrl.updateCandidate);        
@@ -62,6 +63,7 @@ router.get('/votes/trend', ctrl.getVoteTrend);
 // Audit logs
 router.get('/audit-logs', ctrl.getAuditLogs);
 router.get('/notifications', ctrl.getNotifications);
-router.patch('/notifications/:id/read', ctrl.markNotificationRead);
+router.get('/notifications/unread-count', ctrl.getUnreadCount);
+router.patch('/notifications/mark-all-read', ctrl.markAllNotificationsRead);
 
 module.exports = router;

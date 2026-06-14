@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const bcrypt = require("bcrypt");
+const emailService = require('../services/email.service');
 
 const getColorForType = (type) => {
   switch (type) {
@@ -11,9 +12,6 @@ const getColorForType = (type) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// STATS
-// ─────────────────────────────────────────────────────────────
 exports.getStats = async (req, res) => {
   try {
     const [
@@ -48,9 +46,6 @@ exports.getStats = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// VOTE TREND (week/month/year)
-// ─────────────────────────────────────────────────────────────
 exports.getVoteTrend = async (req, res) => {
   try {
     const { range = "week" } = req.query;
@@ -114,9 +109,6 @@ exports.getVoteTrend = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// USER MANAGEMENT
-// ─────────────────────────────────────────────────────────────
 exports.getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -181,9 +173,6 @@ exports.updateUserRole = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// CANDIDATE MANAGEMENT
-// ─────────────────────────────────────────────────────────────
 exports.getAllCandidates = async (req, res) => {
   try {
     const candidates = await prisma.candidate.findMany({
@@ -250,8 +239,6 @@ exports.approveCandidate = async (req, res) => {
       data: { status },
       include: { user: true, election: true },
     });
-
-    // Notify the candidate about approval/rejection
     await prisma.notification.create({
       data: {
         userId: candidate.user.id,
@@ -263,7 +250,6 @@ exports.approveCandidate = async (req, res) => {
         link: '/contestant/profile-campaign',
       },
     });
-
     res.json({ candidate });
   } catch (err) {
     console.error("Approve candidate error:", err);
@@ -282,8 +268,9 @@ exports.createCandidateFromAdmin = async (req, res) => {
       return res.status(400).json({ error: `Candidate limit reached for this election (max ${election.maxCandidates})` });
     }
     let user = await prisma.user.findUnique({ where: { email } });
+    let tempPassword = null;
     if (!user) {
-      const tempPassword = Math.random().toString(36).slice(-8);
+      tempPassword = Math.random().toString(36).slice(-8);
       const passwordHash = await bcrypt.hash(tempPassword, 12);
       user = await prisma.user.create({
         data: {
@@ -292,9 +279,15 @@ exports.createCandidateFromAdmin = async (req, res) => {
           nationalId: `ADMIN-${Date.now()}`,
         },
       });
+      await emailService.sendWelcomePassword(email, firstName, lastName, tempPassword);
     } else {
       const existingCandidate = await prisma.candidate.findUnique({ where: { userId: user.id } });
       if (existingCandidate) return res.status(400).json({ error: "User already has a candidate profile" });
+      await emailService.sendEmail({
+        to: email,
+        subject: 'You have been added as a candidate',
+        html: `<p>Hello ${firstName}, you have been added as a candidate in VoteUp. Please log in to manage your campaign.</p>`,
+      });
     }
     const candidate = await prisma.candidate.create({
       data: { userId: user.id, electionId, candidateNumber, party, slogan, bio, avatarUrl },
@@ -306,9 +299,6 @@ exports.createCandidateFromAdmin = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// FINANCE, AUDIT, ETC.
-// ─────────────────────────────────────────────────────────────
 exports.getAuditLogs = async (req, res) => {
   try {
     const logs = await prisma.auditLog.findMany({
@@ -446,9 +436,6 @@ exports.deleteVote = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// NOTIFICATIONS
-// ─────────────────────────────────────────────────────────────
 exports.getNotifications = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
@@ -468,16 +455,28 @@ exports.getNotifications = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 };
-
-exports.markNotificationRead = async (req, res) => {
+exports.getUnreadCount = async (req, res) => {
   try {
-    const { id } = req.params;
-    await prisma.notification.update({
-      where: { id, userId: req.user.id },
+    const count = await prisma.notification.count({
+      where: { userId: req.user.id, isRead: false },
+    });
+    res.json({ count });
+  } catch (err) {
+    console.error('Get unread count error:', err);
+    res.status(500).json({ error: 'Failed to fetch unread count' });
+  }
+};
+
+// 🔔 NEW: Mark all notifications as read for the current admin
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user.id, isRead: false },
       data: { isRead: true },
     });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to mark notification as read' });
+    console.error('Mark all read error:', err);
+    res.status(500).json({ error: 'Failed to mark notifications as read' });
   }
 };

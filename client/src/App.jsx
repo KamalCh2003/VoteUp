@@ -21,10 +21,8 @@ import VoterProfile from './components/voter/VoterProfile';
 import AnalyticsView from './components/contestant/AnalyticsView';
 import ApplyCandidacy from './components/contestant/ApplyCandidacy';
 import CandidacyPayment from './components/payment/CandidacyPayment';
-import PremiumPlans from './components/payment/PremiumPlans';
 import PaymentSuccess from './components/payment/PaymentSuccess';
 import PaymentFailed from './components/payment/PaymentFailed';
-import Wallet from './components/payment/Wallet';
 import NotFound from './components/common/NotFound';
 import AdminHome from './components/admin/AdminHome';
 import ElectionDetails from './components/elections/ElectionDetails';
@@ -102,10 +100,8 @@ function AppContent() {
 
             {/* Payment routes */}
             <Route path="/payment/candidacy" element={<Protected><CandidacyPayment /></Protected>} />
-            <Route path="/payment/plans" element={<Protected><PremiumPlans /></Protected>} />
             <Route path="/payment/success" element={<Protected><PaymentSuccess /></Protected>} />
             <Route path="/payment/failed" element={<Protected><PaymentFailed /></Protected>} />
-            <Route path="/payment/wallet" element={<Protected><Wallet /></Protected>} />
             <Route path="/voter/buy-votes" element={<Protected roles={['VOTER']}><VotePaymentPage /></Protected>} />
             <Route path="/payment/callback" element={<PaymentCallback />} />
 

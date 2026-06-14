@@ -48,16 +48,17 @@ exports.apply = async (req, res) => {
       },
     });
 
-    // 🔔 Notify all admins about the new application
+    // 🔔 Notify all admins about the new application (include name + email)
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
     if (admins.length > 0) {
       const candidateName = `${req.user.firstName} ${req.user.lastName}`;
+      const candidateEmail = req.user.email;
       const electionTitle = election.title;
       await prisma.notification.createMany({
         data: admins.map(admin => ({
           userId: admin.id,
           title: 'New Candidate Application',
-          message: `${candidateName} has applied for "${electionTitle}". Please review.`,
+          message: `${candidateName} (${candidateEmail}) has applied for "${electionTitle}". Please review.`,
           type: 'CANDIDACY_UPDATE',
           link: '/admin/candidates',
         })),

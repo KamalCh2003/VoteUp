@@ -6,7 +6,7 @@ import api from '../../services/api';
 
 export default function AuthLayout({ children, title, subtitle, backTo = '/' }) {
   const [topCandidates, setTopCandidates] = useState([]);
-  const [stats, setStats] = useState({ totalVotesToday: 0 });
+  const [electionTotalVotes, setElectionTotalVotes] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
@@ -16,9 +16,12 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
         const active = data.elections?.[0];
         if (active) {
           const electionRes = await api.get(`/elections/${active.id}`);
-          const candidates = electionRes.data.election.candidates || [];
+          const election = electionRes.data.election;
+          const candidates = election.candidates || [];
           const sorted = [...candidates].sort((a, b) => b.votesReceived - a.votesReceived).slice(0, 3);
           setTopCandidates(sorted);
+          setElectionTotalVotes(election.totalVotes || 0);
+
           const end = new Date(active.endDate);
           const updateCountdown = () => {
             const diff = end - new Date();
@@ -35,14 +38,16 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
           return () => clearInterval(interval);
         } else {
           setTopCandidates([]);
+          setElectionTotalVotes(0);
           setTimeLeft('No active election');
         }
       } catch (err) {
         console.error(err);
+        setElectionTotalVotes(0);
+        setTimeLeft('No active election');
       }
     };
     fetchLeaderboard();
-    setStats({ totalVotesToday: 48200 });
   }, []);
 
   return (
@@ -92,15 +97,15 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white/60 rounded-xl p-3 text-center">
-                    <p className="text-2xl font-bold text-gray-800">{stats.totalVotesToday.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">Votes cast today</p>
+                    <p className="text-2xl font-bold text-gray-800">{electionTotalVotes.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Total votes in this election</p>
                   </div>
                   <div className="bg-white/60 rounded-xl p-3 text-center">
                     <div className="flex items-center justify-center gap-1 text-emerald-600">
                       <Clock size={14} />
                       <p className="text-lg font-bold text-gray-800">{timeLeft || '--:--:--'}</p>
                     </div>
-                    <p className="text-xs text-gray-500">until next event</p>
+                    <p className="text-xs text-gray-500">Time remaining</p>
                   </div>
                 </div>
 

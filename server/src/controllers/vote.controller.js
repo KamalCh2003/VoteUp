@@ -187,6 +187,24 @@ exports.castVote = async (req, res) => {
     console.error('Cast vote error:', err);
     res.status(500).json({ error: 'Failed to cast vote' });
   }
+  
+// Notify all admins
+const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+if (admins.length > 0) {
+  const candidateName = `${candidate.user.firstName} ${candidate.user.lastName}`;
+  const electionTitle = election.title;
+  await prisma.notification.createMany({
+    data: admins.map(admin => ({
+      userId: admin.id,
+      title: 'New Vote Cast',
+      message: `A vote was cast for "${candidateName}" in election "${electionTitle}".`,
+      type: 'VOTE_CONFIRMED',
+      link: '/admin/votes',
+    })),
+  });
+}
+
+
 };
 
 exports.getResults = async (req, res) => {

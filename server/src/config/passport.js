@@ -19,13 +19,11 @@ passport.use(
         const email = profile.emails[0].value;
         console.log(`🔍 Google login attempt for: ${email}`);
 
-        // Find existing user by email
         let user = await prisma.user.findUnique({
           where: { email },
         });
 
         if (!user) {
-          // Create new user with Google data
           console.log(`📝 Creating new user for: ${email}`);
           user = await prisma.user.create({
             data: {
@@ -34,13 +32,12 @@ passport.use(
               lastName: profile.name.familyName || 'User',
               nationalId: `GOOGLE-${profile.id}`,
               passwordHash: await bcrypt.hash(Math.random().toString(36), 10),
-              isVerified: true, // Google emails are pre-verified
+              isVerified: true,
               role: 'VOTER',
-              wallet: { create: { balance: 0 } },
+              // wallet removed
             },
           });
         } else if (!user.isVerified) {
-          // Auto-verify existing unverified account
           console.log(`✅ Auto-verifying existing user: ${email}`);
           user = await prisma.user.update({
             where: { id: user.id },

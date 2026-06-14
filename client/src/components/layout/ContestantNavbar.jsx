@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Vote, LogOut, Menu, X, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import LogoutConfirmModal from '../common/LogoutConfirmModal';
 
 export default function ContestantNavbar() {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const linkClass = ({ isActive }) =>
     `transition hover:text-gray-800 ${
@@ -14,6 +16,11 @@ export default function ContestantNavbar() {
     }`;
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const handleLogout = () => {
+    logout();
+    setShowLogoutModal(false);
+  };
 
   return (
     <>
@@ -45,7 +52,7 @@ export default function ContestantNavbar() {
               Welcome, {user?.firstName || 'Contestant'}
             </div>
             <button
-              onClick={logout}
+              onClick={() => setShowLogoutModal(true)}
               className="flex items-center gap-2 rounded-xl border border-gray-300 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
             >
               <LogOut size={16} />
@@ -94,7 +101,7 @@ export default function ContestantNavbar() {
                 className={linkClass}
                 onClick={closeMobileMenu}
               >
-                 Dashboard
+                Dashboard
               </NavLink>
               <NavLink
                 to="/contestant/analytics"
@@ -117,7 +124,7 @@ export default function ContestantNavbar() {
               <button
                 onClick={() => {
                   closeMobileMenu();
-                  logout();
+                  setShowLogoutModal(true);
                 }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
               >
@@ -128,6 +135,13 @@ export default function ContestantNavbar() {
           </div>
         </div>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+      />
     </>
   );
 }

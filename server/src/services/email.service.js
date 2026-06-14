@@ -188,4 +188,23 @@ const sendPasswordResetEmail = async (email, token) => {
   await sendEmail({ to: email, subject: 'Reset your password – VoteUp', html });
 };
 
-module.exports = { sendEmail, sendVerificationOtp, sendPasswordResetEmail };
+// services/email.service.js
+const sendWelcomePassword = async (email, firstName, lastName, tempPassword) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+      <h2 style="color: #6d28d9;">Welcome to VoteUp, ${firstName} ${lastName}!</h2>
+      <p>An administrator has registered you as a candidate. You can now log in using the following credentials:</p>
+      <div style="background: #f3f4f6; padding: 16px; border-radius: 12px; margin: 20px 0;">
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Temporary password:</strong> ${tempPassword}</p>
+      </div>
+      <p style="color: #4b5563;">Please log in and change your password immediately.</p>
+      <a href="${process.env.CLIENT_URL}/login" style="display: inline-block; background: #6d28d9; color: white; padding: 10px 20px; border-radius: 40px; text-decoration: none; margin-top: 10px;">Login to VoteUp</a>
+      <hr />
+      <p style="font-size: 12px; color: #6b7280;">If you didn't expect this email, please ignore it.</p>
+    </div>
+  `;
+  await sendEmail({ to: email, subject: 'Your candidate account has been created', html });
+};
+
+module.exports = { sendEmail, sendVerificationOtp, sendPasswordResetEmail, sendWelcomePassword };
