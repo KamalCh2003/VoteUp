@@ -1,152 +1,193 @@
-// src/components/admin/NotificationCenter.jsx
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Bell, CheckCircle, XCircle, Clock, Loader2, Eye, Inbox } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import {
+  LayoutDashboard,
+  Users,
+  UserCheck,
+  Vote,
+  LogOut,
+  Bell,
+  X,
+  ChevronRight,
+  ShieldCheck,
+  Settings,
+  Trophy,
+  CreditCard,
+  Eye,
+} from "lucide-react";
+
+import { useAuth } from "../../context/AuthContext";
+import LogoutConfirmModal from "../common/LogoutConfirmModal";
+import Badge from "../common/Badge";
+
+import DashboardOverview from "./DashboardOverview";
+import UserManager from "./UserManager";
+import ContestantManagement from "./CandidateManager";
+import ElectionManager from "./ElectionManager";
+import FinanceView from "./FinanceView";
+import AuditLogs from "./AuditLogs";
+import SystemSettings from "./SystemSettings";
+import Leaderboard from "./Leaderboard";
+import VoteVerifier from "./VoteVerifier";
+import NotificationCenter from "./NotificationCenter";
 import api from '../../services/api';
-import { useToast } from '../../context/ToastContext';
 
-export default function NotificationCenter() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const toast = useToast();
+export default function AdminHome() {
+  const { logout } = useAuth();
 
-  const fetchNotifications = async () => {
-    setLoading(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const intervalRef = useRef(null);
+
+  // Fetch unread notification count
+  const fetchUnreadCount = async () => {
     try {
-      const res = await api.get('/admin/notifications', { params: { page, limit: 20 } });
-      setNotifications(res.data.notifications || []);
-      setTotal(res.data.total || 0);
+      const res = await api.get('/admin/notifications/unread-count');
+      setUnreadCount(res.data.count || 0);
     } catch (err) {
-      toast.error('Failed to load notifications');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Mark all notifications as read when the page loads
-  const markAllAsRead = async () => {
-    try {
-      await api.patch('/admin/notifications/mark-all-read');
-      fetchNotifications();
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      console.error('Failed to fetch unread count:', err);
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
-    markAllAsRead();
-  }, [page]);
+    fetchUnreadCount();
+    // Poll every 30 seconds
+    intervalRef.current = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
 
-  const markAsRead = async (id, e) => {
-    e.stopPropagation();
-    try {
-      await api.patch(`/admin/notifications/${id}/read`);
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
-      );
-    } catch (err) {
-      toast.error('Failed to update notification');
-    }
-  };
+  const menuItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+    { id: "elections", label: "Elections", icon: Vote },
+    { id: "candidates", label: "Contestants", icon: UserCheck },
+    { id: "users", label: "Users", icon: Users },
+    { id: "vote-verifier", label: "Vote Verifier", icon: Eye },
+    { id: "finance", label: "Payments", icon: CreditCard },
+    { id: "audit", label: "Audit Logs", icon: ShieldCheck },
+    { id: "settings", label: "Settings", icon: Settings },
+    { id: "notifications", label: "Notifications", icon: Bell },
+  ];
 
-  const getIcon = (type) => {
-    switch (type) {
-      case 'VOTE_CONFIRMED':
-        return <CheckCircle size={18} className="text-emerald-600" />;
-      case 'PAYMENT_SUCCESS':
-        return <CheckCircle size={18} className="text-green-600" />;
-      case 'PAYMENT_FAILED':
-        return <XCircle size={18} className="text-red-600" />;
+  const renderContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <DashboardOverview />;
+      case "leaderboard":
+        return <Leaderboard />;
+      case "users":
+        return <UserManager />;
+      case "candidates":
+        return <ContestantManagement />;
+      case "elections":
+        return <ElectionManager />;
+      case "vote-verifier":
+        return <VoteVerifier />;
+      case "finance":
+        return <FinanceView />;
+      case "audit":
+        return <AuditLogs />;
+      case "settings":
+        return <SystemSettings />;
+      case "notifications":
+        return <NotificationCenter />;
       default:
-        return <Bell size={18} className="text-violet-600" />;
+        return <DashboardOverview />;
     }
   };
 
-  const totalPages = Math.ceil(total / 20);
+  const activeTitle = menuItems.find((m) => m.id === activeTab)?.label || "Dashboard";
 
   return (
-    <div className="bg-gray-50 p-6 rounded-xl">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Bell size={24} className="text-violet-600" />
-          Notifications
-        </h2>
-        <span className="text-xs text-gray-500">
-          {notifications.filter(n => !n.isRead).length} unread
-        </span>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-violet-600" size={40} />
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <Inbox size={48} className="mx-auto mb-4 opacity-30" />
-          <p>No notifications yet.</p>
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3">
-            {notifications.map((notif) => (
-              <Link
-                key={notif.id}
-                to={notif.link || '#'}
-                className={`block rounded-2xl bg-white border border-gray-200 shadow-sm p-5 transition hover:bg-gray-50 ${
-                  !notif.isRead ? 'border-l-4 border-l-violet-500' : ''
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="mt-1">{getIcon(notif.type)}</div>
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-semibold text-gray-800">{notif.title}</h3>
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <Clock size={12} />
-                        {new Date(notif.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 text-sm mt-1">{notif.message}</p>
-                    {!notif.isRead && (
-                      <button
-                        onClick={(e) => markAsRead(notif.id, e)}
-                        className="mt-3 text-xs text-violet-600 hover:text-violet-700 transition flex items-center gap-1"
-                      >
-                        <Eye size={12} /> Mark as read
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
+    <div className="flex min-h-screen bg-gray-50 text-gray-800">
+      {/* SIDEBAR */}
+      <aside className="w-[280px] bg-white border-r border-gray-200 flex flex-col justify-between px-5 py-6 shadow-sm">
+        <div>
+          <div className="flex items-center gap-3 mb-10">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-sm">
+              <Vote size={22} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-bold text-xl text-gray-800">VoteUp</h2>
+              <p className="text-xs text-gray-500">Admin Panel</p>
+            </div>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-8">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 transition"
-              >
-                Previous
-              </button>
-              <span className="px-4 py-2 text-sm text-gray-600">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 transition"
-              >
-                Next
-              </button>
+          <div className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`group w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${
+                    activeTab === item.id
+                      ? "bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                  </div>
+                  <ChevronRight size={16} className={activeTab === item.id ? "text-purple-500" : "text-gray-400"} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowLogoutModal(true)}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition"
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-hidden">
+        <header className="h-20 border-b border-gray-200 bg-white/90 backdrop-blur-md px-8 flex justify-between items-center shadow-sm">
+          <h1 className="text-xl font-semibold text-gray-800">{activeTitle}</h1>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className="relative h-11 w-11 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition"
+            >
+              <Bell size={18} className="text-gray-600" />
+              {unreadCount > 0 && (
+                <Badge color="violet" variant="solid" className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs min-w-[20px] h-5 flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Badge>
+              )}
+            </button>
+            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white">
+                A
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800">Admin</h4>
+                <p className="text-xs text-gray-500">Administrator</p>
+              </div>
             </div>
-          )}
-        </>
-      )}
+          </div>
+        </header>
+
+        <div className="p-8 overflow-auto h-[calc(100vh-80px)]">
+          {renderContent()}
+        </div>
+      </main>
+
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={() => {
+          logout();
+          setShowLogoutModal(false);
+        }}
+      />
     </div>
   );
 }

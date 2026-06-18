@@ -46,7 +46,7 @@ export default function LoginForm() {
       } else {
         switch (user.role) {
           case 'ADMIN':
-            navigate('/admin');
+            navigate('/dashboard');
             break;
           case 'CONTESTANT':
             navigate('/contestant/profile-campaign');

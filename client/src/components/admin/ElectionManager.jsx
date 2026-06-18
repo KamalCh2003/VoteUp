@@ -14,12 +14,12 @@ import {
   Users,
   StopCircle,
   X,
+  Check,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
 import AddElectionModal from './AddElectionModal';
 
-// Custom Confirmation Dialog Component (Light Theme)
 function ConfirmDialog({ open, title, message, onConfirm, onCancel, loading = false }) {
   if (!open) return null;
   return (
@@ -58,6 +58,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel, loading = fa
 export default function ElectionManager() {
   const [elections, setElections] = useState([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingElection, setEditingElection] = useState(null);
   const toast = useToast();
@@ -74,24 +75,31 @@ export default function ElectionManager() {
     fetchElections();
   }, []);
 
-  const fetchElections = async () => {
+  const fetchElections = async (status = statusFilter) => {
     try {
-      const { data } = await api.get('/elections');
+      const params = status !== 'ALL' ? { status } : {};
+      const { data } = await api.get('/elections', { params });
       let electionsList = data.elections || [];
-      const statusOrder = { ACTIVE: 1, UPCOMING: 2, ENDED: 3 };
-      electionsList.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+      // Sort: pending first, then active, upcoming, ended
+      const statusOrder = { PENDING: 0, ACTIVE: 1, UPCOMING: 2, ENDED: 3 };
+      electionsList.sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
       setElections(electionsList);
-    } catch {
+    } catch (err) {
       toast.error('Failed to load elections');
     }
+  };
+
+  const handleStatusFilterChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    fetchElections(newStatus);
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this election? This action cannot be undone.')) return;
     try {
       await api.delete(`/elections/${id}`);
-      setElections((prev) => prev.filter((e) => e.id !== id));
       toast.success('Election deleted');
+      fetchElections();
     } catch {
       toast.error('Delete failed');
     }
@@ -126,6 +134,29 @@ export default function ElectionManager() {
     }
   };
 
+  const handleApprove = async (id, title) => {
+    if (!window.confirm(`Approve the election request "${title}"?`)) return;
+    try {
+      await api.patch(`/admin/elections/${id}/approve`);
+      toast.success(`Election "${title}" approved`);
+      fetchElections();
+    } catch (err) {
+      toast.error('Approval failed');
+    }
+  };
+
+  const handleReject = async (id, title) => {
+    const reason = prompt(`Rejection reason for "${title}" (optional):`);
+    if (reason === null) return; // user cancelled
+    try {
+      await api.patch(`/admin/elections/${id}/reject`, { rejectionReason: reason || null });
+      toast.success(`Election "${title}" rejected`);
+      fetchElections();
+    } catch (err) {
+      toast.error('Rejection failed');
+    }
+  };
+
   const handleEdit = (election) => {
     setEditingElection(election);
     setShowAddModal(true);
@@ -137,6 +168,12 @@ export default function ElectionManager() {
 
   const getStatusBadge = (status) => {
     switch (status) {
+      case 'PENDING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 border border-yellow-200">
+            <Clock size={12} /> Pending
+          </span>
+        );
       case 'ACTIVE':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
@@ -194,6 +231,17 @@ export default function ElectionManager() {
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 transition"
             />
           </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
+            className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+          >
+            <option value="ALL">All Elections</option>
+            <option value="PENDING">Pending Requests</option>
+            <option value="UPCOMING">Upcoming</option>
+            <option value="ACTIVE">Active</option>
+            <option value="ENDED">Ended</option>
+          </select>
           <Button
             variant="primary"
             onClick={() => {
@@ -239,12 +287,30 @@ export default function ElectionManager() {
                   <td className="py-4 px-6 text-gray-700">
                     <div className="flex items-center gap-1.5">
                       <Users size={14} className="text-violet-500" />
-                      { e.approvedCandidates ?? 0 }
+                      {e.approvedCandidates ?? 0}
                     </div>
                   </td>
                   <td className="py-4 px-6 text-gray-700 font-semibold">{e.totalVotes?.toLocaleString() ?? 0}</td>
                   <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1 flex-wrap">
+                      {e.status === 'PENDING' && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(e.id, e.title)}
+                            className="p-2 rounded-xl hover:bg-emerald-50 text-gray-500 hover:text-emerald-600 transition"
+                            title="Approve"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleReject(e.id, e.title)}
+                            className="p-2 rounded-xl hover:bg-red-50 text-gray-500 hover:text-red-600 transition"
+                            title="Reject"
+                          >
+                            <X size={16} />
+                          </button>
+                        </>
+                      )}
                       {e.status === 'UPCOMING' && (
                         <button
                           onClick={() => openConfirmDialog('start', e.id, e.title)}
@@ -263,18 +329,22 @@ export default function ElectionManager() {
                           <StopCircle size={16} />
                         </button>
                       )}
-                      <button onClick={() => handleEdit(e)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition" title="Edit Election">
-                        <Pencil size={16} />
-                      </button>
-                      <button onClick={() => handleDelete(e.id)} className="p-2 rounded-xl hover:bg-red-50 text-gray-500 hover:text-red-600 transition" title="Delete Election">
-                        <Trash2 size={16} />
-                      </button>
+                      {(e.status === 'UPCOMING' || e.status === 'ACTIVE' || e.status === 'ENDED' || e.status === 'CANCELLED') && (
+                        <>
+                          <button onClick={() => handleEdit(e)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition" title="Edit Election">
+                            <Pencil size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(e.id)} className="p-2 rounded-xl hover:bg-red-50 text-gray-500 hover:text-red-600 transition" title="Delete Election">
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-12 text-gray-500">No elections found.弹</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-gray-500">No elections found.</td></tr>
               )}
             </tbody>
           </table>
@@ -288,7 +358,7 @@ export default function ElectionManager() {
           setShowAddModal(false);
           setEditingElection(null);
         }}
-        onSuccess={fetchElections}
+        onSuccess={() => fetchElections()}
         election={editingElection}
       />
 

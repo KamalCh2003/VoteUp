@@ -27,6 +27,7 @@ enum CandidateStatus {
 }
 
 enum ElectionStatus {
+  PENDING
   UPCOMING
   ACTIVE
   ENDED

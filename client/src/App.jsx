@@ -1,4 +1,6 @@
+// client/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
@@ -9,7 +11,6 @@ import Landing from './components/common/Landing';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import ForgotPassword from './components/auth/ForgotPassword';
-import ResetPassword from './components/auth/ResetPassword';
 import VerifyEmail from './components/auth/VerifyEmail';
 import About from './components/voter/About';
 import VoterHome from './components/voter/VoterHome';
@@ -28,10 +29,21 @@ import AdminHome from './components/admin/AdminHome';
 import ElectionDetails from './components/elections/ElectionDetails';
 import VotePaymentPage from './components/payment/VotePaymentPage';
 import ContestantProfileCampaign from './components/contestant/ContestantProfileCampaign';
-import ContestantDashboard from './components/contestant/ContestantDashboard'; // unified dashboard
+import ContestantDashboard from './components/contestant/ContestantDashboard';
 import CandidateHistory from './components/contestant/CandidateHistory';
 import PaymentCallback from './components/payment/PaymentCallback';
 import GoogleCallback from './components/auth/GoogleCallback';
+import CreateElectionRequest from './components/voter/CreateElectionRequest';
+import ResetPassword from './components/auth/ResetPassword';
+
+// Scroll‑to‑top component
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 function Protected({ children, roles }) {
   const { isAuthenticated, user, loading } = useAuth();
@@ -51,10 +63,12 @@ function AppContent() {
 
   const showContestantNavbar = !shouldHideNavbar && !isAdminRoute && user?.role === 'CONTESTANT';
   const showPublicNavbar = !shouldHideNavbar && !isAdminRoute && !showContestantNavbar;
-  const shouldHideFooter = isAdminRoute || hideNavbarPaths.includes(location.pathname);
+
+  const shouldHideFooter = isAdminRoute || hideNavbarPaths.includes(location.pathname) || location.pathname === '/request-election';
 
   return (
     <>
+      <ScrollToTop />
       {showPublicNavbar && <Navbar />}
       {showContestantNavbar && <ContestantNavbar />}
 
@@ -71,7 +85,6 @@ function AppContent() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
             <Route path="/about" element={<About />} />
@@ -79,6 +92,7 @@ function AppContent() {
             <Route path="/results" element={<ResultsView />} />
             <Route path="/results/:electionId" element={<ResultsView />} />
             <Route path="/elections/:id" element={<ElectionDetails />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Voter routes */}
             <Route path="/voter/home" element={<Protected roles={['VOTER']}><VoterHome /></Protected>} />
@@ -87,16 +101,15 @@ function AppContent() {
             <Route path="/voter/profile" element={<Protected roles={['VOTER']}><VoterProfile /></Protected>} />
             <Route path="/history" element={<Protected roles={['VOTER']}><VoteHistory /></Protected>} />
 
-            {/* Contestant routes – unified dashboard */}
+            {/* Contestant routes */}
             <Route path="/contestant/profile-campaign" element={<Protected roles={['CONTESTANT']}><ContestantProfileCampaign /></Protected>} />
             <Route path="/contestant/dashboard" element={<Protected roles={['CONTESTANT']}><ContestantDashboard /></Protected>} />
             <Route path="/contestant/analytics" element={<Protected roles={['CONTESTANT']}><AnalyticsView /></Protected>} />
             <Route path="/contestant/apply" element={<Protected roles={['VOTER', 'CONTESTANT']}><ApplyCandidacy /></Protected>} />
             <Route path="/contestant/history" element={<Protected roles={['CONTESTANT']}><CandidateHistory /></Protected>} />
 
-            {/* Redirect old routes to new dashboard */}
-            <Route path="/contestant/elections" element={<Navigate to="/contestant/dashboard" replace />} />
-            <Route path="/contestant/contestants" element={<Navigate to="/contestant/dashboard" replace />} />
+            {/* Election request (authenticated users) */}
+            <Route path="/request-election" element={<Protected><CreateElectionRequest /></Protected>} />
 
             {/* Payment routes */}
             <Route path="/payment/candidacy" element={<Protected><CandidacyPayment /></Protected>} />

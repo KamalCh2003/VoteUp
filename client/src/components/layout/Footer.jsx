@@ -1,5 +1,3 @@
-// client/src/components/layout/Footer.jsx
-
 import { Link } from 'react-router-dom';
 import { Vote, Mail, Phone, MapPin } from 'lucide-react';
 import {
@@ -8,37 +6,13 @@ import {
   FaLinkedinIn,
   FaGithub,
 } from 'react-icons/fa';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Footer() {
+  const { user } = useAuth(); // <-- get user
+
   return (
     <footer className="mt-24 border-t border-gray-200 bg-white">
-      {/* Top CTA */}
-      <div className="border-b border-gray-200">
-        <div className="mx-auto max-w-7xl px-6 py-16">
-          <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 to-purple-600 p-8 md:p-12">
-            <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-white">
-                  Ready to launch your next election?
-                </h2>
-
-                <p className="mt-3 max-w-2xl text-violet-100">
-                  Create secure elections, manage contestants, track votes
-                  in real-time, and engage your community with confidence.
-                </p>
-              </div>
-
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 font-semibold text-violet-700 shadow-lg transition hover:scale-105"
-              >
-                Get Started Free
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Footer */}
       <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
