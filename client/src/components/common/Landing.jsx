@@ -8,7 +8,7 @@ import ElectionRequestCTA from '../home/ElectionRequestCTA';
 export default function Landing() {
   return (
     <div className="min-h-screen overflow-hidden text-gray-900">
-      {/* Light Background Effects */}
+       {/* Light Background Effects  */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-violet-200/40 blur-[140px]" />
 

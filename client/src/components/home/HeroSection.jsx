@@ -8,42 +8,40 @@ import api from '../../services/api';
 export default function HeroSection() {
   const { user } = useAuth();
   const [activeCount, setActiveCount] = useState(0);
+  const [loadingStats, setLoadingStats] = useState(true); 
   const [recentElection, setRecentElection] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
 
   useEffect(() => {
+    setLoadingStats(true);
     api
       .get('/public/stats')
-      .then(({ data }) => setActiveCount(data.activeElections || 0))
-      .catch(() => {});
+      .then(({ data }) => {
+        setActiveCount(data.activeElections || 0);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingStats(false));
 
     const fetchMostRecentActiveElection = async () => {
       setLoadingRanking(true);
-
       try {
         const { data } = await api.get('/elections', {
           params: { status: 'ACTIVE', limit: 1 },
         });
-
         const elections = data.elections || [];
-
         if (elections.length === 0) {
           setRecentElection(null);
           setCandidates([]);
           setLoadingRanking(false);
           return;
         }
-
         const mostRecent = elections[0];
-
         const electionRes = await api.get(`/elections/${mostRecent.id}`);
         const election = electionRes.data.election;
-
         const sortedCandidates = [...(election.candidates || [])].sort(
           (a, b) => b.votesReceived - a.votesReceived
         );
-
         setRecentElection(election);
         setCandidates(sortedCandidates.slice(0, 5));
       } catch (err) {
@@ -54,7 +52,6 @@ export default function HeroSection() {
     };
 
     fetchMostRecentActiveElection();
-
     const interval = setInterval(fetchMostRecentActiveElection, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -64,12 +61,19 @@ export default function HeroSection() {
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 py-1 md:py-4 mb-10">
-        {/* Active Election Badge */}
+        {/* Active Election Badge – show skeleton while loading */}
         <div className="flex justify-center mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-green-500 bg-green-500 px-5 py-2 text-sm text-white shadow-sm">
-            <Sparkles size={14} />
-            {activeCount} ACTIVE ELECTION{activeCount !== 1 ? 'S' : ''}
-          </div>
+          {loadingStats ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-5 py-2 text-sm text-gray-400 shadow-sm animate-pulse">
+              <Sparkles size={14} />
+              Loading elections...
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 rounded-full border border-green-500 bg-green-500 px-5 py-2 text-sm text-white shadow-sm">
+              <Sparkles size={14} />
+              {activeCount} ACTIVE ELECTION{activeCount !== 1 ? 'S' : ''}
+            </div>
+          )}
         </div>
 
         {/* Hero Layout */}
@@ -114,11 +118,9 @@ export default function HeroSection() {
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="text-yellow-500" size={22} />
-
               <h2 className="text-xl font-bold text-gray-900">
                 Live Leaderboard
               </h2>
-
               <span className="ml-auto text-xs text-emerald-500 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 LIVE
@@ -142,7 +144,6 @@ export default function HeroSection() {
                 <div className="space-y-3">
                   {candidates.map((candidate, idx) => {
                     const avatarUrl = candidate.avatarUrl;
-
                     return (
                       <div
                         key={candidate.id}
@@ -172,7 +173,6 @@ export default function HeroSection() {
                             {candidate.user?.firstName}{' '}
                             {candidate.user?.lastName}
                           </p>
-
                           <p className="text-xs text-gray-500">
                             {candidate.party || 'Independent'}
                           </p>

@@ -1,4 +1,3 @@
-// admin.controller.js – full updated with election management
 const prisma = require("../config/database");
 const bcrypt = require("bcrypt");
 const emailService = require('../services/email.service');
@@ -240,6 +239,7 @@ exports.approveCandidate = async (req, res) => {
       data: { status },
       include: { user: true, election: true },
     });
+
     await prisma.notification.create({
       data: {
         userId: candidate.user.id,
@@ -251,6 +251,7 @@ exports.approveCandidate = async (req, res) => {
         link: '/contestant/profile-campaign',
       },
     });
+
     res.json({ candidate });
   } catch (err) {
     console.error("Approve candidate error:", err);
@@ -262,14 +263,19 @@ exports.createCandidateFromAdmin = async (req, res) => {
   try {
     const { firstName, lastName, email, party, electionId, slogan, bio, candidateNumber } = req.body;
     const avatarUrl = req.file ? req.file.path : null;
+
     const election = await prisma.election.findUnique({ where: { id: electionId } });
     if (!election) return res.status(404).json({ error: "Election not found" });
+
     const candidateCount = await prisma.candidate.count({ where: { electionId, status: "APPROVED" } });
     if (election.maxCandidates && candidateCount >= election.maxCandidates) {
       return res.status(400).json({ error: `Candidate limit reached for this election (max ${election.maxCandidates})` });
     }
+
     let user = await prisma.user.findUnique({ where: { email } });
     let tempPassword = null;
+    let isNewUser = false;
+
     if (!user) {
       tempPassword = Math.random().toString(36).slice(-8);
       const passwordHash = await bcrypt.hash(tempPassword, 12);
@@ -277,22 +283,51 @@ exports.createCandidateFromAdmin = async (req, res) => {
         data: {
           email, firstName, lastName, passwordHash,
           role: "CONTESTANT", isVerified: false,
-          nationalId: `ADMIN-${Date.now()}`,
         },
       });
-      await emailService.sendWelcomePassword(email, firstName, lastName, tempPassword);
+      isNewUser = true;
     } else {
       const existingCandidate = await prisma.candidate.findUnique({ where: { userId: user.id } });
       if (existingCandidate) return res.status(400).json({ error: "User already has a candidate profile" });
-      await emailService.sendEmail({
-        to: email,
-        subject: 'You have been added as a candidate',
-        html: `<p>Hello ${firstName}, you have been added as a candidate in VoteUp. Please log in to manage your campaign.</p>`,
-      });
     }
+
+    // 🔹 Generate candidate number
+    const existingCandidatesCount = await prisma.candidate.count({ where: { electionId } });
+    const sequence = String(existingCandidatesCount + 1).padStart(2, '0');
+    const electionShortId = electionId.slice(0, 6);
+    const generatedCandidateNumber = `CN-${electionShortId}-${sequence}`;
+
     const candidate = await prisma.candidate.create({
-      data: { userId: user.id, electionId, candidateNumber, party, slogan, bio, avatarUrl },
+      data: {
+        userId: user.id,
+        electionId,
+        candidateNumber: generatedCandidateNumber,
+        party,
+        slogan,
+        bio,
+        avatarUrl,
+      },
     });
+
+    // Send emails (non‑blocking)
+    if (isNewUser && tempPassword) {
+      try {
+        await emailService.sendWelcomePassword(email, firstName, lastName, tempPassword);
+      } catch (emailErr) {
+        console.error("Failed to send welcome email:", emailErr);
+      }
+    } else if (!isNewUser) {
+      try {
+        await emailService.sendEmail({
+          to: email,
+          subject: 'You have been added as a candidate',
+          html: `<p>Hello ${firstName}, you have been added as a candidate in VoteUp. Please log in to manage your campaign.</p>`,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send notification email:", emailErr);
+      }
+    }
+
     res.status(201).json({ candidate });
   } catch (err) {
     console.error("Admin add candidate error:", err);
@@ -457,119 +492,31 @@ exports.getNotifications = async (req, res) => {
   }
 };
 
-exports.getUnreadCount = async (req, res) => {
+exports.markNotificationRead = async (req, res) => {
   try {
-    const count = await prisma.notification.count({
-      where: { userId: req.user.id, isRead: false },
-    });
-    res.json({ count });
-  } catch (err) {
-    console.error('Get unread count error:', err);
-    res.status(500).json({ error: 'Failed to fetch unread count' });
-  }
-};
-
-exports.markAllNotificationsRead = async (req, res) => {
-  try {
-    await prisma.notification.updateMany({
-      where: { userId: req.user.id, isRead: false },
+    const { id } = req.params;
+    await prisma.notification.update({
+      where: { id, userId: req.user.id },
       data: { isRead: true },
     });
     res.json({ success: true });
   } catch (err) {
-    console.error('Mark all read error:', err);
-    res.status(500).json({ error: 'Failed to mark notifications as read' });
+    res.status(500).json({ error: 'Failed to mark notification as read' });
   }
 };
 
-// ─── Election Management for Admin ──────────────────────────────────────
-
-exports.getElectionsByStatus = async (req, res) => {
+exports.getUnreadNotificationCount = async (req, res) => {
   try {
-    const { status } = req.query;
-    if (!status) return res.status(400).json({ error: 'Status query parameter is required' });
-    const elections = await prisma.election.findMany({
-      where: { status },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { candidates: true, votes: true } },
-        candidates: {
-          where: { status: 'APPROVED' },
-          select: { id: true },
-        },
-      },
-    });
-    const formatted = elections.map(e => ({
-      ...e,
-      approvedCandidates: e.candidates.length,
-    }));
-    res.json({ elections: formatted });
-  } catch (err) {
-    console.error('Get elections by status error:', err);
-    res.status(500).json({ error: 'Failed to fetch elections' });
-  }
-};
-
-exports.approveElection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const election = await prisma.election.findUnique({ where: { id } });
-    if (!election) return res.status(404).json({ error: 'Election not found' });
-    if (election.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Only pending requests can be approved' });
-    }
-
-    const updated = await prisma.election.update({
-      where: { id },
-      data: { status: 'UPCOMING' },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: election.createdBy,
-        title: 'Election Request Approved 🎉',
-        message: `Your election "${election.title}" has been approved and is now upcoming.`,
-        type: 'SYSTEM_ALERT',
-        link: `/elections/${election.id}`,
+    const count = await prisma.notification.count({
+      where: {
+        userId: req.user.id,   
+        isRead: false,
       },
     });
 
-    res.json({ election: updated });
+    res.json({ count });
   } catch (err) {
-    console.error('Approve election error:', err);
-    res.status(500).json({ error: 'Failed to approve election' });
-  }
-};
-
-exports.rejectElection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { rejectionReason } = req.body;
-    const election = await prisma.election.findUnique({ where: { id } });
-    if (!election) return res.status(404).json({ error: 'Election not found' });
-    if (election.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Only pending requests can be rejected' });
-    }
-
-    const updated = await prisma.election.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: election.createdBy,
-        title: 'Election Request Declined',
-        message: rejectionReason
-          ? `Your election "${election.title}" was not approved. Reason: ${rejectionReason}`
-          : `Your election "${election.title}" was not approved.`,
-        type: 'SYSTEM_ALERT',
-      },
-    });
-
-    res.json({ election: updated });
-  } catch (err) {
-    console.error('Reject election error:', err);
-    res.status(500).json({ error: 'Failed to reject election' });
+    console.error('Unread notification count error:', err);
+    res.status(500).json({ error: 'Failed to fetch unread count' });
   }
 };

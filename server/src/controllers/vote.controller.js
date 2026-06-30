@@ -65,7 +65,7 @@ exports.castVote = async (req, res) => {
         },
       });
 
-      // 🟢 Notify all admins about the vote
+      // 🔔 Notify all admins (candidate is defined here)
       const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
       if (admins.length > 0) {
         const candidateName = `${candidate.user.firstName} ${candidate.user.lastName}`;
@@ -157,7 +157,7 @@ exports.castVote = async (req, res) => {
       },
     });
 
-    // 🟢 Notify all admins about the vote
+    // 🔔 Notify all admins (candidate is defined here)
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
     if (admins.length > 0) {
       const candidateName = `${candidate.user.firstName} ${candidate.user.lastName}`;
@@ -187,26 +187,9 @@ exports.castVote = async (req, res) => {
     console.error('Cast vote error:', err);
     res.status(500).json({ error: 'Failed to cast vote' });
   }
-  
-// Notify all admins
-const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-if (admins.length > 0) {
-  const candidateName = `${candidate.user.firstName} ${candidate.user.lastName}`;
-  const electionTitle = election.title;
-  await prisma.notification.createMany({
-    data: admins.map(admin => ({
-      userId: admin.id,
-      title: 'New Vote Cast',
-      message: `A vote was cast for "${candidateName}" in election "${electionTitle}".`,
-      type: 'VOTE_CONFIRMED',
-      link: '/admin/votes',
-    })),
-  });
-}
-
-
 };
 
+// ─── GET RESULTS ────────────────────────────────────────────────
 exports.getResults = async (req, res) => {
   try {
     const { electionId } = req.params;
@@ -247,6 +230,7 @@ exports.getResults = async (req, res) => {
   }
 };
 
+// ─── CHECK IF USER VOTED ──────────────────────────────────────
 exports.checkVoted = async (req, res) => {
   try {
     const { electionId } = req.params;
@@ -260,6 +244,7 @@ exports.checkVoted = async (req, res) => {
   }
 };
 
+// ─── GET ALL RESULTS (for results page) ──────────────────────
 exports.getAllResults = async (req, res) => {
   try {
     const elections = await prisma.election.findMany({

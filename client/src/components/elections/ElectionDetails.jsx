@@ -213,7 +213,7 @@ export default function ElectionDetails() {
         {/* Election Header */}
         <div className="mb-10">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">{election.title}</h1>
-          <p className="text-gray-600 text-lg">{election.description}</p>
+          <p className="text-gray-600 text-lg hidden ">{election.description}</p>
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Calendar size={16} /> {new Date(election.startDate).toLocaleDateString()} – {new Date(election.endDate).toLocaleDateString()}

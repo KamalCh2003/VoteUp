@@ -1,26 +1,23 @@
 // src/components/admin/AddCandidateModal.jsx
 import { useState, useEffect } from 'react';
-import { X, UserPlus, Hash, Building2, Vote, Mail, Shield, Loader2, Upload, XCircle } from 'lucide-react';
+import { X, UserPlus, Building2, Vote, Mail, Loader2, Upload, XCircle } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 export default function AddCandidateModal({ open, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [elections, setElections] = useState([]);
-  const [allCandidates, setAllCandidates] = useState([]);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    candidateNumber: '',
     party: '',
     electionId: '',
     slogan: '',
     bio: '',
   });
-  const [candidateNumberError, setCandidateNumberError] = useState('');
   const toast = useToast();
 
   useEffect(() => {
@@ -28,26 +25,8 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
       api.get('/elections', { params: { status: 'UPCOMING' } })
         .then(({ data }) => setElections(data.elections || []))
         .catch(() => toast.error('Could not load elections'));
-      api.get('/admin/candidates')
-        .then(({ data }) => setAllCandidates(data.candidates || []))
-        .catch(() => console.warn('Could not fetch candidates for validation'));
     }
   }, [open, toast]);
-
-  useEffect(() => {
-    if (!form.electionId || !form.candidateNumber) {
-      setCandidateNumberError('');
-      return;
-    }
-    const isDuplicate = allCandidates.some(
-      (c) => c.electionId === form.electionId && c.candidateNumber === form.candidateNumber
-    );
-    if (isDuplicate) {
-      setCandidateNumberError(`Candidate number "${form.candidateNumber}" already exists in this election.`);
-    } else {
-      setCandidateNumberError('');
-    }
-  }, [form.candidateNumber, form.electionId, allCandidates]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -82,9 +61,6 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
     if (!form.firstName || !form.lastName || !form.email || !form.party || !form.electionId) {
       return toast.error('Please fill all required fields (name, email, party, election).');
     }
-    if (candidateNumberError) {
-      return toast.error(candidateNumberError);
-    }
 
     try {
       setLoading(true);
@@ -96,7 +72,6 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
       payload.append('electionId', form.electionId);
       payload.append('slogan', form.slogan);
       payload.append('bio', form.bio);
-      payload.append('candidateNumber', form.candidateNumber);
       if (avatarFile) payload.append('avatar', avatarFile);
 
       await api.post('/admin/create-candidate', payload, {
@@ -104,7 +79,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
       });
       toast.success('Candidate added successfully!');
       setForm({
-        firstName: '', lastName: '', email: '', candidateNumber: '', party: '', electionId: '', slogan: '', bio: '',
+        firstName: '', lastName: '', email: '', party: '', electionId: '', slogan: '', bio: '',
       });
       setAvatarFile(null);
       setAvatarPreview(null);
@@ -184,25 +159,6 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Candidate Number</label>
-              <div className="relative">
-                <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  name="candidateNumber"
-                  value={form.candidateNumber}
-                  onChange={handleChange}
-                  className={`w-full h-11 pl-10 bg-gray-50 border rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 ${
-                    candidateNumberError ? 'border-red-500' : 'border-gray-200'
-                  }`}
-                  placeholder="CN-001"
-                />
-              </div>
-              {candidateNumberError && (
-                <p className="text-xs text-red-600 mt-1">{candidateNumberError}</p>
-              )}
-            </div>
-            <div>
               <label className="block text-sm text-gray-700 mb-1">Organization / Party *</label>
               <div className="relative">
                 <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -217,6 +173,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
                 />
               </div>
             </div>
+            {/* Candidate Number field removed – auto-generated by backend */}
           </div>
 
           <div className="grid grid-cols-1 gap-4">
@@ -314,7 +271,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess }) {
             </button>
             <button
               type="submit"
-              disabled={loading || !!candidateNumberError}
+              disabled={loading}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 transition text-white text-sm font-semibold"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}

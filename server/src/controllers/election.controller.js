@@ -7,25 +7,26 @@ exports.getAll = async (req, res) => {
     if (status) where.status = status;
     if (category) where.category = category;
 
+
     const elections = await prisma.election.findMany({
       where,
       take: limit ? parseInt(limit) : 20,
       orderBy: { startDate: 'desc' },
       include: {
         _count: {
-          select: { candidates: true, votes: true },
+          select: { candidates: true, votes: true }, 
         },
         candidates: {
-          where: { status: 'APPROVED' },
-          select: { id: true },
+          where: { status: 'APPROVED' }, 
+          select: { id: true }, 
         },
       },
     });
 
     const formatted = elections.map(election => ({
       ...election,
-      approvedCandidates: election.candidates.length,
-      candidates: undefined,
+      approvedCandidates: election.candidates.length, 
+      candidates: undefined, 
     }));
 
     res.json({ elections: formatted });
@@ -137,6 +138,7 @@ exports.update = async (req, res) => {
     const current = await prisma.election.findUnique({ where: { id } });
     if (!current) return res.status(404).json({ error: 'Election not found' });
 
+    // 1. Prevent ending the election before its end date
     if (status === 'ENDED' && current.status !== 'ENDED') {
       const now = new Date();
       if (now < new Date(current.endDate)) {
@@ -146,6 +148,7 @@ exports.update = async (req, res) => {
       }
     }
 
+    // 2. Prevent activating the election if not enough approved candidates
     if (status === 'ACTIVE' && current.status !== 'ACTIVE') {
       const approvedCandidateCount = await prisma.candidate.count({
         where: { electionId: id, status: 'APPROVED' },
@@ -157,6 +160,7 @@ exports.update = async (req, res) => {
       }
     }
 
+    // 3. Validate other limit updates (cannot reduce below current usage)
     if (maxCandidates !== undefined) {
       const newMax = parseInt(maxCandidates, 10);
       if (newMax < 1) return res.status(400).json({ error: 'Max candidates must be at least 1' });
@@ -209,166 +213,5 @@ exports.delete = async (req, res) => {
     res.json({ message: 'Election deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete election' });
-  }
-};
-
-exports.requestElection = async (req, res) => {
-  try {
-    const {
-      title,
-      description,
-      category,
-      startDate,
-      endDate,
-      maxCandidates,
-      maxVoters,
-      votePrice,
-      rules,
-      organizerName,
-      organizerEmail,
-      organizerPhone,
-    } = req.body;
-
-    if (!title || !startDate || !endDate) {
-      return res.status(400).json({ error: 'Title, start date, and end date are required.' });
-    }
-
-    const parsedStart = new Date(startDate);
-    const parsedEnd = new Date(endDate);
-    if (isNaN(parsedStart.getTime()) || isNaN(parsedEnd.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format' });
-    }
-    if (parsedEnd <= parsedStart) {
-      return res.status(400).json({ error: 'End date must be after start date.' });
-    }
-
-    const election = await prisma.election.create({
-      data: {
-        title,
-        description,
-        category: category || 'General',
-        startDate: parsedStart,
-        endDate: parsedEnd,
-        maxCandidates: parseInt(maxCandidates) || 10,
-        maxVoters: maxVoters ? parseInt(maxVoters) : null,
-        votePrice: parseInt(votePrice) || 0,
-        rules: rules || null,
-        organizerName: organizerName || null,
-        organizerEmail: organizerEmail || null,
-        organizerPhone: organizerPhone || null,
-        createdBy: req.user.id,
-        status: 'PENDING',  // <-- changed from PENDING_ADMIN
-      },
-    });
-
-    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-    if (admins.length > 0) {
-      await prisma.notification.createMany({
-        data: admins.map(admin => ({
-          userId: admin.id,
-          title: 'New Election Request',
-          message: `"${title}" has been requested by ${req.user.firstName} ${req.user.lastName}. Please review.`,
-          type: 'SYSTEM_ALERT',
-          link: `/admin/elections?status=PENDING`,
-        })),
-      });
-    }
-
-    res.status(201).json({ election });
-  } catch (err) {
-    console.error('Election request error:', err);
-    res.status(500).json({ error: 'Failed to submit election request' });
-  }
-};
-
-// ─── Admin functions for PENDING status ──────────────────────────────────
-
-exports.getElectionsByStatus = async (req, res) => {
-  try {
-    const { status } = req.query;
-    if (!status) return res.status(400).json({ error: 'Status query parameter is required' });
-    const elections = await prisma.election.findMany({
-      where: { status },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { candidates: true, votes: true } },
-        candidates: {
-          where: { status: 'APPROVED' },
-          select: { id: true },
-        },
-      },
-    });
-    const formatted = elections.map(e => ({
-      ...e,
-      approvedCandidates: e.candidates.length,
-    }));
-    res.json({ elections: formatted });
-  } catch (err) {
-    console.error('Get elections by status error:', err);
-    res.status(500).json({ error: 'Failed to fetch elections' });
-  }
-};
-
-exports.approveElection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const election = await prisma.election.findUnique({ where: { id } });
-    if (!election) return res.status(404).json({ error: 'Election not found' });
-    if (election.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Only pending requests can be approved' });
-    }
-
-    const updated = await prisma.election.update({
-      where: { id },
-      data: { status: 'UPCOMING' },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: election.createdBy,
-        title: 'Election Request Approved 🎉',
-        message: `Your election "${election.title}" has been approved and is now upcoming.`,
-        type: 'SYSTEM_ALERT',
-        link: `/elections/${election.id}`,
-      },
-    });
-
-    res.json({ election: updated });
-  } catch (err) {
-    console.error('Approve election error:', err);
-    res.status(500).json({ error: 'Failed to approve election' });
-  }
-};
-
-exports.rejectElection = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { rejectionReason } = req.body;
-    const election = await prisma.election.findUnique({ where: { id } });
-    if (!election) return res.status(404).json({ error: 'Election not found' });
-    if (election.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Only pending requests can be rejected' });
-    }
-
-    const updated = await prisma.election.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: election.createdBy,
-        title: 'Election Request Declined',
-        message: rejectionReason
-          ? `Your election "${election.title}" was not approved. Reason: ${rejectionReason}`
-          : `Your election "${election.title}" was not approved.`,
-        type: 'SYSTEM_ALERT',
-      },
-    });
-
-    res.json({ election: updated });
-  } catch (err) {
-    console.error('Reject election error:', err);
-    res.status(500).json({ error: 'Failed to reject election' });
   }
 };

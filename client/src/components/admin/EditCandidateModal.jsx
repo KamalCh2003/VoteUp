@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, UserPlus, Hash, Building2, Upload, XCircle, Loader2, Mail, User } from 'lucide-react';
+import { X, UserPlus, Building2, Upload, XCircle, Loader2, Mail, User } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -11,7 +11,6 @@ export default function EditCandidateModal({ open, onClose, candidate, onSuccess
     firstName: '',
     lastName: '',
     email: '',
-    candidateNumber: '',
     party: '',
     slogan: '',
     bio: '',
@@ -24,7 +23,6 @@ export default function EditCandidateModal({ open, onClose, candidate, onSuccess
         firstName: candidate.user?.firstName || '',
         lastName: candidate.user?.lastName || '',
         email: candidate.user?.email || '',
-        candidateNumber: candidate.candidateNumber || '',
         party: candidate.party || '',
         slogan: candidate.slogan || '',
         bio: candidate.bio || '',
@@ -80,7 +78,6 @@ export default function EditCandidateModal({ open, onClose, candidate, onSuccess
       payload.append('party', form.party);
       payload.append('slogan', form.slogan);
       payload.append('bio', form.bio);
-      payload.append('candidateNumber', form.candidateNumber);
       if (avatarFile) payload.append('avatar', avatarFile);
       else if (avatarPreview === null && candidate?.avatarUrl) {
         payload.append('removeAvatar', 'true');
@@ -167,22 +164,6 @@ export default function EditCandidateModal({ open, onClose, candidate, onSuccess
                 required
                 className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
                 placeholder="candidate@example.com"
-              />
-            </div>
-          </div>
-
-          {/* Candidate Details */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Candidate Number</label>
-            <div className="relative">
-              <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                name="candidateNumber"
-                value={form.candidateNumber}
-                onChange={handleChange}
-                className="w-full h-11 pl-10 bg-[#12121b] border border-white/10 rounded-xl px-4 text-sm text-white placeholder:text-gray-500 outline-none focus:border-purple-500"
-                placeholder="CN-001"
               />
             </div>
           </div>

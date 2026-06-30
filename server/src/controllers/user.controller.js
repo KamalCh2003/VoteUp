@@ -7,10 +7,23 @@ exports.getProfile = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {
-        id: true, email: true, firstName: true, lastName: true,
-        nationalId: true, phone: true, avatarUrl: true, role: true,
-        isVerified: true, anonymousMode: true, twoFactorEnabled: true,
-        candidate: { select: { id: true, status: true } },
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatarUrl: true,
+        googleId: true,          // ✅ show the Google ID if linked
+        role: true,
+        isVerified: true,
+        anonymousMode: true,
+        twoFactorEnabled: true,
+        candidate: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
       },
     });
     res.json({ user });
@@ -32,7 +45,13 @@ exports.updateProfile = async (req, res) => {
         ...(anonymousMode !== undefined && { anonymousMode }),
       },
     });
-    res.json({ user: { id: user.id, firstName: user.firstName, lastName: user.lastName } });
+    res.json({
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ error: 'Update failed' });
@@ -47,7 +66,10 @@ exports.changePassword = async (req, res) => {
     if (!valid) return res.status(400).json({ error: 'Current password is incorrect' });
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash } });
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { passwordHash },
+    });
     res.json({ message: 'Password updated' });
   } catch (err) {
     console.error('Change password error:', err);

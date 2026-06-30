@@ -31,7 +31,7 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
     banner: null,
   });
 
-  const [votingType, setVotingType] = useState('paid'); // 'free' or 'paid'
+  const [votingType, setVotingType] = useState('paid'); 
 
   useEffect(() => {
     if (open && isEdit && election) {
@@ -203,7 +203,7 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
           {/* Capacity + Vote Type + Price */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div><label className="block text-sm text-gray-700 mb-1">Max Candidates</label><input type="number" name="maxCandidates" value={form.maxCandidates} onChange={handleChange} min="1" max="50" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800" /></div>
-            <div><label className="block text-sm text-gray-700 mb-1">Max Voters (0 = unlimited)</label><input type="number" name="maxVoters" value={form.maxVoters} onChange={handleChange} min="0" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800" /></div>
+            <div><label className="block text-sm text-gray-700 mb-1">Max Voters</label><input type="number" placeholder="0 = unlimited" name="maxVoters" value={form.maxVoters} onChange={handleChange} min="0" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800" /></div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Vote Type</label>
               <div className="flex gap-2">

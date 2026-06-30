@@ -13,7 +13,7 @@ function timeAgo(date) {
 
 exports.apply = async (req, res) => {
   try {
-    const { electionId, party, slogan, bio, candidateNumber } = req.body;
+    const { electionId, party, slogan, bio } = req.body;  // candidateNumber removed
     const userId = req.user.id;
 
     const election = await prisma.election.findUnique({ where: { id: electionId } });
@@ -34,12 +34,20 @@ exports.apply = async (req, res) => {
       return res.status(400).json({ error: `Candidate limit reached for this election (max ${election.maxCandidates})` });
     }
 
+    // Auto‑generate candidate number
+    const existingCandidatesCount = await prisma.candidate.count({
+      where: { electionId },
+    });
+    const sequence = String(existingCandidatesCount + 1).padStart(2, '0');
+    const electionShortId = electionId.slice(0, 6);
+    const generatedCandidateNumber = `CN-${electionShortId}-${sequence}`;
+
     const avatarUrl = req.file ? req.file.path : null;
     const candidate = await prisma.candidate.create({
       data: {
         userId,
         electionId,
-        candidateNumber,
+        candidateNumber: generatedCandidateNumber,
         party,
         slogan,
         bio,
@@ -48,7 +56,7 @@ exports.apply = async (req, res) => {
       },
     });
 
-    // 🔔 Notify all admins about the new application (include name + email)
+    // Notify all admins about the new application (include name + email)
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
     if (admins.length > 0) {
       const candidateName = `${req.user.firstName} ${req.user.lastName}`;

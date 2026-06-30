@@ -10,13 +10,11 @@ const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 // ─── REGISTER ──────────────────────────────────
 exports.register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, nationalId, role } = req.body;
-    const effectiveNationalId = nationalId || `AUTO-${uuidv4().slice(0, 8)}`;
+    const { email, password, firstName, lastName, role } = req.body;   // nationalId removed
 
-    const existing = await prisma.user.findFirst({
-      where: { OR: [{ email }, { nationalId: effectiveNationalId }] },
-    });
-    if (existing) return res.status(400).json({ error: 'Email or National ID already exists' });
+    // Check only by email
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(400).json({ error: 'Email already exists' });
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
@@ -25,9 +23,7 @@ exports.register = async (req, res) => {
         passwordHash,
         firstName,
         lastName,
-        nationalId: effectiveNationalId,
         role: role || 'VOTER',
-        // wallet creation removed
       },
     });
 

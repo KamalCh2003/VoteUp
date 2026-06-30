@@ -1,7 +1,7 @@
 // src/components/contestant/ApplyCandidacy.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IdCard, Vote, PartyPopper, Quote, FileText, Loader2, Upload, X } from 'lucide-react';
+import { Vote, PartyPopper, Quote, FileText, Loader2, Upload, X } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,6 @@ export default function ApplyCandidacy() {
   const [imagePreview, setImagePreview] = useState(null);
   const [form, setForm] = useState({
     electionId: '',
-    candidateNumber: '',
     party: '',
     slogan: '',
     bio: '',
@@ -58,7 +57,6 @@ export default function ApplyCandidacy() {
     e.preventDefault();
 
     if (!form.electionId) return toast.error('Please select an election');
-    if (!form.candidateNumber) return toast.error('Candidate ID is required');
     if (!form.party) return toast.error('Party / Affiliation is required');
     if (!profileImage) return toast.error('Profile image is required');
 
@@ -66,7 +64,6 @@ export default function ApplyCandidacy() {
     try {
       const formData = new FormData();
       formData.append('electionId', form.electionId);
-      formData.append('candidateNumber', form.candidateNumber);
       formData.append('party', form.party);
       formData.append('slogan', form.slogan);
       formData.append('bio', form.bio);
@@ -119,22 +116,6 @@ export default function ApplyCandidacy() {
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* Candidate Number */}
-          <div>
-            <label className="block text-gray-700 text-sm mb-1.5 flex items-center gap-1.5">
-              <IdCard size={16} className="text-cyan-600" /> Candidate ID *
-            </label>
-            <input
-              type="text"
-              name="candidateNumber"
-              placeholder="e.g., CN-2025-001"
-              value={form.candidateNumber}
-              onChange={handleChange}
-              required
-              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
-            />
           </div>
 
           {/* Party */}

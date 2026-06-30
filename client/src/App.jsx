@@ -33,7 +33,6 @@ import ContestantDashboard from './components/contestant/ContestantDashboard';
 import CandidateHistory from './components/contestant/CandidateHistory';
 import PaymentCallback from './components/payment/PaymentCallback';
 import GoogleCallback from './components/auth/GoogleCallback';
-import CreateElectionRequest from './components/voter/CreateElectionRequest';
 import ResetPassword from './components/auth/ResetPassword';
 
 // Scroll‑to‑top component
@@ -107,10 +106,6 @@ function AppContent() {
             <Route path="/contestant/analytics" element={<Protected roles={['CONTESTANT']}><AnalyticsView /></Protected>} />
             <Route path="/contestant/apply" element={<Protected roles={['VOTER', 'CONTESTANT']}><ApplyCandidacy /></Protected>} />
             <Route path="/contestant/history" element={<Protected roles={['CONTESTANT']}><CandidateHistory /></Protected>} />
-
-            {/* Election request (authenticated users) */}
-            <Route path="/request-election" element={<Protected><CreateElectionRequest /></Protected>} />
-
             {/* Payment routes */}
             <Route path="/payment/candidacy" element={<Protected><CandidacyPayment /></Protected>} />
             <Route path="/payment/success" element={<Protected><PaymentSuccess /></Protected>} />

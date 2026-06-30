@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 export default function Footer() {
-  const { user } = useAuth(); // <-- get user
+  const { user } = useAuth();
 
   return (
     <footer className="mt-24 border-t border-gray-200 bg-white">

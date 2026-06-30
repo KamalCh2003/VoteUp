@@ -10,7 +10,7 @@ export default function PaymentCallback() {
   const toast = useToast();
   const [status, setStatus] = useState('processing');
   const [message, setMessage] = useState('Verifying payment...');
-  const processed = useRef(false); // prevent duplicate execution
+  const processed = useRef(false);
 
   useEffect(() => {
     if (processed.current) return;
@@ -31,7 +31,6 @@ export default function PaymentCallback() {
       }
 
       try {
-        // 1. Verify payment with backend
         const verifyRes = await api.post('/payments/khalti/verify', {
           pidx,
           transaction_id: transactionId,
@@ -39,12 +38,17 @@ export default function PaymentCallback() {
         });
         const paymentId = verifyRes.data.paymentId;
 
-        // 2. Get pending vote data
         const pendingData = sessionStorage.getItem('pendingVote');
         if (!pendingData) throw new Error('No pending vote data');
-        const { electionId, candidateId, quantity } = JSON.parse(pendingData);
+        const { electionId, candidateId, quantity, returnUrl } = JSON.parse(pendingData);
 
-        // 3. Cast the vote (may fail if already voted)
+        console.log('🔍 Pending data:', { electionId, candidateId, quantity, returnUrl });
+
+        // Ensure electionId exists
+        if (!electionId) {
+          throw new Error('Election ID is missing from pending data');
+        }
+
         try {
           await api.post('/votes', {
             electionId,
@@ -56,27 +60,32 @@ export default function PaymentCallback() {
           setMessage(`${quantity} vote(s) cast successfully!`);
           toast.success('Vote recorded!');
           sessionStorage.removeItem('pendingVote');
-          setTimeout(() => navigate(`/elections/${electionId}`), 2000);
         } catch (voteErr) {
-          // If the error is "already voted", treat it as success
           const errorMsg = voteErr.response?.data?.error || '';
           if (errorMsg.toLowerCase().includes('already voted')) {
             setStatus('success');
             setMessage('You have already voted in this election.');
             toast.info('Vote already counted');
             sessionStorage.removeItem('pendingVote');
-            setTimeout(() => navigate(`/elections/${electionId}`), 2000);
           } else {
             throw voteErr;
           }
         }
+
+        // Redirect after vote processing (success or already voted)
+        const redirectTo = returnUrl || `/elections/${electionId}`;
+        console.log('🔀 Redirecting to:', redirectTo);
+        // Use replace: true to avoid back button issues
+        navigate(redirectTo, { replace: true });
+
       } catch (err) {
         console.error('Callback error:', err);
         setStatus('error');
         setMessage(err.response?.data?.error || 'Payment verification failed');
         toast.error('Failed to record vote');
         sessionStorage.removeItem('pendingVote');
-        setTimeout(() => navigate('/'), 4000);
+        // Redirect to home on error
+        setTimeout(() => navigate('/'), 2000);
       }
     };
 
@@ -85,28 +94,28 @@ export default function PaymentCallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white border border-white rounded-2xl p-8 text-center max-w-md w-full">
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center max-w-md w-full shadow-lg">
         {status === 'processing' && (
           <>
-            <Loader2 className="animate-spin text-violet-400 w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-black mb-2">Processing Payment</h2>
-            <p className="text-gray-400">{message}</p>
+            <Loader2 className="animate-spin text-violet-600 w-16 h-16 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Processing Payment</h2>
+            <p className="text-gray-500">{message}</p>
           </>
         )}
         {status === 'success' && (
           <>
-            <CheckCircle className="text-emerald-400 w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-black mb-2">Payment Successful</h2>
-            <p className="text-gray-400">{message}</p>
-            <p className="text-xs text-gray-500 mt-4">Redirecting...</p>
+            <CheckCircle className="text-emerald-500 w-16 h-16 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Payment Successful</h2>
+            <p className="text-gray-600">{message}</p>
+            <p className="text-xs text-gray-400 mt-4">Redirecting...</p>
           </>
         )}
         {status === 'error' && (
           <>
-            <XCircle className="text-red-400 w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-black mb-2">Payment Failed</h2>
-            <p className="text-gray-400">{message}</p>
-            <p className="text-xs text-gray-500 mt-4">Redirecting...</p>
+            <XCircle className="text-red-500 w-16 h-16 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Payment Failed</h2>
+            <p className="text-gray-600">{message}</p>
+            <p className="text-xs text-gray-400 mt-4">Redirecting...</p>
           </>
         )}
       </div>

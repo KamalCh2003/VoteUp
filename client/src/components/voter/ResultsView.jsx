@@ -38,7 +38,7 @@ export default function ResultsPage() {
     try {
       const [activeRes, endedRes] = await Promise.all([
         api.get('/elections', { params: { status: 'ACTIVE' } }),
-        api.get('/elections', { params: { status: 'ENDED' } })
+        api.get('/elections', { params: { status: 'ENDED' } }),
       ]);
 
       let active = activeRes.data.elections || [];
@@ -67,7 +67,7 @@ export default function ResultsPage() {
       }
 
       const initialTime = {};
-      active.forEach(e => {
+      active.forEach((e) => {
         initialTime[e.id] = getTimeRemaining(e.endDate);
       });
       setTimeLeft(initialTime);
@@ -88,7 +88,7 @@ export default function ResultsPage() {
     if (!activeElections.length) return;
     const interval = setInterval(() => {
       const updated = {};
-      activeElections.forEach(e => {
+      activeElections.forEach((e) => {
         updated[e.id] = getTimeRemaining(e.endDate);
       });
       setTimeLeft(updated);
@@ -96,23 +96,26 @@ export default function ResultsPage() {
     return () => clearInterval(interval);
   }, [activeElections, getTimeRemaining]);
 
-  const handleSelectElection = useCallback(async (electionId) => {
-    if (selectedElection?.id === electionId) return;
-    try {
-      const { data } = await api.get(`/elections/${electionId}`);
-      const election = data.election;
-      const sorted = [...(election.candidates || [])].sort(
-        (a, b) => b.votesReceived - a.votesReceived
-      );
-      setSelectedElection(election);
-      setSelectedCandidates(sorted);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [selectedElection]);
+  const handleSelectElection = useCallback(
+    async (electionId) => {
+      if (selectedElection?.id === electionId) return;
+      try {
+        const { data } = await api.get(`/elections/${electionId}`);
+        const election = data.election;
+        const sorted = [...(election.candidates || [])].sort(
+          (a, b) => b.votesReceived - a.votesReceived
+        );
+        setSelectedElection(election);
+        setSelectedCandidates(sorted);
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [selectedElection]
+  );
 
   const filteredEnded = useMemo(() => {
-    return endedElections.filter(e =>
+    return endedElections.filter((e) =>
       e.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [endedElections, searchTerm]);
@@ -173,10 +176,8 @@ export default function ResultsPage() {
   return (
     <div className="min-h-screen text-gray-900">
       <div className="mx-auto max-w-7xl px-6 py-8 flex flex-col lg:flex-row gap-8">
-
-        {/* LEFT */}
+        {/* LEFT PANEL */}
         <div className="lg:w-1/3 space-y-6">
-
           <div className="text-xs text-gray-500 flex items-center gap-2">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
             Last updated: {lastUpdated?.toLocaleTimeString() || '--:--'}
@@ -197,9 +198,8 @@ export default function ResultsPage() {
               <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></span>
               Ongoing Elections
             </h2>
-
             <div className="space-y-3">
-              {activeElections.map(e => (
+              {activeElections.map((e) => (
                 <ElectionItem key={e.id} election={e} type="active" />
               ))}
             </div>
@@ -209,16 +209,15 @@ export default function ResultsPage() {
             <h2 className="font-bold mb-3 flex items-center gap-2 text-gray-800">
               <Trophy size={16} /> Past Elections
             </h2>
-
             <div className="space-y-3">
-              {filteredEnded.map(e => (
+              {filteredEnded.map((e) => (
                 <ElectionItem key={e.id} election={e} type="ended" />
               ))}
             </div>
           </div>
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT PANEL */}
         <div className="lg:w-2/3">
           {!selectedElection ? (
             <div className="bg-white border rounded-xl p-10 text-center text-gray-500">
@@ -226,52 +225,61 @@ export default function ResultsPage() {
             </div>
           ) : (
             <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-
+              {/* Election Header (always visible) */}
               <div className="p-5 border-b bg-gray-50">
                 <h2 className="text-xl font-bold">{selectedElection.title}</h2>
                 <p className="text-sm text-gray-500">{selectedElection.description}</p>
-
                 <div className="flex gap-4 text-xs text-gray-500 mt-2">
                   <span>
                     <Calendar size={12} className="inline mr-1" />
-                    {new Date(selectedElection.startDate).toLocaleDateString()} - {new Date(selectedElection.endDate).toLocaleDateString()}
+                    {new Date(selectedElection.startDate).toLocaleDateString()} -{' '}
+                    {new Date(selectedElection.endDate).toLocaleDateString()}
                   </span>
-                  <span>
-                    {selectedElection.status}
-                  </span>
+                  <span>{selectedElection.status}</span>
                 </div>
               </div>
 
+              {/* Candidate table – always visible, but Rank & Share only for ENDED */}
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 text-gray-600">
                   <tr>
-                    <th className="p-3 text-left">Rank</th>
+                    {selectedElection.status === 'ENDED' && (
+                      <th className="p-3 text-left">Rank</th>
+                    )}
                     <th className="p-3 text-left">Candidate</th>
                     <th className="p-3 text-left">Party</th>
-                    <th className="p-3 text-right">Share</th>
+                    {selectedElection.status === 'ENDED' && (
+                      <th className="p-3 text-right">Share</th>
+                    )}
                   </tr>
                 </thead>
-
                 <tbody>
                   {selectedCandidates.map((c, i) => {
                     const total = selectedElection.totalVotes || 1;
                     const share = ((c.votesReceived / total) * 100).toFixed(1);
-
                     return (
                       <tr key={c.id} className="border-t">
-                        <td className="p-3 font-bold">#{i + 1}</td>
+                        {selectedElection.status === 'ENDED' && (
+                          <td className="p-3 font-bold">#{i + 1}</td>
+                        )}
                         <td className="p-3">
                           {c.user?.firstName} {c.user?.lastName}
                         </td>
-                        <td className="p-3 text-gray-600">{c.party || 'Independent'}</td>
-                        <td className="p-3 text-right">{share}%</td>
+                        <td className="p-3 text-gray-600">
+                          {c.party || 'Independent'}
+                        </td>
+                        {selectedElection.status === 'ENDED' && (
+                          <td className="p-3 text-right">{share}%</td>
+                        )}
                       </tr>
                     );
                   })}
-
                   {selectedCandidates.length === 0 && (
                     <tr>
-                      <td colSpan="4" className="text-center p-6 text-gray-400">
+                      <td
+                        colSpan={selectedElection.status === 'ENDED' ? 4 : 2}
+                        className="text-center p-6 text-gray-400"
+                      >
                         No candidates found
                       </td>
                     </tr>
@@ -285,7 +293,6 @@ export default function ResultsPage() {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

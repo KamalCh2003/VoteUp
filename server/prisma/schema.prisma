@@ -13,12 +13,6 @@ enum Role {
   ADMIN
 }
 
-enum Gender { 
-  MALE 
-  FEMALE 
-  OTHER 
-}
-
 enum CandidateStatus {
   PENDING
   APPROVED
@@ -27,7 +21,6 @@ enum CandidateStatus {
 }
 
 enum ElectionStatus {
-  PENDING
   UPCOMING
   ACTIVE
   ENDED
@@ -68,14 +61,14 @@ model User {
   passwordHash       String
   firstName          String
   lastName           String
-  nationalId         String              @unique
+  // nationalId      removed
   phone              String?
   avatarUrl          String?
-  gender             Gender?             @default(OTHER)
+  // gender          removed
   role               Role                @default(VOTER)
   isVerified         Boolean             @default(false)
   isActive           Boolean             @default(true)
-  googleId           String?             @unique
+  googleId           String?             @unique      // ← stays as is
   twoFactorEnabled   Boolean             @default(false)
   anonymousMode      Boolean             @default(true)
   votes              Vote[]
@@ -110,6 +103,7 @@ model Candidate {
   payments        Payment[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  @@unique([electionId, candidateNumber])
 }
 
 model Election {

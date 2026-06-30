@@ -6,39 +6,25 @@ const upload = require('../middleware/upload');
 
 router.use(authenticate, requireRole('ADMIN'));
 
-// User management
 router.get('/stats', ctrl.getStats);
+router.get('/votes/trend', ctrl.getVoteTrend);
 router.get('/users', ctrl.getUsers);
 router.delete('/users/:id', ctrl.deleteUser);
 router.patch('/users/:id/role', ctrl.updateUserRole);
-
-// Candidate management
+router.get('/candidates', ctrl.getAllCandidates);
 router.post('/create-candidate', upload.single('avatar'), ctrl.createCandidateFromAdmin);
 router.put('/candidates/:id', upload.single('avatar'), ctrl.updateCandidate);
 router.patch('/candidates/:id/status', ctrl.approveCandidate);
 router.delete('/candidates/:id', ctrl.deleteCandidate);
-router.get('/candidates', ctrl.getAllCandidates);
-
-// Vote management
-router.delete('/votes/:id', ctrl.deleteVote);
 router.get('/votes', ctrl.getAllVotes);
-
-// Finance
+router.delete('/votes/:id', ctrl.deleteVote);
 router.get('/finance/revenue-trend', ctrl.getRevenueTrend);
 router.get('/finance/payment-methods', ctrl.getPaymentMethods);
 router.get('/finance/top-voters', ctrl.getTopVoters);
 router.get('/finance/recent-payments', ctrl.getRecentPayments);
-router.get('/votes/trend', ctrl.getVoteTrend);
-
-// Audit logs & notifications
 router.get('/audit-logs', ctrl.getAuditLogs);
 router.get('/notifications', ctrl.getNotifications);
-router.get('/notifications/unread-count', ctrl.getUnreadCount);
-router.patch('/notifications/mark-all-read', ctrl.markAllNotificationsRead);
-
-// Election management (approve/reject requests)
-router.get('/elections', ctrl.getElectionsByStatus);
-router.patch('/elections/:id/approve', ctrl.approveElection);
-router.patch('/elections/:id/reject', ctrl.rejectElection);
+router.patch('/notifications/:id/read', ctrl.markNotificationRead);
+router.get('/notifications/unread-count', ctrl.getUnreadNotificationCount);
 
 module.exports = router;
