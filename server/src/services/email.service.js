@@ -58,6 +58,7 @@ const emailWrapper = (content) => `
         border-radius: 24px;
         overflow: hidden;
         box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f9fafb; /* gray-50 border */
       }
       .header {
         background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%);
@@ -160,8 +161,9 @@ const sendVerificationOtp = async (email, otp) => {
 
 const sendPasswordResetEmail = async (email, token) => {
   const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+  // This email uses a separate inline template, so we add the same border style directly
   const html = `
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f9fafb;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%); padding: 32px 24px; text-align: center;">
         <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: white;">VoteUp</h1>
@@ -188,10 +190,10 @@ const sendPasswordResetEmail = async (email, token) => {
   await sendEmail({ to: email, subject: 'Reset your password – VoteUp', html });
 };
 
-// services/email.service.js
+// Welcome password email – also with border
 const sendWelcomePassword = async (email, firstName, lastName, tempPassword) => {
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; border: 1px solid #f9fafb;">
       <h2 style="color: #6d28d9;">Welcome to VoteUp, ${firstName} ${lastName}!</h2>
       <p>An administrator has registered you as a candidate. You can now log in using the following credentials:</p>
       <div style="background: #f3f4f6; padding: 16px; border-radius: 12px; margin: 20px 0;">

@@ -32,7 +32,7 @@ export default function ResetLinkSent() {
             <MailCheck className="text-green-600" size={22} />
           </div>
         </div>
-        <h2 className="text-gray-800 text-xl font-bold mb-2">Please, Check your email</h2>
+        <h2 className="text-gray-800 text-xl font-bold mb-2">Check your email</h2>
         <p className="text-gray-500 text-sm mb-6">
           We sent a password reset link to{' '}
           <span className="text-violet-600 font-medium">{email}</span>

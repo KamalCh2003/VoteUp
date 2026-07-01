@@ -70,7 +70,7 @@ function AppContent() {
   return (
     <>
       <ScrollToTop />
-      <Toaster position="top-right" />
+      {/* <Toaster position="top-right" /> */}
       {showPublicNavbar && <Navbar />}
       {showContestantNavbar && <ContestantNavbar />}
 

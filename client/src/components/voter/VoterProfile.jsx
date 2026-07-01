@@ -1,5 +1,5 @@
 // src/components/voter/VoterProfile.jsx
-import { useState, useEffect, useRef } from "react";   // added useRef
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -22,7 +22,7 @@ import {
 export default function VoterProfile() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
-  const fileInputRef = useRef(null);   // ref for hidden file input
+  const fileInputRef = useRef(null);
 
   // Personal info states
   const [profile, setProfile] = useState({
@@ -33,7 +33,7 @@ export default function VoterProfile() {
     avatarUrl: "",
   });
   const [saving, setSaving] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);   // avatar upload loading
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Password states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -118,7 +118,6 @@ export default function VoterProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Basic validation
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
@@ -133,7 +132,6 @@ export default function VoterProfile() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Update the avatar URL in context and local profile state
       const updatedUser = { ...user, avatarUrl: data.avatarUrl };
       updateUser(updatedUser);
       setProfile((prev) => ({ ...prev, avatarUrl: data.avatarUrl }));
@@ -143,10 +141,13 @@ export default function VoterProfile() {
       toast.error(msg);
     } finally {
       setUploadingAvatar(false);
-      // Clear the file input so the same file can be selected again if needed
       e.target.value = "";
     }
   };
+
+  // Determine back button destination and label based on role
+  const backLink = user?.role === "CONTESTANT" ? "/contestant/dashboard" : "/";
+  const backLabel = user?.role === "CONTESTANT" ? "Back to Dashboard" : "Back to Home";
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -159,14 +160,14 @@ export default function VoterProfile() {
         onChange={handleAvatarChange}
       />
 
-      {/* Back to Home – full width, leftmost, hidden on mobile */}
+      {/* Back button – leftmost on desktop, hidden on mobile */}
       <div className="hidden lg:block w-full px-6 pt-6">
         <Link
-          to="/"
+          to={backLink}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white shadow-sm transition"
         >
           <ArrowLeft size={18} />
-          Back to Home
+          {backLabel}
         </Link>
       </div>
 
@@ -196,7 +197,6 @@ export default function VoterProfile() {
                   </span>
                 )}
               </div>
-              {/* Camera button triggers file input */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}

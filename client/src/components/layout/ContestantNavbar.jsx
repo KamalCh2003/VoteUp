@@ -1,7 +1,7 @@
 // src/components/layout/ContestantNavbar.jsx
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Vote, LogOut, Menu, X, LayoutDashboard } from 'lucide-react';
+import { Vote, LogOut, Menu, X, User } from 'lucide-react'; // added User
 import { useAuth } from '../../context/AuthContext';
 import LogoutConfirmModal from '../common/LogoutConfirmModal';
 
@@ -38,22 +38,43 @@ export default function ContestantNavbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-10 text-sm md:flex">
-            <NavLink to="/contestant/profile-campaign" className={linkClass}>Profile</NavLink>
+            <NavLink to="/contestant/profile-campaign" className={linkClass}>
+              Profile
+            </NavLink>
             <NavLink to="/contestant/dashboard" className={linkClass}>
               Dashboard
             </NavLink>
-            <NavLink to="/contestant/analytics" className={linkClass}>Analytics</NavLink>
-            <NavLink to="/contestant/history" className={linkClass}>History</NavLink>
+            <NavLink to="/contestant/analytics" className={linkClass}>
+              Analytics
+            </NavLink>
+            <NavLink to="/contestant/history" className={linkClass}>
+              History
+            </NavLink>
           </nav>
 
           {/* Desktop User Section */}
-          <div className="hidden items-center gap-4 md:flex">
-            <div className="text-sm text-gray-600">
-              Welcome, {user?.firstName || 'Contestant'}
-            </div>
+          <div className="hidden items-center gap-3 md:flex">
+            {/* Profile icon button (replaces Welcome text) */}
+            <NavLink
+              to="/voter-profile"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-violet-100 hover:text-violet-600 overflow-hidden"
+              title="Your Profile"
+            >
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.firstName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User size={20} />
+              )}
+            </NavLink>
+
+            {/* Logout button */}
             <button
               onClick={() => setShowLogoutModal(true)}
-              className="flex items-center gap-2 rounded-xl border border-gray-300 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
+              className="flex items-center gap-2 rounded-xl border  border-red-200 bg-red-50  py-2 px-4cl text-sm font-medium text-red-600 transition hover:bg-violet-700"
             >
               <LogOut size={16} />
               Logout
@@ -118,15 +139,35 @@ export default function ContestantNavbar() {
                 History
               </NavLink>
               <hr className="border-gray-200 my-2" />
-              <div className="text-sm text-gray-600 px-2">
-                Welcome, {user?.firstName || 'Contestant'}
-              </div>
+
+              {/* Mobile profile link with avatar & name */}
+              <NavLink
+                to="/voter-profile"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-3 text-gray-700 hover:text-violet-600 transition"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 overflow-hidden">
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.firstName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User size={20} />
+                  )}
+                </div>
+                <span className="font-medium">
+                  {user?.firstName} {user?.lastName}
+                </span>
+              </NavLink>
+
               <button
                 onClick={() => {
                   closeMobileMenu();
                   setShowLogoutModal(true);
                 }}
-                className="flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
+                className="flex items-center justify-center gap-2 rounded-xl border  border-red-200 bg-red-50  px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-violet-700"
               >
                 <LogOut size={16} />
                 Logout

@@ -62,15 +62,6 @@ export default function CandidateHistory() {
     <div className="min-h-screen px-4 sm:px-6 py-6 sm:py-10 text-gray-900">
       <div className="max-w-5xl mx-auto">
 
-        {/* HEADER */}
-        <div className="flex items-center gap-3 mb-6 sm:mb-8">
-          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-violet-100 flex items-center justify-center">
-            <Vote size={20} className="text-violet-600" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            My Candidacy History
-          </h1>
-        </div>
 
         {history.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
@@ -79,7 +70,7 @@ export default function CandidateHistory() {
               to="/contestant/apply"
               className="text-violet-600 hover:underline mt-2 inline-block"
             >
-              Apply for an election →
+              Apply for candidacy 
             </Link>
           </div>
         ) : (
