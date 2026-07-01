@@ -1,5 +1,6 @@
 // src/components/auth/ForgotPassword.jsx
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { forgotPassword } from '../../services/authService';
 import { useToast } from '../../context/ToastContext';
 import { Loader2 } from 'lucide-react';
@@ -7,10 +8,11 @@ import { Loader2 } from 'lucide-react';
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const navigate = useNavigate();
   const toast = useToast();
 
-  const handleSend = async (isResend = false) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!email.trim()) {
       toast.error('Please enter your email address');
       return;
@@ -18,22 +20,13 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       await forgotPassword(email);
-      if (!emailSent) setEmailSent(true);
-      toast.success(isResend ? 'Reset link resent successfully!' : 'Reset link sent successfully!');
+      // Navigate to the confirmation page, passing the email in the URL
+      navigate(`/reset-link-sent?email=${encodeURIComponent(email)}`);
     } catch (err) {
       toast.error('Error sending email');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    handleSend(false);
-  };
-
-  const handleResend = () => {
-    handleSend(true);
   };
 
   return (
@@ -57,24 +50,13 @@ export default function ForgotPassword() {
             />
           </div>
 
-          {!emailSent ? (
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 className="animate-spin" size={16} /> : 'Send Reset Link'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={loading}
-              className="w-full h-11 border border-violet-600 text-violet-600 hover:bg-violet-50 disabled:opacity-70 rounded-full font-semibold text-sm flex items-center justify-center gap-2 transition"
-            >
-              {loading ? <Loader2 className="animate-spin" size={16} /> : 'Resend Reset Link'}
-            </button>
-          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="animate-spin" size={16} /> : 'Send Reset Link'}
+          </button>
         </form>
 
         <p className="text-center text-gray-500 text-xs mt-6">

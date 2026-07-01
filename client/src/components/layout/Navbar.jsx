@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Vote, LogOut, Menu, X } from 'lucide-react';
+import { Vote, LogOut, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import LogoutConfirmModal from '../common/LogoutConfirmModal';
 
@@ -32,7 +32,6 @@ export default function Navbar() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
               <Vote size={22} />
             </div>
-
             <span>
               Vote<span className="text-violet-600">Up</span>
             </span>
@@ -43,23 +42,19 @@ export default function Navbar() {
             <NavLink to="/" end className={linkClass}>
               Home
             </NavLink>
-
             <NavLink to="/elections" className={linkClass}>
               Elections
             </NavLink>
-
             {user && (
               <NavLink to="/results" className={linkClass}>
                 Results
               </NavLink>
             )}
-
             {user && (
               <NavLink to="/history" className={linkClass}>
                 History
               </NavLink>
             )}
-
             {!user && (
               <NavLink to="/about" className={linkClass}>
                 About
@@ -77,7 +72,6 @@ export default function Navbar() {
                 >
                   Sign In
                 </NavLink>
-
                 <NavLink
                   to="/register"
                   className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white shadow-md transition hover:bg-violet-700"
@@ -86,10 +80,23 @@ export default function Navbar() {
                 </NavLink>
               </>
             ) : (
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  Welcome, {user.firstName || 'User'}
-                </span>
+              <div className="flex items-center gap-3">
+                {/* Profile Icon Link */}
+                <NavLink
+                  to="/voter-profile"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-violet-100 hover:text-violet-600 overflow-hidden"
+                  title="Your Profile"
+                >
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.firstName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User size={20} />
+                  )}
+                </NavLink>
 
                 <button
                   onClick={() => setShowLogoutModal(true)}
@@ -130,7 +137,6 @@ export default function Navbar() {
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={closeMobileMenu}
           />
-
           <div className="absolute right-0 top-0 h-full w-72 bg-white border-l border-gray-200 shadow-2xl">
             <div className="flex justify-end p-4">
               <button
@@ -150,7 +156,6 @@ export default function Navbar() {
               >
                 Home
               </NavLink>
-
               <NavLink
                 to="/elections"
                 className={linkClass}
@@ -158,7 +163,6 @@ export default function Navbar() {
               >
                 Elections
               </NavLink>
-
               <NavLink
                 to="/results"
                 className={linkClass}
@@ -166,7 +170,6 @@ export default function Navbar() {
               >
                 Results
               </NavLink>
-
               <NavLink
                 to="/history"
                 className={linkClass}
@@ -177,9 +180,27 @@ export default function Navbar() {
 
               <hr className="border-gray-200" />
 
-              <div className="text-sm text-gray-600">
-                Welcome, {user.firstName || 'User'}
-              </div>
+              {/* Mobile Profile Link */}
+              <NavLink
+                to="/voter-profile"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-3 text-gray-700 hover:text-violet-600 transition"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 overflow-hidden">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.firstName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User size={20} />
+                  )}
+                </div>
+                <span className="font-medium">
+                  {user.firstName} {user.lastName}
+                </span>
+              </NavLink>
 
               <button
                 onClick={() => {

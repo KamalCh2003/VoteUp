@@ -44,9 +44,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Add this function to allow VoterProfile to update user data in context
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
   return (
     <AuthContext.Provider value={{ 
-      user, loading, login, register, logout, setAuth,
+      user, loading, login, register, logout, setAuth, updateUser,   // ← expose updateUser
       isAuthenticated: !!user 
     }}>
       {children}

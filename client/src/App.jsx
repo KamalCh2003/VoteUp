@@ -1,6 +1,7 @@
 // client/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
@@ -34,6 +35,7 @@ import CandidateHistory from './components/contestant/CandidateHistory';
 import PaymentCallback from './components/payment/PaymentCallback';
 import GoogleCallback from './components/auth/GoogleCallback';
 import ResetPassword from './components/auth/ResetPassword';
+import ResetLinkSent from './components/auth/ResetLinkSent';
 
 // Scroll‑to‑top component
 function ScrollToTop() {
@@ -57,7 +59,7 @@ function AppContent() {
   const { user } = useAuth();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  const hideNavbarPaths = ['/login', '/register', '/forgot-password', '/verify-email'];
+  const hideNavbarPaths = ['/login', '/register', '/forgot-password', '/verify-email', '/reset-password', '/reset-link-sent', '/auth/callback', '/payment/callback', '/voter-profile'];
   const shouldHideNavbar = hideNavbarPaths.includes(location.pathname);
 
   const showContestantNavbar = !shouldHideNavbar && !isAdminRoute && user?.role === 'CONTESTANT';
@@ -68,6 +70,7 @@ function AppContent() {
   return (
     <>
       <ScrollToTop />
+      <Toaster position="top-right" />
       {showPublicNavbar && <Navbar />}
       {showContestantNavbar && <ContestantNavbar />}
 
@@ -92,6 +95,7 @@ function AppContent() {
             <Route path="/results/:electionId" element={<ResultsView />} />
             <Route path="/elections/:id" element={<ElectionDetails />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+           <Route path="/reset-link-sent" element={<ResetLinkSent />} />
 
             {/* Voter routes */}
             <Route path="/voter/home" element={<Protected roles={['VOTER']}><VoterHome /></Protected>} />
@@ -99,6 +103,7 @@ function AppContent() {
             <Route path="/voter/history" element={<Protected roles={['VOTER']}><VoteHistory /></Protected>} />
             <Route path="/voter/profile" element={<Protected roles={['VOTER']}><VoterProfile /></Protected>} />
             <Route path="/history" element={<Protected roles={['VOTER']}><VoteHistory /></Protected>} />
+            <Route path="/voter-profile" element={<Protected><VoterProfile /></Protected>} />
 
             {/* Contestant routes */}
             <Route path="/contestant/profile-campaign" element={<Protected roles={['CONTESTANT']}><ContestantProfileCampaign /></Protected>} />

@@ -146,7 +146,7 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-// ─── LOGIN ─────────────────────────
+// LOGIN 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;

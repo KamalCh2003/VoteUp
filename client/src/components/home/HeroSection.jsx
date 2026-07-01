@@ -1,6 +1,6 @@
 // src/components/home/HeroSection.jsx
 import { Link } from 'react-router-dom';
-import { ChevronRight, Sparkles, Trophy } from 'lucide-react';
+import { ChevronRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
@@ -8,10 +8,10 @@ import api from '../../services/api';
 export default function HeroSection() {
   const { user } = useAuth();
   const [activeCount, setActiveCount] = useState(0);
-  const [loadingStats, setLoadingStats] = useState(true); 
+  const [loadingStats, setLoadingStats] = useState(true);
   const [recentElection, setRecentElection] = useState(null);
   const [candidates, setCandidates] = useState([]);
-  const [loadingRanking, setLoadingRanking] = useState(false);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
 
   useEffect(() => {
     setLoadingStats(true);
@@ -24,7 +24,7 @@ export default function HeroSection() {
       .finally(() => setLoadingStats(false));
 
     const fetchMostRecentActiveElection = async () => {
-      setLoadingRanking(true);
+      setLoadingCandidates(true);
       try {
         const { data } = await api.get('/elections', {
           params: { status: 'ACTIVE', limit: 1 },
@@ -33,21 +33,24 @@ export default function HeroSection() {
         if (elections.length === 0) {
           setRecentElection(null);
           setCandidates([]);
-          setLoadingRanking(false);
+          setLoadingCandidates(false);
           return;
         }
         const mostRecent = elections[0];
         const electionRes = await api.get(`/elections/${mostRecent.id}`);
         const election = electionRes.data.election;
-        const sortedCandidates = [...(election.candidates || [])].sort(
-          (a, b) => b.votesReceived - a.votesReceived
-        );
+        // Sort alphabetically by full name
+        const sorted = [...(election.candidates || [])].sort((a, b) => {
+          const nameA = `${a.user?.firstName ?? ''} ${a.user?.lastName ?? ''}`.trim().toLowerCase();
+          const nameB = `${b.user?.firstName ?? ''} ${b.user?.lastName ?? ''}`.trim().toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
         setRecentElection(election);
-        setCandidates(sortedCandidates.slice(0, 5));
+        setCandidates(sorted.slice(0, 5)); // show top 5 alphabetically
       } catch (err) {
         console.error('Failed to fetch most recent active election:', err);
       } finally {
-        setLoadingRanking(false);
+        setLoadingCandidates(false);
       }
     };
 
@@ -61,7 +64,7 @@ export default function HeroSection() {
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 py-1 md:py-4 mb-10">
-        {/* Active Election Badge – show skeleton while loading */}
+        {/* Active Election Badge */}
         <div className="flex justify-center mb-8">
           {loadingStats ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-5 py-2 text-sm text-gray-400 shadow-sm animate-pulse">
@@ -77,9 +80,9 @@ export default function HeroSection() {
         </div>
 
         {/* Hero Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
           {/* Left Content */}
-          <div className="text-center lg:text-left">
+          <div className="text-center lg:text-left lg:col-span-2">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight tracking-tight text-gray-900">
               The future of{' '}
               <span className="bg-gradient-to-r from-violet-600 to-cyan-500 bg-clip-text italic text-transparent">
@@ -95,7 +98,7 @@ export default function HeroSection() {
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
               <Link
-                to={votingRoute}
+                to="/elections"
                 className="group flex items-center gap-2 rounded-2xl bg-violet-600 px-8 py-3 text-lg font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-violet-700"
               >
                 Start Voting
@@ -114,20 +117,13 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Leaderboard */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
-            <div className="flex items-center gap-2 mb-4">
-              <Trophy className="text-yellow-500" size={22} />
-              <h2 className="text-xl font-bold text-gray-900">
-                Live Leaderboard
-              </h2>
-              <span className="ml-auto text-xs text-emerald-500 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                LIVE
-              </span>
-            </div>
+          {/* Candidate List (replaces leaderboard) */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg lg:col-span-1">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Candidates
+            </h2>
 
-            {loadingRanking && candidates.length === 0 ? (
+            {loadingCandidates && candidates.length === 0 ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
               </div>
@@ -142,17 +138,14 @@ export default function HeroSection() {
                 </div>
 
                 <div className="space-y-3">
-                  {candidates.map((candidate, idx) => {
+                  {candidates.map((candidate) => {
                     const avatarUrl = candidate.avatarUrl;
                     return (
                       <div
                         key={candidate.id}
                         className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition"
                       >
-                        <div className="w-8 text-center font-bold text-gray-600">
-                          #{idx + 1}
-                        </div>
-
+                        {/* Avatar */}
                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden">
                           {avatarUrl ? (
                             <img
@@ -189,11 +182,6 @@ export default function HeroSection() {
                 )}
               </>
             )}
-
-            <div className="mt-4 pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-              Updated every 10 seconds – top candidates of the most recent
-              active election
-            </div>
           </div>
         </div>
       </div>

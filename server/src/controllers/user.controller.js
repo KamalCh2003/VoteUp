@@ -13,7 +13,7 @@ exports.getProfile = async (req, res) => {
         lastName: true,
         phone: true,
         avatarUrl: true,
-        googleId: true,          // ✅ show the Google ID if linked
+        googleId: true,          
         role: true,
         isVerified: true,
         anonymousMode: true,
@@ -32,7 +32,6 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 };
-
 exports.updateProfile = async (req, res) => {
   try {
     const { firstName, lastName, phone, anonymousMode } = req.body;
@@ -41,17 +40,22 @@ exports.updateProfile = async (req, res) => {
       data: {
         ...(firstName && { firstName }),
         ...(lastName && { lastName }),
-        ...(phone && { phone }),
+        ...(phone !== undefined && { phone }),   // allows empty string to clear phone
         ...(anonymousMode !== undefined && { anonymousMode }),
       },
-    });
-    res.json({
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,            // ← now returned
+        avatarUrl: true,
+        role: true,
+        isVerified: true,
+        // add any other fields your AuthContext uses (e.g., googleId, twoFactorEnabled, etc.)
       },
     });
+    res.json({ user });
   } catch (err) {
     console.error('Update profile error:', err);
     res.status(500).json({ error: 'Update failed' });

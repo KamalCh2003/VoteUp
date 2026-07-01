@@ -242,7 +242,9 @@ export default function ContestantManagement() {
                 </tr>
               ))}
               {paginatedCandidates.length === 0 && (
-                <td colSpan={8} className="text-center py-12 text-gray-500">No contestants found.</td>
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-gray-500">No contestants found.</td>
+                </tr> 
               )}
             </tbody>
           </table>

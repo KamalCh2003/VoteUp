@@ -2,14 +2,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';   // ✅ custom toast
 import AuthLayout from './AuthLayout';
 
 export default function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const toast = useToast();   // ✅ use custom toast
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -56,6 +57,7 @@ export default function LoginForm() {
         }
       }
     } catch (err) {
+      console.error('Login error:', err?.response?.data);
       toast.error(err?.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);

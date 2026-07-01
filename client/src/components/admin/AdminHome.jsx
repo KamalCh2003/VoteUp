@@ -149,7 +149,7 @@ export default function AdminHome() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-hidden">
-        <header className="h-20 border-b border-gray-200 bg-white/90 backdrop-blur-md px-8 flex justify-between items-center shadow-sm">
+        <header className="h-18 border-b border-gray-200 bg-white/90 backdrop-blur-md px-8 flex justify-between items-center shadow-sm">
           <h1 className="text-xl font-semibold text-gray-800">{activeTitle}</h1>
           <div className="flex items-center gap-4">
             <button
@@ -164,7 +164,7 @@ export default function AdminHome() {
               )}
             </button>
             <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white">
                 A
               </div>
               <div>
@@ -175,7 +175,7 @@ export default function AdminHome() {
           </div>
         </header>
 
-        <div className="p-8 overflow-auto h-[calc(100vh-80px)]">
+        <div className="p-2 overflow-auto h-[calc(100vh-80px)]">
           {renderContent()}
         </div>
       </main>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getElection } from '../../services/electionService';
-import useVote from '../../hooks/useVote';   // ← fixed default import
+import useVote from '../../hooks/useVote';   
 import GlassCard from '../common/GlassCard';
 import Button from '../common/Button';
 import { useToast } from '../../context/ToastContext';
