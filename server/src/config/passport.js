@@ -4,8 +4,8 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const prisma = require('./database');
 const bcrypt = require('bcrypt');
 
-console.log('🔐 Loading Passport Google Strategy...');
-console.log('Callback URL:', `${process.env.API_URL || 'http://localhost:5000'}/api/auth/google/callback`);
+// // console.log('Loading Passport Google Strategy...');
+// // console.log('Callback URL:', `${process.env.API_URL || 'http://localhost:5000'}/api/auth/google/callback`);
 
 passport.use(
   new GoogleStrategy(
@@ -17,7 +17,7 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
-        console.log(`🔍 Google login attempt for: ${email}`);
+        console.log(`Google login attempt for: ${email}`);
 
         const placeholderHash = await bcrypt.hash(Math.random().toString(36), 10);
         const user = await prisma.user.upsert({
@@ -37,7 +37,7 @@ passport.use(
           },
         });
 
-        console.log(`✅ Google user processed: ${user.email}`);
+        console.log(`Google user processed: ${user.email}`);
         return done(null, user);
       } catch (err) {
         console.error('❌ Google Strategy Error:', err);

@@ -28,16 +28,12 @@ enum ElectionStatus {
 }
 
 enum PaymentType {
-  CANDIDACY_FEE
   VOTE_PURCHASE  
-  REFUND
 }
 
 enum PaymentStatus {
-  PENDING
   COMPLETED
   FAILED
-  REFUNDED
 }
 
 enum NotifType {
@@ -154,7 +150,7 @@ model Payment {
   amount                Float
   currency              String        @default("USD")
   type                  PaymentType
-  status                PaymentStatus @default(PENDING)
+  status                PaymentStatus @default(COMPLETED)
   stripePaymentIntentId String?       @unique
   receiptUrl            String?
   createdAt             DateTime      @default(now())

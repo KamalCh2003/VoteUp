@@ -2,16 +2,6 @@ const prisma = require("../config/database");
 const bcrypt = require("bcrypt");
 const emailService = require('../services/email.service');
 
-const getColorForType = (type) => {
-  switch (type) {
-    case "CANDIDACY_FEE": return "#7c6fff";
-    case "PREMIUM_VOTER": return "#00d4aa";
-    case "WALLET_TOPUP": return "#f5a623";
-    case "REFUND": return "#ff6b8a";
-    default: return "#60a5fa";
-  }
-};
-
 exports.getStats = async (req, res) => {
   try {
     const [
@@ -48,60 +38,98 @@ exports.getStats = async (req, res) => {
 
 exports.getVoteTrend = async (req, res) => {
   try {
-    const { range = "week" } = req.query;
-    const endDate = new Date();
-    endDate.setHours(23, 59, 59, 999);
-    let startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-    let groupBy = "day";
+    const { range = 'THIS_YEAR' } = req.query;
+    const now = new Date();
+    let startDate, endDate;
+    let groupBy = 'day'; // default
 
-    if (range === "week") {
-      startDate.setDate(startDate.getDate() - 6);
-    } else if (range === "month") {
-      startDate.setDate(startDate.getDate() - 29);
-    } else if (range === "year") {
-      startDate = new Date(endDate.getFullYear(), 0, 1);
-      groupBy = "month";
+    switch (range) {
+      case 'LAST_MONTH':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        endDate = now;
+        break;
+      case 'LAST_3_MONTHS':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        endDate = now;
+        break;
+      case 'LAST_6_MONTHS':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+        endDate = now;
+        break;
+      case 'THIS_YEAR':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = now;
+        groupBy = 'month';
+        break;
+      case 'LAST_5_YEARS':
+        startDate = new Date(now.getFullYear() - 4, 0, 1);
+        endDate = now;
+        groupBy = 'year';
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = now;
+        groupBy = 'month';
     }
 
     const votes = await prisma.vote.findMany({
-      where: { votedAt: { gte: startDate, lte: endDate } },
+      where: {
+        votedAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
       select: { votedAt: true, quantity: true },
     });
 
     const trendMap = new Map();
 
-    if (groupBy === "month") {
-      for (let i = 0; i < 12; i++) {
-        const monthStr = `${endDate.getFullYear()}-${String(i + 1).padStart(2, "0")}`;
-        trendMap.set(monthStr, 0);
+    if (groupBy === 'year') {
+      for (let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
+        trendMap.set(`${y}`, 0);
       }
       votes.forEach(v => {
-        const monthStr = v.votedAt.toISOString().slice(0, 7);
-        const qty = v.quantity || 1;
-        trendMap.set(monthStr, (trendMap.get(monthStr) || 0) + qty);
+        const yearStr = v.votedAt.getFullYear().toString();
+        if (trendMap.has(yearStr)) {
+          trendMap.set(yearStr, trendMap.get(yearStr) + (v.quantity || 1));
+        }
       });
-      const trend = Array.from(trendMap.entries())
-        .map(([date, votes]) => ({ date, votes }))
-        .sort((a, b) => a.date.localeCompare(b.date));
-      return res.json({ trend });
+    } else if (groupBy === 'month') {
+      const start = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const end = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
+      let current = new Date(start);
+      while (current <= end) {
+        const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        trendMap.set(key, 0);
+        current.setMonth(current.getMonth() + 1);
+      }
+      votes.forEach(v => {
+        const key = `${v.votedAt.getFullYear()}-${String(v.votedAt.getMonth() + 1).padStart(2, '0')}`;
+        if (trendMap.has(key)) {
+          trendMap.set(key, trendMap.get(key) + (v.quantity || 1));
+        }
+      });
+    } else {
+      // day grouping
+      const diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      for (let i = 0; i <= diffDays; i++) {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
+        const key = d.toISOString().split('T')[0];
+        trendMap.set(key, 0);
+      }
+      votes.forEach(v => {
+        const key = v.votedAt.toISOString().split('T')[0];
+        if (trendMap.has(key)) {
+          trendMap.set(key, trendMap.get(key) + (v.quantity || 1));
+        }
+      });
     }
 
-    const diffDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-    for (let i = 0; i < diffDays; i++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
-      trendMap.set(dateStr, 0);
-    }
-    votes.forEach(v => {
-      const dateStr = v.votedAt.toISOString().split("T")[0];
-      const qty = v.quantity || 1;
-      if (trendMap.has(dateStr)) trendMap.set(dateStr, trendMap.get(dateStr) + qty);
-    });
     const trend = Array.from(trendMap.entries())
       .map(([date, votes]) => ({ date, votes }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+      .sort((a, b) => a.date.localeCompare(b.date));
+
     res.json({ trend });
   } catch (err) {
     console.error("Vote trend error:", err);
@@ -291,7 +319,7 @@ exports.createCandidateFromAdmin = async (req, res) => {
       if (existingCandidate) return res.status(400).json({ error: "User already has a candidate profile" });
     }
 
-    // 🔹 Generate candidate number
+    // Generate candidate number
     const existingCandidatesCount = await prisma.candidate.count({ where: { electionId } });
     const sequence = String(existingCandidatesCount + 1).padStart(2, '0');
     const electionShortId = electionId.slice(0, 6);
@@ -351,23 +379,71 @@ exports.getAuditLogs = async (req, res) => {
 
 exports.getRevenueTrend = async (req, res) => {
   try {
+    const { range = 'THIS_YEAR' } = req.query;
     const now = new Date();
-    const months = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push({
-        start: new Date(d.getFullYear(), d.getMonth(), 1),
-        end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59),
-        label: d.toLocaleString("default", { month: "short" }),
-      });
+    let startDate, endDate;
+    let groupBy = 'month'; // 'year' for LAST_5_YEARS
+
+    switch (range) {
+      case 'LAST_MONTH':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        break;
+      case 'LAST_3_MONTHS':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        break;
+      case 'LAST_6_MONTHS':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        break;
+      case 'THIS_YEAR':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'LAST_5_YEARS':
+        startDate = new Date(now.getFullYear() - 4, 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        groupBy = 'year';
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
     }
-    const revenueData = await Promise.all(months.map(async (m) => {
-      const agg = await prisma.payment.aggregate({
-        _sum: { amount: true },
-        where: { status: "COMPLETED", createdAt: { gte: m.start, lte: m.end } },
-      });
-      return { month: m.label, revenue: agg._sum.amount || 0 };
-    }));
+
+    const revenueData = [];
+
+    if (groupBy === 'year') {
+      for (let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
+        const startOfYear = new Date(y, 0, 1);
+        const endOfYear = new Date(y, 11, 31, 23, 59, 59);
+        const agg = await prisma.payment.aggregate({
+          _sum: { amount: true },
+          where: {
+            status: 'COMPLETED',
+            createdAt: { gte: startOfYear, lte: endOfYear },
+          },
+        });
+        revenueData.push({ month: `${y}`, revenue: agg._sum.amount || 0 });
+      }
+    } else {
+      let current = new Date(startDate);
+      while (current <= endDate) {
+        const monthStart = new Date(current.getFullYear(), current.getMonth(), 1);
+        const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0, 23, 59, 59);
+        const agg = await prisma.payment.aggregate({
+          _sum: { amount: true },
+          where: {
+            status: 'COMPLETED',
+            createdAt: { gte: monthStart, lte: monthEnd },
+          },
+        });
+        const label = monthStart.toLocaleString('default', { month: 'short', year: 'numeric' });
+        revenueData.push({ month: label, revenue: agg._sum.amount || 0 });
+        current.setMonth(current.getMonth() + 1);
+      }
+    }
+
     res.json({ revenueData });
   } catch (err) {
     console.error("Revenue trend error:", err);
@@ -377,23 +453,8 @@ exports.getRevenueTrend = async (req, res) => {
 
 exports.getPaymentMethods = async (req, res) => {
   try {
-    const methods = await prisma.payment.groupBy({
-      by: ["type"],
-      _count: true,
-      where: { status: "COMPLETED" },
-    });
-    const nameMap = {
-      CANDIDACY_FEE: "Candidacy Fee",
-      PREMIUM_VOTER: "Premium",
-      WALLET_TOPUP: "Wallet Top‑up",
-      REFUND: "Refund",
-    };
-    const result = methods.map(m => ({
-      name: nameMap[m.type] || m.type,
-      value: m._count,
-      color: getColorForType(m.type),
-    }));
-    res.json({ methods: result });
+    const count = await prisma.payment.count({ where: { status: 'COMPLETED' } });
+    res.json({ methods: [{ name: 'Vote Purchase', value: count, color: '#7c6fff' }] });
   } catch (err) {
     console.error("Payment methods error:", err);
     res.status(500).json({ error: "Failed to fetch payment methods" });
@@ -513,7 +574,6 @@ exports.getUnreadNotificationCount = async (req, res) => {
         isRead: false,
       },
     });
-
     res.json({ count });
   } catch (err) {
     console.error('Unread notification count error:', err);
