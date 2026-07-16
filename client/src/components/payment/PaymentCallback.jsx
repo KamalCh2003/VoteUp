@@ -30,25 +30,42 @@ export default function PaymentCallback() {
         return;
       }
 
+      // 1. Retrieve pending vote data
+      const pendingData = sessionStorage.getItem('pendingVote');
+      if (!pendingData) {
+        setStatus('error');
+        setMessage('Missing vote information. Please start over.');
+        toast.error('No vote data found');
+        sessionStorage.removeItem('pendingVote');
+        setTimeout(() => navigate('/'), 3000);
+        return;
+      }
+
+      const { electionId, candidateId, quantity, returnUrl } = JSON.parse(pendingData);
+
+      if (!electionId || !candidateId || !quantity) {
+        setStatus('error');
+        setMessage('Incomplete vote data. Please try again.');
+        toast.error('Missing election/candidate information');
+        sessionStorage.removeItem('pendingVote');
+        setTimeout(() => navigate('/'), 3000);
+        return;
+      }
+
       try {
+        // 2. Verify payment with Khalti – send election metadata
         const verifyRes = await api.post('/payments/khalti/verify', {
           pidx,
           transaction_id: transactionId,
           status: statusParam,
+          electionId,
+          candidateId,
+          quantity,
         });
+
         const paymentId = verifyRes.data.paymentId;
 
-        const pendingData = sessionStorage.getItem('pendingVote');
-        if (!pendingData) throw new Error('No pending vote data');
-        const { electionId, candidateId, quantity, returnUrl } = JSON.parse(pendingData);
-
-        console.log('🔍 Pending data:', { electionId, candidateId, quantity, returnUrl });
-
-        // Ensure electionId exists
-        if (!electionId) {
-          throw new Error('Election ID is missing from pending data');
-        }
-
+        // 3. Cast the vote
         try {
           await api.post('/votes', {
             electionId,
@@ -72,10 +89,7 @@ export default function PaymentCallback() {
           }
         }
 
-        // Redirect after vote processing (success or already voted)
         const redirectTo = returnUrl || `/elections/${electionId}`;
-        console.log('🔀 Redirecting to:', redirectTo);
-        // Use replace: true to avoid back button issues
         navigate(redirectTo, { replace: true });
 
       } catch (err) {
@@ -84,7 +98,6 @@ export default function PaymentCallback() {
         setMessage(err.response?.data?.error || 'Payment verification failed');
         toast.error('Failed to record vote');
         sessionStorage.removeItem('pendingVote');
-        // Redirect to home on error
         setTimeout(() => navigate('/'), 2000);
       }
     };

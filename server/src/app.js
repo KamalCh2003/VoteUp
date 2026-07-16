@@ -42,7 +42,8 @@ app.use('/api/votes', voteRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/public', publicRoutes);
+// app.use('/api/public', publicRoutes);
+app.use('/api/public', require('./routes/public.routes'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Error handler

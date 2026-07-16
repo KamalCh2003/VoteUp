@@ -11,8 +11,6 @@ VoteUp is a secure full-stack online voting platform that enables administrators
 - Manage users
 
 ### Candidate
-- Register as candidate
-- SelfApply for candidacy
 - Edit profile
 - View election status
 

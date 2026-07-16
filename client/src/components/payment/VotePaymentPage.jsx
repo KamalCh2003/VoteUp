@@ -1,36 +1,60 @@
 // src/components/payment/VotePaymentPage.jsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Wallet, CreditCard, Smartphone, CheckCircle, Loader2, Shield, ArrowLeft, Minus, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Loader2, Minus, Plus, Shield, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 
 export default function VotePaymentPage() {
-  const { user, refreshUser } = useAuth(); // assume refreshUser updates user balance
+  const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
-  
+  const [searchParams] = useSearchParams();
+
+  const electionId = searchParams.get('electionId');
+  const candidateId = searchParams.get('candidateId');
+
+  const [election, setElection] = useState(null);
+  const [candidate, setCandidate] = useState(null);
+  const [loadingElection, setLoadingElection] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState('');
   const [processing, setProcessing] = useState(false);
-  
-  // Tiered pricing: more votes = lower per‑vote price
-  const getPricePerVote = (qty) => {
-    if (qty >= 21) return 80;
-    if (qty >= 11) return 90;
-    return 100;
-  };
-  
-  const pricePerVote = getPricePerVote(quantity);
+
+  // Fetch election details (to get vote price)
+  useEffect(() => {
+    if (!electionId || !candidateId) {
+      toast.error('Missing election or candidate information');
+      navigate(-1);
+      return;
+    }
+
+    const fetchElection = async () => {
+      try {
+        const { data } = await api.get(`/elections/${electionId}`);
+        setElection(data.election);
+        // Optionally fetch candidate info if needed
+        // const candRes = await api.get(`/candidates/${candidateId}`);
+        // setCandidate(candRes.data.candidate);
+      } catch (err) {
+        toast.error('Failed to load election details');
+        navigate(-1);
+      } finally {
+        setLoadingElection(false);
+      }
+    };
+    fetchElection();
+  }, [electionId, candidateId, navigate, toast]);
+
+  const pricePerVote = election?.votePrice || 100;
   const totalAmount = quantity * pricePerVote;
-  
+
   const increment = () => setQuantity(prev => Math.min(prev + 1, 100));
   const decrement = () => setQuantity(prev => Math.max(prev - 1, 1));
-  
-  const handlePayment = async () => {
-    if (!paymentMethod) {
-      toast.error('Please select a payment method');
+
+  const handleKhaltiPayment = async () => {
+    if (!electionId || !candidateId) {
+      toast.error('Missing election or candidate information');
       return;
     }
     if (!user) {
@@ -38,165 +62,130 @@ export default function VotePaymentPage() {
       navigate('/login');
       return;
     }
-    
+
     setProcessing(true);
     try {
-      // Replace with real backend call
-      // const { data } = await api.post('/payments/vote-credits', {
-      //   quantity,
-      //   amount: totalAmount,
-      //   method: paymentMethod,
-      // });
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // After success, update user's vote balance (simulate)
-      // await refreshUser(); // re‑fetch user to get new credit balance
-      
-      toast.success(`Purchased ${quantity} vote credit(s) for रू ${totalAmount}!`);
-      navigate('/voter/wallet');
+      // 1. Initiate Khalti payment
+      const { data } = await api.post('/payments/khalti/initiate', {
+        electionId,
+        candidateId,
+        quantity,
+      });
+
+      // 2. Save pending vote data to sessionStorage
+      sessionStorage.setItem('pendingVote', JSON.stringify({
+        electionId,
+        candidateId,
+        quantity,
+        returnUrl: `/elections/${electionId}`,
+      }));
+
+      // 3. Redirect to Khalti payment page
+      window.location.href = data.paymentUrl;
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Payment failed');
-    } finally {
+      console.error('Payment initiation error:', err);
+      toast.error(err.response?.data?.error || 'Failed to initiate payment');
       setProcessing(false);
     }
   };
-  
-  if (!user) {
+
+  if (loadingElection) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-violet-600" size={40} />
+      </div>
+    );
+  }
+
+  if (!election) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Please login first</h2>
-          <button onClick={() => navigate('/login')} className="text-violet-400">Go to Login</button>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Election not found</h2>
+          <button onClick={() => navigate(-1)} className="text-violet-600 hover:underline">Go Back</button>
         </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0B1020] to-black">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl"></div>
-      </div>
-      
-      <div className="relative max-w-4xl mx-auto px-6 py-10">
-        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition">
           <ArrowLeft size={18} /> Back
         </button>
-        
+
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Purchase Vote Credits</h1>
-          <p className="text-gray-400">Buy vote credits – each credit = one vote. Bulk pricing available.</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Purchase Vote Credits</h1>
+          <p className="text-gray-500">
+            Voting in <strong>{election.title}</strong> – each vote costs रू {pricePerVote}
+          </p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Left: Quantity Selector & Summary */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-6">
-            <h2 className="text-xl font-semibold text-white mb-6">Select Number of Votes</h2>
-            
-            <div className="flex items-center justify-between bg-[#12121b] border border-white/10 rounded-xl p-4 mb-6">
-              <button
-                onClick={decrement}
-                className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center"
-              >
+          {/* Quantity Selector & Summary */}
+          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Select Number of Votes</h2>
+
+            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+              <button onClick={decrement} className="h-10 w-10 rounded-lg bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center border">
                 <Minus size={18} />
               </button>
-              <span className="text-3xl font-bold text-white">{quantity}</span>
-              <button
-                onClick={increment}
-                className="h-10 w-10 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center"
-              >
+              <span className="text-3xl font-bold text-gray-900">{quantity}</span>
+              <button onClick={increment} className="h-10 w-10 rounded-lg bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center border">
                 <Plus size={18} />
               </button>
             </div>
-            
-            <div className="space-y-3 text-gray-300">
-              <div className="flex justify-between py-2 border-b border-white/10">
+
+            <div className="space-y-3 text-gray-700">
+              <div className="flex justify-between py-2 border-b">
                 <span>Price per vote</span>
                 <span className="font-mono">रू {pricePerVote}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
+              <div className="flex justify-between py-2 border-b">
                 <span>Quantity</span>
                 <span className="font-mono">{quantity}</span>
               </div>
-              <div className="flex justify-between py-2 text-lg font-bold text-white">
+              <div className="flex justify-between py-2 text-lg font-bold text-gray-900">
                 <span>Total</span>
-                <span className="text-violet-400">रू {totalAmount.toLocaleString()}</span>
+                <span className="text-violet-600">रू {totalAmount.toLocaleString()}</span>
               </div>
             </div>
-            
-            {/* Bulk discount hint */}
-            <div className="mt-4 text-xs text-gray-500">
-              {quantity < 11 && "Buy 11+ votes for रू 90 each | 21+ for रू 80 each"}
-              {quantity >= 11 && quantity < 21 && "✓ You're getting the रू 90 per vote discount!"}
-              {quantity >= 21 && "✓ Best discount: रू 80 per vote!"}
-            </div>
           </div>
-          
-          {/* Right: Payment Methods (unchanged) */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm p-6">
-            <h2 className="text-xl font-semibold text-white mb-6">Choose Payment Method</h2>
-            
+
+          {/* Payment Method & Pay Button */}
+          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Payment Method</h2>
             <div className="space-y-4 mb-8">
-              <button
-                onClick={() => setPaymentMethod('khalti')}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition ${
-                  paymentMethod === 'khalti' ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'
-                }`}
-              >
-                <Wallet size={24} className="text-violet-400" />
-                <span className="flex-1 text-left text-white font-medium">Khalti</span>
-                {paymentMethod === 'khalti' && <CheckCircle size={20} className="text-emerald-400" />}
-              </button>
-              <button
-                onClick={() => setPaymentMethod('esewa')}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition ${
-                  paymentMethod === 'esewa' ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'
-                }`}
-              >
-                <CreditCard size={24} className="text-emerald-400" />
-                <span className="flex-1 text-left text-white font-medium">eSewa</span>
-                {paymentMethod === 'esewa' && <CheckCircle size={20} className="text-emerald-400" />}
-              </button>
-              <button
-                onClick={() => setPaymentMethod('mobile_banking')}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition ${
-                  paymentMethod === 'mobile_banking' ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'
-                }`}
-              >
-                <Smartphone size={24} className="text-cyan-400" />
-                <span className="flex-1 text-left text-white font-medium">Mobile Banking</span>
-                {paymentMethod === 'mobile_banking' && <CheckCircle size={20} className="text-emerald-400" />}
-              </button>
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-violet-200 bg-violet-50">
+                <Shield size={24} className="text-violet-600" />
+                <div>
+                  <p className="font-medium text-gray-800">Khalti</p>
+                  <p className="text-xs text-gray-500">Pay securely via Khalti wallet or mobile banking</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400">Other payment methods (eSewa, mobile banking) coming soon.</p>
             </div>
-            
+
             <button
-              onClick={handlePayment}
-              disabled={processing || !paymentMethod}
-              className={`w-full py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${
-                processing || !paymentMethod
-                  ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg'
-              }`}
+              onClick={handleKhaltiPayment}
+              disabled={processing}
+              className="w-full py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white shadow-md disabled:opacity-70"
             >
-              {processing ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <>Pay रू {totalAmount.toLocaleString()}</>
-              )}
+              {processing ? <Loader2 size={20} className="animate-spin" /> : null}
+              Pay रू {totalAmount.toLocaleString()} via Khalti
             </button>
-            
-            <div className="mt-6 flex items-center gap-2 text-xs text-gray-500 justify-center">
+
+            <div className="mt-6 flex items-center gap-2 text-xs text-gray-400 justify-center">
               <Shield size={14} />
-              <span>Secure payment. Your vote credits will be added immediately.</span>
+              <span>Secure payment. Vote credits are added immediately after confirmation.</span>
             </div>
           </div>
         </div>
-        
-        {/* Info note */}
+
         <div className="mt-12 text-center text-sm text-gray-500">
           <p>Each vote credit allows you to cast one vote in any active election.</p>
-          <p>You may vote only once per election, but you can buy as many credits as you like for different elections.</p>
+          <p>You may vote only once per election, but you can buy as many credits as you like.</p>
         </div>
       </div>
     </div>

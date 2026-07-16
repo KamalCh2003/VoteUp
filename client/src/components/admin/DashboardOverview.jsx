@@ -1,25 +1,25 @@
 // src/components/admin/DashboardOverview.jsx
 import { useEffect, useState } from 'react';
-import { Users, Vote, UserCheck, TrendingUp, Activity, Calendar, BarChart } from 'lucide-react';
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+} from 'recharts';
+import {
+  Users, Vote, UserCheck, TrendingUp, Calendar, BarChart, Clock, Trophy,
+} from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
-function MiniBarChart({ data }) {
-  const max = Math.max(...data.map((d) => d.votes), 1);
-  return (
-    <div className="flex items-end gap-2 h-32 mt-2 overflow-x-auto pb-2">
-      {data.map((item, i) => (
-        <div key={i} className="flex flex-col items-center flex-1 min-w-[40px]">
-          <div
-            className="w-full rounded-t-md bg-gradient-to-t from-purple-500 to-indigo-500 transition-all duration-300"
-            style={{ height: `${(item.votes / max) * 100}%` }}
-          />
-          <span className="text-[10px] text-gray-500 mt-1">{item.date.slice(5)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-md">
+        <p className="text-gray-700 text-sm">{label}</p>
+        <p className="text-violet-600 font-bold">{payload[0].value} votes</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState({
@@ -33,39 +33,27 @@ export default function DashboardOverview() {
   });
   const [activeElections, setActiveElections] = useState([]);
   const [voteTrend, setVoteTrend] = useState([]);
+  const [topVoters, setTopVoters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [trendRange, setTrendRange] = useState('week');
+  const [trendRange, setTrendRange] = useState('THIS_YEAR');
   const toast = useToast();
 
-  const generateFallbackTrend = (range) => {
-    const trend = [];
-    if (range === 'year') {
-      const now = new Date();
-      for (let i = 0; i < 12; i++) {
-        const monthStr = `${now.getFullYear()}-${String(i + 1).padStart(2, '0')}`;
-        trend.push({ date: monthStr, votes: 0 });
-      }
-      return trend;
-    } else {
-      const days = range === 'month' ? 30 : 7;
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        trend.push({ date: d.toISOString().split('T')[0], votes: 0 });
-      }
-      return trend;
+  const fetchTrend = async (range) => {
+    try {
+      const res = await api.get('/admin/votes/trend', { params: { range } });
+      setVoteTrend(res.data.trend || []);
+    } catch (err) {
+      console.error('Vote trend error:', err);
+      toast.error('Failed to load vote trend');
     }
   };
 
-  const fetchTrend = async () => {
+  const fetchTopVoters = async () => {
     try {
-      const res = await api.get('/admin/votes/trend', { params: { range: trendRange } });
-      let trend = res.data.trend || [];
-      if (trend.length === 0) trend = generateFallbackTrend(trendRange);
-      setVoteTrend(trend);
+      const res = await api.get('/admin/finance/top-voters', { params: { limit: 10 } });
+      setTopVoters(res.data.topVoters || []);
     } catch (err) {
-      console.error(err);
-      setVoteTrend(generateFallbackTrend(trendRange));
+      console.error('Top voters error:', err);
     }
   };
 
@@ -81,11 +69,11 @@ export default function DashboardOverview() {
         const activeRes = await api.get('/elections', { params: { status: 'ACTIVE', limit: 5 } });
         setActiveElections(activeRes.data.elections || []);
 
-        await fetchTrend();
+        await fetchTrend(trendRange);
+        await fetchTopVoters();
       } catch (err) {
         console.error(err);
         toast.error('Failed to load dashboard data');
-        setVoteTrend(generateFallbackTrend(trendRange));
       } finally {
         setLoading(false);
       }
@@ -94,8 +82,8 @@ export default function DashboardOverview() {
   }, []);
 
   useEffect(() => {
-    if (!loading) fetchTrend();
-  }, [trendRange]);
+    if (!loading) fetchTrend(trendRange);
+  }, [trendRange, loading]);
 
   if (loading) {
     return (
@@ -105,18 +93,8 @@ export default function DashboardOverview() {
     );
   }
 
-  const totalTrendVotes = voteTrend.reduce((sum, d) => sum + d.votes, 0);
-  const hasVotesOutsideRange = stats.totalVotes > 0 && totalTrendVotes === 0;
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
-        <span className="text-xs text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 flex items-center gap-1.5">
-          <Activity size={12} /> Live data
-        </span>
-      </div>
-
+    <div className="py-6">
       {/* Stats Cards – 6 columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -198,49 +176,48 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Vote Chart + Active Elections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Row: Vote Trend + Active Elections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Vote Trend Chart with Range Selector */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp size={18} className="text-violet-600" />
-              Votes ({trendRange === 'week' ? 'Last 7 Days' : trendRange === 'month' ? 'Last 30 Days' : 'This Year'})
+              Vote Trend
             </h3>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTrendRange('week')}
-                className={`px-3 py-1 text-xs rounded-lg transition ${
-                  trendRange === 'week' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+            <div className="flex items-center gap-2 text-sm">
+              <Clock size={16} className="text-violet-500" />
+              <select
+                value={trendRange}
+                onChange={(e) => setTrendRange(e.target.value)}
+                className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-gray-700 outline-none focus:border-violet-500 cursor-pointer"
               >
-                Week
-              </button>
-              <button
-                onClick={() => setTrendRange('month')}
-                className={`px-3 py-1 text-xs rounded-lg transition ${
-                  trendRange === 'month' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Month
-              </button>
-              <button
-                onClick={() => setTrendRange('year')}
-                className={`px-3 py-1 text-xs rounded-lg transition ${
-                  trendRange === 'year' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                Year
-              </button>
+                <option value="LAST_MONTH">Last Month</option>
+                <option value="LAST_3_MONTHS">Last 3 Months</option>
+                <option value="LAST_6_MONTHS">Last 6 Months</option>
+                <option value="THIS_YEAR">This Year</option>
+                <option value="LAST_5_YEARS">Last 5 Years</option>
+              </select>
             </div>
           </div>
-          <MiniBarChart data={voteTrend} />
-          {hasVotesOutsideRange && (
-            <div className="text-center text-xs text-amber-600 mt-3">
-              No votes in the selected range. {stats.totalVotes} total votes exist. Try "Month" or "Year".
-            </div>
-          )}
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={voteTrend}>
+              <XAxis dataKey="date" stroke="#888888" fontSize={12} />
+              <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line
+                type="monotone"
+                dataKey="votes"
+                stroke="#7c6fff"
+                strokeWidth={3}
+                dot={{ r: 4, fill: '#7c6fff', strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 6, fill: '#7c6fff', stroke: '#fff', strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
+        {/* Active Elections */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Vote size={18} className="text-cyan-600" />
@@ -274,6 +251,34 @@ export default function DashboardOverview() {
             <p className="text-sm text-gray-500">No active elections at the moment.</p>
           )}
         </div>
+      </div>
+
+      {/* Top 10 Most Active Voters */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Trophy size={18} className="text-amber-500" />
+          Top 10 Most Active Voters
+        </h3>
+        {topVoters.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {topVoters.map((voter, idx) => (
+              <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                  {voter.name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{voter.name}</p>
+                  <p className="text-xs text-gray-500">{voter.votes} votes</p>
+                </div>
+                {idx < 3 && (
+                  <Trophy size={16} className={`ml-auto ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : 'text-amber-600'}`} />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No voting activity recorded yet.</p>
+        )}
       </div>
     </div>
   );

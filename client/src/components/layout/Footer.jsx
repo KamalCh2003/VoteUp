@@ -92,7 +92,7 @@ export default function Footer() {
 
               <li>
                 <Link
-                  to="/register"
+                  to="/request-election"
                   className="text-gray-600 hover:text-violet-600"
                 >
                   Create Election

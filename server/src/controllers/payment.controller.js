@@ -108,50 +108,51 @@ exports.initiateKhaltiPayment = async (req, res) => {
     res.status(500).json({ error: 'Failed to initiate payment' });
   }
 };
-
 exports.verifyKhaltiPayment = async (req, res) => {
   try {
-    const { pidx, transaction_id, status, purchase_order_name } = req.body;
-
+    const { pidx, transaction_id, status, electionId, candidateId, quantity } = req.body;
     if (!pidx || !status) {
       return res.status(400).json({ error: 'Missing pidx or status' });
     }
-
     if (status !== 'Completed') {
       return res.status(400).json({ error: 'Payment was not completed' });
     }
-
     const verifyRes = await axios.post(
       'https://dev.khalti.com/api/v2/epayment/lookup/',
       { pidx },
-      {
-        headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` },
-      }
+      { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` } }
     );
-
     if (verifyRes.data.status !== 'Completed') {
       return res.status(400).json({ error: 'Payment verification failed' });
     }
 
-    let meta = {};
-    try {
-      const decoded = Buffer.from(purchase_order_name || verifyRes.data.purchase_order_name || '', 'base64').toString('utf8');
-      meta = JSON.parse(decoded);
-    } catch (e) {
-      return res.status(400).json({ error: 'Invalid payment metadata' });
+    // Use directly provided fields, fallback to metadata if needed
+    let userId = req.user.id;
+    let finalElectionId = electionId;
+    let finalCandidateId = candidateId;
+    let finalQuantity = quantity;
+
+    if (!finalElectionId || !finalCandidateId || !finalQuantity) {
+      try {
+        const metaStr = verifyRes.data.purchase_order_name || '';
+        const decoded = Buffer.from(metaStr, 'base64').toString('utf8');
+        const meta = JSON.parse(decoded);
+        finalElectionId = meta.electionId;
+        finalCandidateId = meta.candidateId;
+        finalQuantity = meta.quantity;
+        userId = meta.userId;
+      } catch (e) {
+        return res.status(400).json({ error: 'Invalid payment metadata' });
+      }
     }
 
-    const { userId, candidateId, electionId, quantity } = meta;
     const election = await prisma.election.findUnique({
-      where: { id: electionId },
+      where: { id: finalElectionId },
       select: { votePrice: true },
     });
+    if (!election) return res.status(404).json({ error: 'Election not found' });
 
-    if (!election) {
-      return res.status(404).json({ error: 'Election not found' });
-    }
-
-    const amount = election.votePrice * quantity;
+    const amount = election.votePrice * finalQuantity;
 
     const payment = await prisma.payment.create({
       data: {
@@ -160,7 +161,7 @@ exports.verifyKhaltiPayment = async (req, res) => {
         type: 'VOTE_PURCHASE',
         status: 'COMPLETED',
         stripePaymentIntentId: pidx,
-        candidateId,
+        candidateId: finalCandidateId,
       },
     });
 

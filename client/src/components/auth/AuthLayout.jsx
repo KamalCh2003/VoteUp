@@ -3,11 +3,16 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Clock } from 'lucide-react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';   // ✅ import auth
 
 export default function AuthLayout({ children, title, subtitle, backTo = '/' }) {
+  const { user } = useAuth();                          // ✅ get current user
   const [topCandidates, setTopCandidates] = useState([]);
   const [electionTitle, setElectionTitle] = useState('');
   const [timeLeft, setTimeLeft] = useState('');
+
+  // 🧠 Decide back link based on role
+  const backLink = user?.role === 'ADMIN' ? '/admin' : backTo;
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -20,7 +25,6 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
           const election = electionRes.data.election;
           const candidates = election.candidates || [];
 
-          // Sort alphabetically by full name
           const sorted = [...candidates].sort((a, b) => {
             const nameA = `${a.user?.firstName ?? ''} ${a.user?.lastName ?? ''}`.trim().toLowerCase();
             const nameB = `${b.user?.firstName ?? ''} ${b.user?.lastName ?? ''}`.trim().toLowerCase();
@@ -62,7 +66,7 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
       {/* Back button */}
       <div className="w-full max-w-6xl mx-auto px-6 pt-6">
         <Link
-          to={backTo}
+          to={backLink}                      // ✅ dynamic link
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white shadow-sm transition"
         >
           <ArrowLeft size={18} /> Back
@@ -103,21 +107,13 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
                     const initials = `${c.user?.firstName?.[0] || ''}${c.user?.lastName?.[0] || ''}`;
                     return (
                       <div key={c.id} className="flex items-center gap-3 border-b border-gray-200 pb-2">
-                        {/* Avatar */}
                         <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden">
                           {avatarUrl ? (
-                            <img
-                              src={avatarUrl}
-                              alt={initials}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={avatarUrl} alt={initials} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-white text-sm font-bold">
-                              {initials}
-                            </span>
+                            <span className="text-white text-sm font-bold">{initials}</span>
                           )}
                         </div>
-
                         <div>
                           <span className="text-gray-700 font-medium text-sm">
                             {c.user?.firstName} {c.user?.lastName}
@@ -134,7 +130,6 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
                   )}
                 </div>
 
-                {/* Time remaining */}
                 <div className="bg-white/60 rounded-xl p-4 text-center">
                   <div className="flex items-center justify-center gap-1 text-emerald-600">
                     <Clock size={14} />
@@ -143,7 +138,6 @@ export default function AuthLayout({ children, title, subtitle, backTo = '/' }) 
                   <p className="text-xs text-gray-500">Time remaining</p>
                 </div>
 
-                {/* Tagline */}
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800">Your Vote. Your Voice. Your Power.</h2>
                   <p className="text-gray-600 text-sm mt-2">

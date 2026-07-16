@@ -2,6 +2,7 @@ const prisma = require("../config/database");
 const bcrypt = require("bcrypt");
 const emailService = require('../services/email.service');
 
+
 exports.getStats = async (req, res) => {
   try {
     const [
@@ -134,6 +135,31 @@ exports.getVoteTrend = async (req, res) => {
   } catch (err) {
     console.error("Vote trend error:", err);
     res.status(500).json({ error: "Failed to fetch vote trend" });
+  }
+};
+
+exports.getTopVoters = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;   // 👈 now configurable, default 10
+    const topVoters = await prisma.vote.groupBy({
+      by: ["userId"],
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: limit,
+    });
+    const userIds = topVoters.map(v => v.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const result = topVoters.map(v => {
+      const user = users.find(u => u.id === v.userId);
+      return { name: user ? `${user.firstName} ${user.lastName}` : "Unknown", votes: v._count.id };
+    });
+    res.json({ topVoters: result });
+  } catch (err) {
+    console.error("Top voters error:", err);
+    res.status(500).json({ error: "Failed to fetch top voters" });
   }
 };
 
@@ -466,9 +492,18 @@ exports.getRecentPayments = async (req, res) => {
     const payments = await prisma.payment.findMany({
       take: 10,
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { firstName: true, lastName: true, email: true } } },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+        votes: { select: { quantity: true } },
+      },
     });
-    res.json({ payments });
+
+    const paymentsWithVotes = payments.map(p => ({
+      ...p,
+      totalVotes: p.votes.reduce((sum, v) => sum + v.quantity, 0),
+    }));
+
+    res.json({ payments: paymentsWithVotes });
   } catch (err) {
     console.error("Recent payments error:", err);
     res.status(500).json({ error: "Failed to fetch payments" });
@@ -503,7 +538,7 @@ exports.getAllVotes = async (req, res) => {
   try {
     const votes = await prisma.vote.findMany({
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true, gender: true, createdAt: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true, createdAt: true } },
         candidate: { include: { user: { select: { firstName: true, lastName: true } } } },
         election: { select: { title: true, status: true } },
       },
@@ -562,7 +597,21 @@ exports.markNotificationRead = async (req, res) => {
     });
     res.json({ success: true });
   } catch (err) {
+    console.error('Mark notification read error:', err);
     res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+};
+
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user.id, isRead: false },
+      data: { isRead: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Mark all notifications read error:', err);
+    res.status(500).json({ error: 'Failed to mark all notifications as read' });
   }
 };
 
@@ -578,5 +627,102 @@ exports.getUnreadNotificationCount = async (req, res) => {
   } catch (err) {
     console.error('Unread notification count error:', err);
     res.status(500).json({ error: 'Failed to fetch unread count' });
+  }
+};
+
+// Get all election requests (for admin)
+exports.getElectionRequests = async (req, res) => {
+  try {
+    const { status, search, page = 1, limit = 20 } = req.query;
+    const where = {};
+
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { organization: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [requests, total] = await Promise.all([
+      prisma.electionRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (parseInt(page) - 1) * parseInt(limit),
+        take: parseInt(limit),
+      }),
+      prisma.electionRequest.count({ where }),
+    ]);
+
+    res.json({
+      requests,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+    });
+  } catch (err) {
+    console.error('Get election requests error:', err);
+    res.status(500).json({ error: 'Failed to fetch election requests' });
+  }
+};
+
+// Update request status
+exports.updateElectionRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['PENDING', 'REVIEWED', 'COMPLETED', 'ARCHIVED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const request = await prisma.electionRequest.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.json({ request });
+  } catch (err) {
+    console.error('Update request status error:', err);
+    res.status(500).json({ error: 'Failed to update request' });
+  }
+};
+
+// Delete request
+exports.deleteElectionRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.electionRequest.delete({ where: { id } });
+    res.json({ message: 'Request deleted' });
+  } catch (err) {
+    console.error('Delete request error:', err);
+    res.status(500).json({ error: 'Failed to delete request' });
+  }
+};
+
+exports.replyToElectionRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    const request = await prisma.electionRequest.findUnique({ where: { id } });
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+
+    const sent = await emailService.sendEmail({
+      to: request.email,
+      subject: 'Response to your election request',
+      html: `<p>${message}</p>`,
+    });
+
+    if (!sent) return res.status(500).json({ error: 'Failed to send reply email' });
+
+    res.json({ success: true, message: 'Reply sent' });
+  } catch (err) {
+    console.error('Reply error:', err);
+    res.status(500).json({ error: 'Failed to send reply' });
   }
 };

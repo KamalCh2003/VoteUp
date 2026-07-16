@@ -133,8 +133,8 @@ export default function ContestantDashboard() {
     return (
       <div className="text-center py-20">
         <p className="text-2xl sm:text-3xl font-bold text-gray-900">You are not part of any election yet.</p>
-        <button className="mt-4 px-4 py-2 bg-violet-600 rounded hover:bg-violet-700 transition">
-          <Link to="/contestant/apply" className="text-white hover:underline inline-block">
+        <button className="mt-4 px-4 py-2 bg-violet-600 rounded-xl hover:bg-violet-700 transition">
+          <Link to="/contestant/apply" className="text-white inline-block">
             Apply for candidacy 
           </Link>
         </button>

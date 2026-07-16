@@ -7,10 +7,10 @@ const passport = require('passport');
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// ─── REGISTER ──────────────────────────────────
+
 exports.register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role } = req.body;   // nationalId removed
+    const { email, password, firstName, lastName, role } = req.body;   
 
     // Check only by email
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -57,7 +57,6 @@ exports.register = async (req, res) => {
   }
 };
 
-// ─── VERIFY OTP (auto‑login after verification) ───
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -105,7 +104,7 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// ─── RESEND OTP ───────────────────────────────
+
 exports.resendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -185,7 +184,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// ─── FORGOT / RESET PASSWORD ───────────────────
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -245,7 +243,7 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
-// ─── GOOGLE OAUTH ───────────────────────────────
+
 exports.googleAuth = passport.authenticate('google', { scope: ['profile', 'email'] });
 
 exports.googleCallback = (req, res, next) => {

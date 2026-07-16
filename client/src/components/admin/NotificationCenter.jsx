@@ -5,7 +5,7 @@ import { Bell, CheckCircle, XCircle, Clock, Loader2, Eye, Inbox } from 'lucide-r
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
-// Helper: format date as "Today", "Yesterday", "Last week", "1 month ago", etc.
+
 const formatRelativeDate = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
@@ -59,6 +59,8 @@ export default function NotificationCenter() {
     fetchNotifications();
     markAllAsRead();
   }, [page]);
+
+ 
 
   const markAsRead = async (id, e) => {
     e.stopPropagation();

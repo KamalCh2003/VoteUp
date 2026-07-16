@@ -25,6 +25,11 @@ router.get('/finance/recent-payments', ctrl.getRecentPayments);
 router.get('/audit-logs', ctrl.getAuditLogs);
 router.get('/notifications', ctrl.getNotifications);
 router.patch('/notifications/:id/read', ctrl.markNotificationRead);
+router.patch('/notifications/mark-all-read', ctrl.markAllNotificationsRead);
 router.get('/notifications/unread-count', ctrl.getUnreadNotificationCount);
+router.get('/election-requests', ctrl.getElectionRequests);
+router.patch('/election-requests/:id/status', ctrl.updateElectionRequestStatus);
+router.delete('/election-requests/:id', ctrl.deleteElectionRequest);
+router.post('/election-requests/:id/reply', ctrl.replyToElectionRequest);
 
 module.exports = router;

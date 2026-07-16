@@ -2,11 +2,10 @@
 import { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
 } from 'recharts';
 import {
   TrendingUp, ShoppingCart, CreditCard, Wallet,
-  RefreshCw, Users, Smartphone
+  Users, Calendar
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -29,42 +28,42 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function FinanceView() {
   const [loading, setLoading] = useState(true);
   const [revenueData, setRevenueData] = useState([]);
-  const [paymentMethods, setPaymentMethods] = useState([]);
   const [topVoters, setTopVoters] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
+  const [revenueRange, setRevenueRange] = useState('THIS_YEAR');
   const toast = useToast();
 
+  const fetchFinanceData = async () => {
+    setLoading(true);
+    try {
+      const [revenueRes, votersRes, paymentsRes] = await Promise.all([
+        api.get('/admin/finance/revenue-trend', { params: { range: revenueRange } }),
+        api.get('/admin/finance/top-voters'),
+        api.get('/admin/finance/recent-payments'),
+      ]);
+      setRevenueData(revenueRes.data.revenueData || []);
+      setTopVoters(votersRes.data.topVoters || []);
+      setRecentPayments(paymentsRes.data.payments || []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load finance data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [revenueRes, methodsRes, votersRes, paymentsRes] = await Promise.all([
-          api.get('/admin/finance/revenue-trend'),
-          api.get('/admin/finance/payment-methods'),
-          api.get('/admin/finance/top-voters'),
-          api.get('/admin/finance/recent-payments'),
-        ]);
-        setRevenueData(revenueRes.data.revenueData || []);
-        setPaymentMethods(methodsRes.data.methods || []);
-        setTopVoters(votersRes.data.topVoters || []);
-        setRecentPayments(paymentsRes.data.payments || []);
-      } catch (err) {
-        console.error(err);
-        toast.error('Failed to load finance data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    fetchFinanceData();
+  }, [revenueRange]);
 
   const totalRevenue = recentPayments
     .filter(p => p.status === 'COMPLETED')
     .reduce((sum, p) => sum + p.amount, 0);
   const totalTransactions = recentPayments.length;
-  const refunds = recentPayments.filter(p => p.status === 'REFUNDED').length;
+  const failedTransactions = recentPayments.filter(p => p.status === 'FAILED').length;
   const avgTransaction = totalTransactions ? totalRevenue / totalTransactions : 0;
 
-  if (loading) {
+  if (loading && !revenueData.length) {
     return (
       <div className="flex justify-center py-20">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-500" />
@@ -81,7 +80,7 @@ export default function FinanceView() {
         </h2>
       </div>
 
-      {/* Stat Cards - Light theme */}
+      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
           <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-emerald-100 opacity-50"></div>
@@ -115,11 +114,11 @@ export default function FinanceView() {
           <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-red-100 opacity-50"></div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500">Refunds</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">{refunds}</h3>
+              <p className="text-xs text-gray-500">Failed Transactions</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">{failedTransactions}</h3>
             </div>
             <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center">
-              <RefreshCw size={22} className="text-red-600" />
+              <Wallet size={22} className="text-red-600" />
             </div>
           </div>
         </div>
@@ -142,12 +141,28 @@ export default function FinanceView() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Revenue Trend */}
+        {/* Revenue Trend with range selector */}
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-emerald-600" />
-            Revenue Trend (Last 6 Months)
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <TrendingUp size={18} className="text-emerald-600" />
+              Revenue Trend
+            </h3>
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar size={16} className="text-violet-500" />
+              <select
+                value={revenueRange}
+                onChange={(e) => setRevenueRange(e.target.value)}
+                className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-gray-700 outline-none focus:border-violet-500 cursor-pointer"
+              >
+                <option value="LAST_MONTH">Last Month</option>
+                <option value="LAST_3_MONTHS">Last 3 Months</option>
+                <option value="LAST_6_MONTHS">Last 6 Months</option>
+                <option value="THIS_YEAR">This Year</option>
+                <option value="LAST_5_YEARS">Last 5 Years</option>
+              </select>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={revenueData}>
               <XAxis dataKey="month" stroke="#888888" fontSize={12} />
@@ -165,36 +180,6 @@ export default function FinanceView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Payment Methods */}
-        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Smartphone size={18} className="text-violet-600" />
-            Payment Methods (by Type)
-          </h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={paymentMethods}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {paymentMethods.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Top Voters & Recent Transactions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Voters */}
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -220,53 +205,55 @@ export default function FinanceView() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Recent Transactions */}
-        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <ShoppingCart size={18} className="text-violet-600" />
-            Recent Transactions
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="py-3 px-4 text-gray-500 font-medium">Date</th>
-                  <th className="py-3 px-4 text-gray-500 font-medium">User</th>
-                  <th className="py-3 px-4 text-gray-500 font-medium">Amount</th>
-                  <th className="py-3 px-4 text-gray-500 font-medium">Status</th>
+      {/* Recent Transactions with Votes column */}
+      <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <ShoppingCart size={18} className="text-violet-600" />
+          Recent Transactions
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left">
+                <th className="py-3 px-4 text-gray-500 font-medium">Date</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">User</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Amount</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Votes</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {recentPayments.slice(0, 6).map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50 transition">
+                  <td className="py-3 px-4 text-gray-500 text-xs">
+                    {new Date(p.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    {p.user?.firstName || p.user?.email || 'N/A'}
+                  </td>
+                  <td className="py-3 px-4 text-gray-800 font-medium">
+                    रू {p.amount.toFixed(2)}
+                  </td>
+                  <td className="py-3 px-4 text-gray-800 font-medium">
+                    {p.totalVotes ?? 0}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                        p.status === 'COMPLETED'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          : 'bg-red-100 text-red-700 border-red-200'
+                      }`}
+                    >
+                      {p.status}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentPayments.slice(0, 6).map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50 transition">
-                    <td className="py-3 px-4 text-gray-500 text-xs">
-                      {new Date(p.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4 text-gray-700">
-                      {p.user?.firstName || p.user?.email || 'N/A'}
-                    </td>
-                    <td className="py-3 px-4 text-gray-800 font-medium">
-                      रू {p.amount.toFixed(2)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                          p.status === 'COMPLETED'
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                            : p.status === 'REFUNDED'
-                            ? 'bg-red-100 text-red-700 border-red-200'
-                            : 'bg-amber-100 text-amber-700 border-amber-200'
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

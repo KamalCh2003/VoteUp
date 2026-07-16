@@ -66,12 +66,14 @@ export default function CandidateHistory() {
         {history.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p>No candidacy history found.</p>
+            <button className="mt-6 px-4 py-2 bg-violet-600 rounded-xl hover:bg-violet-700 transition">
             <Link
               to="/contestant/apply"
-              className="text-violet-600 hover:underline mt-2 inline-block"
+              className="text-white inline-block"
             >
               Apply for candidacy 
             </Link>
+            </button>
           </div>
         ) : (
           <>

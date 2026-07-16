@@ -22,8 +22,10 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
+  
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
+
     setUser(data.user);
     return data.user;
   };
@@ -51,7 +53,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, loading, login, register, logout, setAuth, updateUser,   // ← expose updateUser
+      user, loading, login, register, logout, setAuth, updateUser,
       isAuthenticated: !!user 
     }}>
       {children}
