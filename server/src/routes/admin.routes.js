@@ -32,4 +32,5 @@ router.patch('/election-requests/:id/status', ctrl.updateElectionRequestStatus);
 router.delete('/election-requests/:id', ctrl.deleteElectionRequest);
 router.post('/election-requests/:id/reply', ctrl.replyToElectionRequest);
 
+
 module.exports = router;

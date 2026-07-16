@@ -270,7 +270,7 @@ export default function AdminHome() {
                   >
                     <Key size={16} className="text-gray-500" /> Change Password
                   </button>
-                  <button
+                  {/* <button
                     onClick={() => {
                       setDropdownOpen(false);
                       navigate("/admin/settings");
@@ -278,7 +278,7 @@ export default function AdminHome() {
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
                   >
                     <Settings size={16} className="text-gray-500" /> Settings
-                  </button>
+                  </button> */}
                   <hr className="my-1" />
                   <button
                     onClick={() => {

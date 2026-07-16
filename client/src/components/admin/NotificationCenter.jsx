@@ -7,7 +7,11 @@ import { useToast } from '../../context/ToastContext';
 
 
 const formatRelativeDate = (dateString) => {
+  if (!dateString) return 'Unknown date';   // handle missing data
+
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString; // if invalid, show the raw value
+
   const now = new Date();
   const diffMs = now - date;
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -578,6 +578,15 @@ exports.getNotifications = async (req, res) => {
         orderBy: { createdAt: 'desc' },
         skip,
         take: parseInt(limit),
+        select: {
+          id: true,
+          title: true,
+          message: true,
+          type: true,
+          isRead: true,
+          link: true,
+          createdAt: true,   // ← must be here!
+        },
       }),
       prisma.notification.count({ where: { userId: req.user.id } }),
     ]);
@@ -726,3 +735,5 @@ exports.replyToElectionRequest = async (req, res) => {
     res.status(500).json({ error: 'Failed to send reply' });
   }
 };
+
+
