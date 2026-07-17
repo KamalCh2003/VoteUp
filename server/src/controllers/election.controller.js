@@ -2,31 +2,38 @@ const prisma = require('../config/database');
 
 exports.getAll = async (req, res) => {
   try {
+    // 1. Move expired active elections to ENDED
+    await prisma.election.updateMany({
+      where: {
+        status: 'ACTIVE',
+        endDate: { lte: new Date() },
+      },
+      data: { status: 'ENDED' },
+    });
+
+    // 2. Fetch elections as usual
     const { status, category, limit } = req.query;
     const where = {};
     if (status) where.status = status;
     if (category) where.category = category;
-
 
     const elections = await prisma.election.findMany({
       where,
       take: limit ? parseInt(limit) : 20,
       orderBy: { startDate: 'desc' },
       include: {
-        _count: {
-          select: { candidates: true, votes: true }, 
-        },
+        _count: { select: { candidates: true, votes: true } },
         candidates: {
-          where: { status: 'APPROVED' }, 
-          select: { id: true }, 
+          where: { status: 'APPROVED' },
+          select: { id: true },
         },
       },
     });
 
     const formatted = elections.map(election => ({
       ...election,
-      approvedCandidates: election.candidates.length, 
-      candidates: undefined, 
+      approvedCandidates: election.candidates.length,
+      candidates: undefined,
     }));
 
     res.json({ elections: formatted });
@@ -50,6 +57,7 @@ exports.getById = async (req, res) => {
     if (!election) return res.status(404).json({ error: 'Election not found' });
     res.json({ election });
   } catch (err) {
+    console.error('Fetch election error:', err);
     res.status(500).json({ error: 'Failed to fetch election' });
   }
 };

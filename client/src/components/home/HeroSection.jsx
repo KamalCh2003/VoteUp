@@ -63,7 +63,7 @@ export default function HeroSection() {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 py-1 md:py-4 mb-10">
+      <div className="mx-auto max-w-7xl px-6 py-7 md:py-1 mb-10">
         {/* Active Election Badge */}
         <div className="flex justify-center mb-8">
           {loadingStats ? (
@@ -118,7 +118,7 @@ export default function HeroSection() {
           </div>
 
           {/* Candidate List (replaces leaderboard) */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg lg:col-span-1">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg lg:col-span-1 hidden lg:block">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Candidates
             </h2>

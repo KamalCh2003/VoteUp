@@ -142,7 +142,7 @@ export default function Leaderboard() {
               );
             })}
             {candidates.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-8 text-gray-500">No candidates yet.弹</td></tr>
+              <tr><td colSpan={5} className="text-center py-8 text-gray-500">No candidates yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -208,12 +208,14 @@ export default function Leaderboard() {
         <div className="lg:col-span-2 space-y-6">
           {/* Selected Election Details */}
           {selectedElection && (
-            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+            <div className={`rounded-2xl border border-gray-200 shadow-sm p-6 ${
+              selectedElection.status === 'ACTIVE' ? 'bg-green-50' : 'bg-red-50'
+            }`}>
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-xl font-semibold text-gray-800">{selectedElection.title}</h3>
-                    {activeElections.some(e => e.id === selectedElection.id) && (
+                    {selectedElection.status === 'ACTIVE' && (
                       <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         LIVE
@@ -222,8 +224,8 @@ export default function Leaderboard() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                     <Calendar size={14} />
-                    {activeElections.some(e => e.id === selectedElection.id) ? 'Ends' : 'Ended'} {new Date(selectedElection.endDate).toLocaleDateString()}
-                    {activeElections.some(e => e.id === selectedElection.id) && timeLeft[selectedElection.id]?.total > 0 && (
+                    {selectedElection.status === 'ACTIVE' ? 'Ends' : 'Ended'} {new Date(selectedElection.endDate).toLocaleDateString()}
+                    {selectedElection.status === 'ACTIVE' && timeLeft[selectedElection.id]?.total > 0 && (
                       <span className="flex items-center gap-1 ml-2 text-cyan-600">
                         <Clock size={12} />
                         {formatCountdown(timeLeft[selectedElection.id])}
