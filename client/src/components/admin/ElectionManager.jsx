@@ -17,6 +17,8 @@ import {
   Square as SquareIcon,
   SquareCheckBig,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
@@ -63,8 +65,8 @@ export default function ElectionManager() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [priceFilter, setPriceFilter] = useState('ALL'); // 'ALL', 'FREE', 'PAID'
-  const [timeFilter, setTimeFilter] = useState('ALL'); // 'ALL', 'TODAY', 'LAST_7_DAYS', 'LAST_30_DAYS', 'THIS_YEAR'
+  const [priceFilter, setPriceFilter] = useState('ALL');
+  const [timeFilter, setTimeFilter] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingElection, setEditingElection] = useState(null);
   const toast = useToast();
@@ -72,6 +74,10 @@ export default function ElectionManager() {
   // Batch selection states
   const [selectedIds, setSelectedIds] = useState([]);
   const [loadingBatch, setLoadingBatch] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -93,19 +99,18 @@ export default function ElectionManager() {
       electionsList.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
       setElections(electionsList);
       setSelectedIds([]);
+      setCurrentPage(1);
     } catch {
       toast.error('Failed to load elections');
     }
   };
 
-  // Extract unique categories from elections
   const categories = useMemo(() => {
     const cats = new Set();
     elections.forEach(e => { if (e.category) cats.add(e.category); });
     return Array.from(cats).sort();
   }, [elections]);
 
-  // Time filter helper
   const getTimeFilterCutoff = () => {
     if (timeFilter === 'ALL') return null;
     const now = new Date();
@@ -139,6 +144,11 @@ export default function ElectionManager() {
     return searchMatch && statusMatch && categoryMatch && priceMatch && timeMatch;
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedElections = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
+
   // Selection logic
   const allIds = filtered.map(e => e.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
@@ -157,7 +167,6 @@ export default function ElectionManager() {
 
   const clearSelection = () => setSelectedIds([]);
 
-  // Batch delete
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`Permanently delete ${selectedIds.length} election(s)?`)) return;
@@ -174,7 +183,6 @@ export default function ElectionManager() {
     }
   };
 
-  // Individual actions
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this election? This action cannot be undone.')) return;
     try {
@@ -282,7 +290,7 @@ export default function ElectionManager() {
               type="text"
               placeholder="Search elections..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 transition"
             />
           </div>
@@ -292,7 +300,7 @@ export default function ElectionManager() {
             <Filter size={16} className="text-violet-500" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
               className="bg-white outline-none cursor-pointer "
             >
               <option value="ALL">All Status</option>
@@ -307,7 +315,7 @@ export default function ElectionManager() {
             <BarChart3 size={16} className="text-violet-500" />
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
               className="bg-white outline-none cursor-pointer"
             >
               <option value="ALL">All Categories</option>
@@ -322,7 +330,7 @@ export default function ElectionManager() {
             <Filter size={16} className="text-violet-500" />
             <select
               value={priceFilter}
-              onChange={(e) => setPriceFilter(e.target.value)}
+              onChange={(e) => { setPriceFilter(e.target.value); setCurrentPage(1); }}
               className="bg-white outline-none cursor-pointer"
             >
               <option value="ALL">All Types</option>
@@ -336,7 +344,7 @@ export default function ElectionManager() {
             <Clock size={16} className="text-violet-500" />
             <select
               value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value)}
+              onChange={(e) => { setTimeFilter(e.target.value); setCurrentPage(1); }}
               className="bg-white outline-none cursor-pointer"
             >
               <option value="ALL">All Time</option>
@@ -416,7 +424,7 @@ export default function ElectionManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((e) => {
+              {paginatedElections.map((e) => {
                 const isSelected = selectedIds.includes(e.id);
                 return (
                   <tr key={e.id} className={`hover:bg-gray-50 transition ${isSelected ? 'bg-violet-50' : ''}`}>
@@ -482,7 +490,7 @@ export default function ElectionManager() {
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginatedElections.length === 0 && (
                 <tr>
                   <td colSpan={9} className="text-center py-12 text-gray-500">No elections found.</td>
                 </tr>
@@ -490,6 +498,13 @@ export default function ElectionManager() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm">
+            <button onClick={() => goToPage(currentPage-1)} disabled={currentPage===1} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16}/></button>
+            <span>Page {currentPage} of {totalPages}</span>
+            <button onClick={() => goToPage(currentPage+1)} disabled={currentPage===totalPages} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16}/></button>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Modal */}

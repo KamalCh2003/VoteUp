@@ -63,7 +63,7 @@ export default function HeroSection() {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 py-7 md:py-1 mb-10">
+      <div className="mx-auto max-w-7xl px-6 py-8 md:py-1 mb-10">
         {/* Active Election Badge */}
         <div className="flex justify-center mb-8">
           {loadingStats ? (

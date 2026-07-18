@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, ShoppingCart, CreditCard, Wallet,
-  Users, Calendar
+  Users, Calendar, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -31,6 +31,8 @@ export default function FinanceView() {
   const [topVoters, setTopVoters] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
   const [revenueRange, setRevenueRange] = useState('THIS_YEAR');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const toast = useToast();
 
   const fetchFinanceData = async () => {
@@ -44,6 +46,7 @@ export default function FinanceView() {
       setRevenueData(revenueRes.data.revenueData || []);
       setTopVoters(votersRes.data.topVoters || []);
       setRecentPayments(paymentsRes.data.payments || []);
+      setCurrentPage(1); // reset to first page after fresh data
     } catch (err) {
       console.error(err);
       toast.error('Failed to load finance data');
@@ -55,6 +58,14 @@ export default function FinanceView() {
   useEffect(() => {
     fetchFinanceData();
   }, [revenueRange]);
+
+  // Pagination logic for recent payments
+  const totalPages = Math.ceil(recentPayments.length / itemsPerPage);
+  const paginatedPayments = recentPayments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
 
   const totalRevenue = recentPayments
     .filter(p => p.status === 'COMPLETED')
@@ -207,7 +218,7 @@ export default function FinanceView() {
         </div>
       </div>
 
-      {/* Recent Transactions with Votes column */}
+      {/* Recent Transactions with pagination */}
       <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <ShoppingCart size={18} className="text-violet-600" />
@@ -218,20 +229,24 @@ export default function FinanceView() {
             <thead>
               <tr className="border-b border-gray-200 text-left">
                 <th className="py-3 px-4 text-gray-500 font-medium">Date</th>
-                <th className="py-3 px-4 text-gray-500 font-medium">User</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Voter</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Contestant</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Amount</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Votes</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {recentPayments.slice(0, 6).map((p) => (
+              {paginatedPayments.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 transition">
                   <td className="py-3 px-4 text-gray-500 text-xs">
                     {new Date(p.createdAt).toLocaleDateString()}
                   </td>
                   <td className="py-3 px-4 text-gray-700">
-                    {p.user?.firstName || p.user?.email || 'N/A'}
+                    {p.voterName || (p.user?.firstName || p.user?.email || 'N/A')}
+                  </td>
+                  <td className="py-3 px-4 text-gray-700">
+                    {p.contestantName || '—'}
                   </td>
                   <td className="py-3 px-4 text-gray-800 font-medium">
                     रू {p.amount.toFixed(2)}
@@ -255,6 +270,29 @@ export default function FinanceView() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 text-sm">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ export default function RequestElection() {
   const [form, setForm] = useState({
     name: '',
     email: '',
+    phone: '',
     organization: '',
     message: '',
   });
@@ -20,15 +21,19 @@ export default function RequestElection() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.message) {
-      return toast.error('Email and message are required');
-    }
+
+    // Check all fields are filled
+    if (!form.name.trim()) return toast.error('Name is required');
+    if (!form.email.trim()) return toast.error('Email is required');
+    if (!form.phone.trim()) return toast.error('Phone number is required');
+    if (!form.organization.trim()) return toast.error('Organization is required');
+    if (!form.message.trim()) return toast.error('Message is required');
 
     setLoading(true);
     try {
       await api.post('/public/request-election', form);
       toast.success('Your request has been sent. The admin will contact you soon.');
-      setForm({ name: '', email: '', organization: '', message: '' });
+      setForm({ name: '', email: '', phone: '', organization: '', message: '' });
     } catch (err) {
       toast.error('Failed to send request. Please try again.');
     } finally {
@@ -53,26 +58,40 @@ export default function RequestElection() {
           <input
             type="text"
             name="name"
-            placeholder="Your Name"
+            placeholder="Your Name *"
             value={form.name}
-            onChange={handleChange}
-            className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-violet-500"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Your Email *"
-            value={form.email}
             onChange={handleChange}
             required
             className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-violet-500"
           />
+          <div className="flex gap-4">
+            <input
+              type="email"
+              name="email"
+              placeholder="Your Email *"
+              value={form.email}
+              onChange={handleChange}
+              required
+              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-violet-500"
+            />
+            <input 
+              type="tel"
+              name="phone"
+              placeholder="Phone Number *"
+              value={form.phone}
+              onChange={handleChange}
+              required
+              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-violet-500"
+            />  
+          </div>
+          
           <input
             type="text"
             name="organization"
-            placeholder="Organization / Community"
+            placeholder="Organization / Community *"
             value={form.organization}
             onChange={handleChange}
+            required
             className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-violet-500"
           />
           <textarea

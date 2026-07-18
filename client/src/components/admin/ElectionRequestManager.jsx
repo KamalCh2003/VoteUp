@@ -5,7 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import {
   Search, Mail, User, Building, MessageSquare, CheckCircle,
   XCircle, Clock, Archive, Trash2, ChevronLeft, ChevronRight,
-  X, Send, Loader2,
+  X, Send, Loader2, Phone,
 } from 'lucide-react';
 
 export default function ElectionRequestManager() {
@@ -13,10 +13,9 @@ export default function ElectionRequestManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const toast = useToast();
-  const limit = 10;
 
   // Detail modal state
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -29,11 +28,8 @@ export default function ElectionRequestManager() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/election-requests', {
-        params: { page, limit, status: statusFilter, search },
-      });
+      const res = await api.get('/admin/election-requests');
       setRequests(res.data.requests || []);
-      setTotalPages(res.data.totalPages || 1);
     } catch (err) {
       toast.error('Failed to load election requests');
     } finally {
@@ -43,7 +39,10 @@ export default function ElectionRequestManager() {
 
   useEffect(() => {
     fetchRequests();
-  }, [page, statusFilter, search]);
+  }, []);
+
+  // Refetch when a status is changed or a request is deleted, to keep data fresh
+  const refreshData = () => fetchRequests();
 
   const handleStatusChange = async (id, status) => {
     try {
@@ -52,7 +51,7 @@ export default function ElectionRequestManager() {
       if (selectedRequest?.id === id) {
         setSelectedRequest(prev => ({ ...prev, status }));
       }
-      fetchRequests();
+      refreshData();
     } catch (err) {
       toast.error('Failed to update status');
     }
@@ -64,7 +63,7 @@ export default function ElectionRequestManager() {
       await api.delete(`/admin/election-requests/${id}`);
       toast.success('Request deleted');
       if (selectedRequest?.id === id) setSelectedRequest(null);
-      fetchRequests();
+      refreshData();
     } catch (err) {
       toast.error('Failed to delete request');
     }
@@ -105,6 +104,26 @@ export default function ElectionRequestManager() {
     }
   };
 
+  // Client‑side filtering
+  const filtered = requests.filter(req => {
+    const searchMatch = !search ||
+      (req.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (req.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (req.organization || '').toLowerCase().includes(search.toLowerCase()) ||
+      (req.phone || '').toLowerCase().includes(search.toLowerCase());
+    const statusMatch = statusFilter === 'ALL' || req.status === statusFilter;
+    return searchMatch && statusMatch;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedRequests = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -119,13 +138,13 @@ export default function ElectionRequestManager() {
               type="text"
               placeholder="Search..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-white text-sm"
             />
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm"
           >
             <option value="ALL">All Status</option>
@@ -139,7 +158,7 @@ export default function ElectionRequestManager() {
 
       {loading ? (
         <div className="flex justify-center py-20"><div className="animate-spin h-10 w-10 border-t-2 border-violet-500 rounded-full" /></div>
-      ) : requests.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-gray-500">No requests found.</div>
       ) : (
         <>
@@ -150,6 +169,7 @@ export default function ElectionRequestManager() {
                   <tr>
                     <th className="p-4 text-left">Requester</th>
                     <th className="p-4 text-left">Email</th>
+                    <th className="p-4 text-left">Phone</th>
                     <th className="p-4 text-left">Organization</th>
                     <th className="p-4 text-left">Message</th>
                     <th className="p-4 text-left">Date</th>
@@ -158,10 +178,11 @@ export default function ElectionRequestManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {requests.map((req) => (
+                  {paginatedRequests.map((req) => (
                     <tr key={req.id} className="hover:bg-gray-50">
                       <td className="p-4 font-medium">{req.name || 'N/A'}</td>
                       <td className="p-4 text-gray-600">{req.email}</td>
+                      <td className="p-4 text-gray-600">{req.phone || '—'}</td>
                       <td className="p-4 text-gray-600">{req.organization || '—'}</td>
                       <td
                         className="p-4 text-gray-600 max-w-xs truncate cursor-pointer hover:text-violet-600 hover:underline"
@@ -206,9 +227,9 @@ export default function ElectionRequestManager() {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 text-sm">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronLeft size={16} /></button>
-              <span>Page {page} of {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronRight size={16} /></button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronLeft size={16} /></button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"><ChevronRight size={16} /></button>
             </div>
           )}
         </>
@@ -243,6 +264,10 @@ export default function ElectionRequestManager() {
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Email</p>
                   <p className="text-gray-800">{selectedRequest.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase mb-1">Phone</p>
+                  <p className="text-gray-800">{selectedRequest.phone || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Organization</p>

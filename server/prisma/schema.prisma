@@ -203,6 +203,7 @@ model ElectionRequest {
   id           String   @id @default(uuid())
   name         String?
   email        String
+  phone        String?
   organization String?
   message      String
   status       String   @default("PENDING")  // PENDING, REVIEWED, COMPLETED, ARCHIVED

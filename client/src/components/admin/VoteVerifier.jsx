@@ -1,6 +1,6 @@
 // src/components/admin/VoteVerifier.jsx
-import { useState, useEffect } from 'react';
-import { Search, Trash2, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Trash2, AlertCircle, Filter, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -9,6 +9,10 @@ export default function VoteVerifier() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [electionFilter, setElectionFilter] = useState('ALL');
+  const [timeFilter, setTimeFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const toast = useToast();
 
   useEffect(() => {
@@ -43,11 +47,63 @@ export default function VoteVerifier() {
     }
   };
 
-  const filtered = votes.filter(v => 
-    v.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
-    `${v.user?.firstName} ${v.user?.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    `${v.candidate?.user?.firstName} ${v.candidate?.user?.lastName}`.toLowerCase().includes(search.toLowerCase())
-  );
+  // Unique elections for filter dropdown
+  const elections = useMemo(() => {
+    const unique = new Map();
+    votes.forEach(v => {
+      if (v.election) {
+        unique.set(v.election.id || v.election.title, v.election);
+      }
+    });
+    return Array.from(unique.values()).sort((a, b) => a.title.localeCompare(b.title));
+  }, [votes]);
+
+  // Time filter helper
+  const getTimeFilterCutoff = () => {
+    if (timeFilter === 'ALL') return null;
+    const now = new Date();
+    switch (timeFilter) {
+      case 'TODAY': {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return today;
+      }
+      case 'LAST_7_DAYS':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'LAST_30_DAYS':
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case 'THIS_YEAR':
+        return new Date(now.getFullYear(), 0, 1);
+      default:
+        return null;
+    }
+  };
+
+  const timeCutoff = getTimeFilterCutoff();
+
+  const filtered = votes.filter(v => {
+    const searchMatch =
+      !search ||
+      v.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
+      `${v.user?.firstName} ${v.user?.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+      `${v.candidate?.user?.firstName} ${v.candidate?.user?.lastName}`.toLowerCase().includes(search.toLowerCase());
+
+    const electionMatch =
+      electionFilter === 'ALL' || v.election?.id === electionFilter || v.election?.title === electionFilter;
+
+    const timeMatch = !timeCutoff || new Date(v.votedAt) >= timeCutoff;
+
+    return searchMatch && electionMatch && timeMatch;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedVotes = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, electionFilter, timeFilter]);
 
   if (loading) {
     return (
@@ -74,23 +130,59 @@ export default function VoteVerifier() {
 
   return (
     <div className="bg-gray-50 min-h-screen p-6 text-gray-800">
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Vote Verifier</h2>
+          <h2 className="text-xl font-bold text-gray-900">Vote Verifier</h2>
           <p className="text-gray-500 text-sm">Inspect and manage every vote</p>
           {votes.length > 0 && (
             <p className="text-xs text-emerald-600 mt-1">Total votes: {votes.length}</p>
           )}
         </div>
-        <div className="relative w-72">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by voter or candidate..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 focus:outline-none focus:border-violet-500"
-          />
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by voter or candidate..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
+            />
+          </div>
+
+          {/* Election Filter */}
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 min-w-[180px]">
+            <Filter size={16} className="text-violet-500 flex-shrink-0" />
+            <select
+              value={electionFilter}
+              onChange={(e) => setElectionFilter(e.target.value)}
+              className="bg-white outline-none cursor-pointer w-full"
+            >
+              <option value="ALL">All Elections</option>
+              {elections.map(e => (
+                <option key={e.id || e.title} value={e.id || e.title}>
+                  {e.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Time Filter */}
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 min-w-[160px]">
+            <Clock size={16} className="text-violet-500 flex-shrink-0" />
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="bg-white outline-none cursor-pointer w-full"
+            >
+              <option value="ALL">All Time</option>
+              <option value="TODAY">Today</option>
+              <option value="LAST_7_DAYS">Last 7 days</option>
+              <option value="LAST_30_DAYS">Last 30 days</option>
+              <option value="THIS_YEAR">This year</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -109,7 +201,7 @@ export default function VoteVerifier() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map(vote => (
+              {paginatedVotes.map(vote => (
                 <tr key={vote.id} className="hover:bg-gray-50 transition">
                   <td className="p-4 font-medium text-gray-900">{vote.user?.firstName} {vote.user?.lastName}</td>
                   <td className="p-4 text-gray-600">{vote.user?.email}</td>
@@ -128,7 +220,7 @@ export default function VoteVerifier() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && votes.length > 0 && (
+              {paginatedVotes.length === 0 && votes.length > 0 && (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-gray-500">
                     No matching votes found.
@@ -138,6 +230,14 @@ export default function VoteVerifier() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm">
+            <button onClick={() => goToPage(currentPage-1)} disabled={currentPage===1} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16}/></button>
+            <span>Page {currentPage} of {totalPages}</span>
+            <button onClick={() => goToPage(currentPage+1)} disabled={currentPage===totalPages} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16}/></button>
+          </div>
+        )}
       </div>
     </div>
   );

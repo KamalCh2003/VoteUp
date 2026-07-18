@@ -18,14 +18,14 @@ export default function ContestantManagement() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [electionFilter, setElectionFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [timeFilter, setTimeFilter] = useState('ALL'); // 'ALL', 'TODAY', 'LAST_7_DAYS', 'LAST_30_DAYS', 'THIS_YEAR'
+  const [timeFilter, setTimeFilter] = useState('ALL');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [candidateToEdit, setCandidateToEdit] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(7);
+  const [itemsPerPage] = useState(10); // ← changed from 7 to 10
   const toast = useToast();
 
   // Batch selection
@@ -75,7 +75,6 @@ export default function ContestantManagement() {
     return Array.from(cats).sort();
   }, [elections]);
 
-  // Time filter helper
   const getTimeFilterCutoff = () => {
     if (timeFilter === 'ALL') return null;
     const now = new Date();
@@ -114,7 +113,6 @@ export default function ContestantManagement() {
   const paginatedCandidates = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
 
-  // Selection logic
   const allIds = filtered.map(c => c.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
   const someSelected = selectedIds.length > 0 && !allSelected;
@@ -130,7 +128,6 @@ export default function ContestantManagement() {
 
   const clearSelection = () => setSelectedIds([]);
 
-  // Batch actions
   const handleBatchApprove = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`Approve ${selectedIds.length} contestant(s)?`)) return;
@@ -170,7 +167,6 @@ export default function ContestantManagement() {
     finally { setLoadingBatch(false); }
   };
 
-  // Individual actions (unchanged)
   const handleApprove = async (id) => {
     try {
       await api.patch(`/admin/candidates/${id}/status`, { status: 'APPROVED' });
@@ -224,7 +220,7 @@ export default function ContestantManagement() {
 
   return (
     <div className="p-6 bg-gray-50 text-gray-800 min-h-screen">
-      {/* Smaller Stats Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-3">
           <div className="flex items-center justify-between">
@@ -252,7 +248,7 @@ export default function ContestantManagement() {
         </div>
       </div>
 
-      {/* Header & Filters with Time Filter */}
+      {/* Header & Filters */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -280,7 +276,6 @@ export default function ContestantManagement() {
               <option value="ALL">All Categories</option>
               {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
-            {/* Time Filter Dropdown */}
             <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
               <Clock size={16} className="text-violet-500" />
               <select
@@ -405,7 +400,7 @@ export default function ContestantManagement() {
         )}
       </div>
 
-      {/* Detail Modal (unchanged except minor style) */}
+      {/* Detail Modal */}
       {showDetailModal && selectedCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">

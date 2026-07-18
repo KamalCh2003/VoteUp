@@ -490,20 +490,29 @@ exports.getPaymentMethods = async (req, res) => {
 exports.getRecentPayments = async (req, res) => {
   try {
     const payments = await prisma.payment.findMany({
-      take: 10,
+      take: 100,
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { firstName: true, lastName: true, email: true } },
+        candidate: {                                  // ← add candidate
+          select: {
+            user: { select: { firstName: true, lastName: true } }
+          }
+        },
         votes: { select: { quantity: true } },
       },
     });
 
-    const paymentsWithVotes = payments.map(p => ({
+    const paymentsWithDetails = payments.map(p => ({
       ...p,
       totalVotes: p.votes.reduce((sum, v) => sum + v.quantity, 0),
+      voterName: `${p.user?.firstName || ''} ${p.user?.lastName || ''}`.trim() || p.user?.email || 'N/A',
+      contestantName: p.candidate?.user
+        ? `${p.candidate.user.firstName} ${p.candidate.user.lastName}`
+        : '—',
     }));
 
-    res.json({ payments: paymentsWithVotes });
+    res.json({ payments: paymentsWithDetails });
   } catch (err) {
     console.error("Recent payments error:", err);
     res.status(500).json({ error: "Failed to fetch payments" });
@@ -652,6 +661,7 @@ exports.getElectionRequests = async (req, res) => {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
         { organization: { contains: search, mode: 'insensitive' } },
       ];
     }

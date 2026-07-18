@@ -3,7 +3,7 @@ const emailService = require('../services/email.service');
 
 exports.requestElection = async (req, res) => {
   try {
-    const { name, email, organization, message } = req.body;
+    const { name, email, phone, organization, message } = req.body;
     const adminEmail = process.env.ADMIN_EMAIL;
 
     // Save to DB
@@ -11,6 +11,7 @@ exports.requestElection = async (req, res) => {
       data: {
         name,
         email,
+        phone,
         organization,
         message,
       },
@@ -22,6 +23,7 @@ exports.requestElection = async (req, res) => {
         <h3>New Election Request</h3>
         <p><strong>Name:</strong> ${name || 'Not provided'}</p>
         <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
         <p><strong>Organization:</strong> ${organization || 'Not provided'}</p>
         <p><strong>Message:</strong></p>
         <p>${message}</p>

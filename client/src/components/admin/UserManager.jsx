@@ -15,6 +15,8 @@ import {
   SquareCheckBig,
   Trash2,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
 
@@ -22,7 +24,7 @@ export default function UserManager() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
-  const [timeFilter, setTimeFilter] = useState("ALL"); // "ALL", "LAST_HOUR", "LAST_WEEK", "THIS_MONTH", "THIS_YEAR"
+  const [timeFilter, setTimeFilter] = useState("ALL");
   const toast = useToast();
 
   const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -35,6 +37,10 @@ export default function UserManager() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBatchRoleModal, setShowBatchRoleModal] = useState(false);
   const [batchNewRole, setBatchNewRole] = useState("");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [stats, setStats] = useState({
     totalVoters: 0,
@@ -69,7 +75,6 @@ export default function UserManager() {
     }
   };
 
-  // Individual delete
   const deleteUser = async (userId) => {
     if (!confirm("Permanently delete this user? This action cannot be undone.")) return;
     try {
@@ -83,7 +88,6 @@ export default function UserManager() {
     setOpenDropdownId(null);
   };
 
-  // Individual role change modal
   const openRoleModal = (user) => {
     setSelectedUser(user);
     setNewRole(user.role);
@@ -138,7 +142,20 @@ export default function UserManager() {
     return searchMatch && roleMatch && timeMatch;
   });
 
-  const allIds = filtered.map((u) => u.id);
+  // Pagination calculations
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedUsers = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
+
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, roleFilter, timeFilter]);
+
+  const allIds = paginatedUsers.map((u) => u.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
   const someSelected = selectedIds.length > 0 && !allSelected;
 
@@ -375,7 +392,7 @@ export default function UserManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((u) => {
+              {paginatedUsers.map((u) => {
                 const isSelected = selectedIds.includes(u.id);
                 return (
                   <tr
@@ -433,7 +450,7 @@ export default function UserManager() {
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginatedUsers.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-gray-500">
                     No users found.
@@ -443,6 +460,29 @@ export default function UserManager() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Individual Role Change Modal */}
