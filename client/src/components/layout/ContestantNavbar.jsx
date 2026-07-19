@@ -38,11 +38,11 @@ export default function ContestantNavbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-10 text-sm md:flex">
-            <NavLink to="/contestant/profile-campaign" className={linkClass}>
+            <NavLink to="/contestant/profile" className={linkClass}>
               Profile
             </NavLink>
             <NavLink to="/contestant/dashboard" className={linkClass}>
-              Dashboard
+              Election
             </NavLink>
             <NavLink to="/contestant/analytics" className={linkClass}>
               Analytics
@@ -111,7 +111,7 @@ export default function ContestantNavbar() {
             </div>
             <nav className="flex flex-col gap-4 px-6 py-4">
               <NavLink
-                to="/contestant/profile-campaign"
+                to="/contestant/profile"
                 className={linkClass}
                 onClick={closeMobileMenu}
               >
@@ -122,7 +122,7 @@ export default function ContestantNavbar() {
                 className={linkClass}
                 onClick={closeMobileMenu}
               >
-                Dashboard
+                Election
               </NavLink>
               <NavLink
                 to="/contestant/analytics"

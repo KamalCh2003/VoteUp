@@ -13,7 +13,7 @@ function timeAgo(date) {
 
 exports.apply = async (req, res) => {
   try {
-    const { electionId, party, slogan, bio } = req.body;  // candidateNumber removed
+    const { electionId, party, slogan, bio } = req.body;
     const userId = req.user.id;
 
     const election = await prisma.election.findUnique({ where: { id: electionId } });
@@ -34,7 +34,6 @@ exports.apply = async (req, res) => {
       return res.status(400).json({ error: `Candidate limit reached for this election (max ${election.maxCandidates})` });
     }
 
-    // Auto‑generate candidate number
     const existingCandidatesCount = await prisma.candidate.count({
       where: { electionId },
     });
@@ -56,7 +55,6 @@ exports.apply = async (req, res) => {
       },
     });
 
-    // Notify all admins about the new application (include name + email)
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
     if (admins.length > 0) {
       const candidateName = `${req.user.firstName} ${req.user.lastName}`;
@@ -155,22 +153,27 @@ exports.getDetailedAnalytics = async (req, res) => {
     const totalVotes = candidate.election.totalVotes || 0;
     const share = totalVotes > 0 ? ((candidate.votesReceived / totalVotes) * 100).toFixed(1) : 0;
 
+    // 1. Build date range (UTC)
     let startDate = new Date(candidate.election.startDate);
     let endDate = new Date(candidate.election.endDate);
     const now = new Date();
     if (endDate > now) endDate = now;
 
+    // 2. Create a map of UTC dates (YYYY-MM-DD) with 0 votes
     const dateMap = new Map();
-    let current = new Date(startDate);
-    current.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const current = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+    const end = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999));
+
     while (current <= end) {
-      const dateStr = current.toISOString().split('T')[0];
-      dateMap.set(dateStr, 0);
-      current.setDate(current.getDate() + 1);
+      const year = current.getUTCFullYear();
+      const month = String(current.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(current.getUTCDate()).padStart(2, '0');
+      const key = `${year}-${month}-${day}`;
+      dateMap.set(key, 0);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
 
+    // 3. Fetch votes in the range
     const votes = await prisma.vote.findMany({
       where: {
         candidateId: candidate.id,
@@ -178,16 +181,24 @@ exports.getDetailedAnalytics = async (req, res) => {
       },
       select: { votedAt: true, quantity: true },
     });
+
+    // 4. Add vote quantities to the correct UTC date
     votes.forEach(v => {
-      const dateStr = v.votedAt.toISOString().split('T')[0];
-      const qty = v.quantity || 1;
-      if (dateMap.has(dateStr)) dateMap.set(dateStr, dateMap.get(dateStr) + qty);
+      const d = new Date(v.votedAt);
+      const year = d.getUTCFullYear();
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const key = `${year}-${month}-${day}`;
+      if (dateMap.has(key)) {
+        dateMap.set(key, dateMap.get(key) + (v.quantity || 1));
+      }
     });
 
     const voteTrend = Array.from(dateMap.entries())
       .map(([date, votes]) => ({ date, votes }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+      .sort((a, b) => a.date.localeCompare(b.date));
 
+    // 5. Top supporters and recent activity (unchanged)
     const supporterVotes = await prisma.vote.findMany({
       where: { candidateId: candidate.id },
       include: { user: { select: { firstName: true, lastName: true } } },
@@ -222,6 +233,7 @@ exports.getDetailedAnalytics = async (req, res) => {
       voteTrend,
       topSupporters,
       recentActivity,
+      electionStatus: candidate.election.status,
     });
   } catch (err) {
     console.error('Detailed analytics error:', err);

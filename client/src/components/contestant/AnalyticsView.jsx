@@ -69,8 +69,11 @@ export default function AnalyticsView() {
     );
   }
 
+  const isEnded = analytics.electionStatus === 'ENDED';
+  const hasVoteTrend = analytics.voteTrend && analytics.voteTrend.length > 0;
+
   return (
-    <div className="min-h-screen p-6 rounded-xl">
+    <div className="min-h-screen relative max-w-7xl mx-auto px-4 sm:px-6 py-8 rounded-xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
@@ -81,12 +84,13 @@ export default function AnalyticsView() {
         </div>
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 shadow-sm">
           <Activity size={16} className="text-emerald-600" />
-          Live data
+          {isEnded ? 'Final results' : 'Live data'}
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Votes Received – always visible */}
         <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
           <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-violet-100 opacity-50"></div>
           <div className="flex items-center justify-between">
@@ -100,31 +104,37 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
-          <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-emerald-100 opacity-50"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Total Votes in Election</p>
-              <p className="text-3xl font-bold text-gray-800 mt-2">
-                {analytics.totalVotes?.toLocaleString() || 0}
-              </p>
+        {/* Total Votes – only when ended */}
+        {isEnded && (
+          <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+            <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-emerald-100 opacity-50"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Total Votes in Election</p>
+                <p className="text-3xl font-bold text-gray-800 mt-2">
+                  {analytics.totalVotes?.toLocaleString() || 0}
+                </p>
+              </div>
+              <TrendingUp className="text-emerald-600" size={32} />
             </div>
-            <TrendingUp className="text-emerald-600" size={32} />
           </div>
-        </div>
+        )}
 
-        <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
-          <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-cyan-100 opacity-50"></div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Vote Share</p>
-              <p className="text-3xl font-bold text-gray-800 mt-2">
-                {analytics.share || 0}%
-              </p>
+        {/* Vote Share – only when ended */}
+        {isEnded && (
+          <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+            <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-cyan-100 opacity-50"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Vote Share</p>
+                <p className="text-3xl font-bold text-gray-800 mt-2">
+                  {analytics.share || 0}%
+                </p>
+              </div>
+              <Users className="text-cyan-600" size={32} />
             </div>
-            <Users className="text-cyan-600" size={32} />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Vote Trend Chart */}
@@ -133,30 +143,42 @@ export default function AnalyticsView() {
           <TrendingUp size={18} className="text-violet-600" />
           Vote Trend (from Election Start to End)
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={analytics.voteTrend || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-            <YAxis stroke="#9ca3af" fontSize={12} />
-            <Tooltip
-              contentStyle={{
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
-              labelStyle={{ color: "#374151" }}
-            />
-            <Line
-              type="monotone"
-              dataKey="votes"
-              stroke="#7c6fff"
-              strokeWidth={3}
-              dot={{ r: 5, fill: "#7c6fff", strokeWidth: 2, stroke: "#fff" }}
-              activeDot={{ r: 7, stroke: "#fff", strokeWidth: 2 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+
+        {hasVoteTrend ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={analytics.voteTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+              <YAxis stroke="#9ca3af" fontSize={12} />
+              <Tooltip
+                contentStyle={{
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                }}
+                labelStyle={{ color: "#374151" }}
+              />
+              <Line
+                type="monotone"
+                dataKey="votes"
+                stroke="#7c6fff"
+                strokeWidth={3}
+                dot={{ r: 5, fill: "#7c6fff", strokeWidth: 2, stroke: "#fff" }}
+                activeDot={{ r: 7, stroke: "#fff", strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[300px] text-gray-400 text-sm">
+            <p>No vote data available yet.</p>
+            {analytics.voteTrend && (
+              <pre className="text-xs text-left mt-4 bg-gray-100 p-2 rounded max-h-40 overflow-auto w-full">
+                {JSON.stringify(analytics.voteTrend, null, 2)}
+              </pre>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Grid: Top Supporters & Recent Activity */}

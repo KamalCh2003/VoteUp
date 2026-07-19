@@ -7,7 +7,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useEffect } from "react";
-import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -34,7 +33,7 @@ import NotFound from "./components/common/NotFound";
 import AdminHome from "./components/admin/AdminHome";
 import ElectionDetails from "./components/elections/ElectionDetails";
 import VotePaymentPage from "./components/payment/VotePaymentPage";
-import ContestantProfileCampaign from "./components/contestant/ContestantProfileCampaign";
+import ContestantProfileCampaign from "./components/contestant/ContestantProfileCampaign";   // ✅ added
 import ContestantDashboard from "./components/contestant/ContestantDashboard";
 import CandidateHistory from "./components/contestant/CandidateHistory";
 import PaymentCallback from "./components/payment/PaymentCallback";
@@ -66,6 +65,7 @@ function AppContent() {
   const location = useLocation();
   const { user } = useAuth();
   const isAdminRoute = location.pathname.startsWith("/admin");
+  const isContestantRoute = location.pathname.startsWith("/contestant");
 
   const hideNavbarPaths = [
     "/login",
@@ -78,22 +78,22 @@ function AppContent() {
     "/payment/callback",
     "/voter-profile",
   ];
-  const shouldHideNavbar = hideNavbarPaths.includes(location.pathname);
+  const shouldHideNavbar =
+    hideNavbarPaths.includes(location.pathname) ||
+    isAdminRoute;
 
-  const showContestantNavbar =
-    !shouldHideNavbar && !isAdminRoute && user?.role === "CONTESTANT";
-  const showPublicNavbar =
-    !shouldHideNavbar && !isAdminRoute && !showContestantNavbar;
+  const showContestantNavbar = isContestantRoute && !shouldHideNavbar;
+  const showPublicNavbar = !shouldHideNavbar && !isContestantRoute;
 
   const shouldHideFooter =
     isAdminRoute ||
+    isContestantRoute ||
     hideNavbarPaths.includes(location.pathname) ||
     location.pathname === "/request-election";
 
   return (
     <>
       <ScrollToTop />
-      {/* <Toaster position="top-right" /> */}
       {showPublicNavbar && <Navbar />}
       {showContestantNavbar && <ContestantNavbar />}
 
@@ -107,7 +107,6 @@ function AppContent() {
               </Protected>
             }
           />
-          
           <Route
             path="/admin/*"
             element={
@@ -126,7 +125,7 @@ function AppContent() {
           />
         </Routes>
       ) : (
-        <main className="min-h-screen px-4 py-4 max-w-7xl mx-auto">
+        <main className="min-h-screen">
           <Routes>
             {/* Public pages */}
             <Route path="/" element={<Landing />} />
@@ -195,11 +194,20 @@ function AppContent() {
             />
 
             {/* Contestant routes */}
+            {/* ✅ New route that matches the navbar link */}
+            <Route
+              path="/contestant/profile"
+              element={
+                <Protected roles={["CONTESTANT"]}>
+                  <ContestantProfileCampaign />
+                </Protected>
+              }
+            />
             <Route
               path="/contestant/profile-campaign"
               element={
                 <Protected roles={["CONTESTANT"]}>
-                  <ContestantProfileCampaign />
+                  <ContestantDashboard />
                 </Protected>
               }
             />
