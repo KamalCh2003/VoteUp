@@ -268,7 +268,7 @@ export default function DashboardOverview() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">{voter.name}</p>
-                  <p className="text-xs text-gray-500">{voter.votes} votes</p>
+                  <p className="text-xs text-gray-500">{voter.votes} times voted</p>
                 </div>
                 {idx < 3 && (
                   <Trophy size={16} className={`ml-auto ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : 'text-amber-600'}`} />

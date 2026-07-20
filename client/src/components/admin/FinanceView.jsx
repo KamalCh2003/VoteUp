@@ -206,7 +206,7 @@ export default function FinanceView() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800">{voter.name}</p>
-                    <p className="text-xs text-gray-500">{voter.votes} votes</p>
+                    <p className="text-xs text-gray-500">{voter.votes} times voted</p>
                   </div>
                 </div>
               </div>
