@@ -178,7 +178,9 @@ export default function Leaderboard() {
                     key={election.id}
                     onClick={() => selectElection(election.id, true)}
                     className={`p-3 rounded-xl cursor-pointer transition ${
-                      isSelected ? 'bg-violet-100 border border-violet-300' : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                      isSelected
+                        ? 'bg-emerald-100 border border-emerald-300'   // selected: green
+                        : 'bg-green-50 border border-green-200 hover:bg-green-100' // default: light green
                     }`}
                   >
                     <div className="flex justify-between items-start">
@@ -195,7 +197,7 @@ export default function Leaderboard() {
                           </div>
                         )}
                       </div>
-                      <ChevronRight size={16} className={`text-gray-400 transition ${isSelected ? 'translate-x-1 text-violet-600' : ''}`} />
+                      <ChevronRight size={16} className={`text-gray-400 transition ${isSelected ? 'translate-x-1 text-emerald-600' : ''}`} />
                     </div>
                   </div>
                 );
@@ -259,7 +261,7 @@ export default function Leaderboard() {
                     <div
                       key={election.id}
                       onClick={() => selectElection(election.id, false)}
-                      className="p-4 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100 transition cursor-pointer"
+                      className="p-4 rounded-xl bg-red-50 border border-red-200 hover:bg-red-100 transition cursor-pointer"   // red tint
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
@@ -276,7 +278,7 @@ export default function Leaderboard() {
                           )}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {candidates.length} candidates
+                          {election.approvedCandidates ?? 0} candidates
                         </div>
                       </div>
                     </div>

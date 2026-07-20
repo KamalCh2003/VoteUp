@@ -71,7 +71,7 @@ export default function VoteHistory() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl px-6 py-8">
 
       {/* HEADER */}
       <div>

@@ -1,7 +1,6 @@
 const prisma = require("../config/database");
 const bcrypt = require("bcrypt");
-const emailService = require('../services/email.service');
-
+const emailService = require("../services/email.service");
 
 exports.getStats = async (req, res) => {
   try {
@@ -19,7 +18,10 @@ exports.getStats = async (req, res) => {
       prisma.candidate.count(),
       prisma.candidate.count({ where: { status: "APPROVED" } }),
       prisma.election.count(),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "COMPLETED" } }),
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: "COMPLETED" },
+      }),
       prisma.vote.aggregate({ _sum: { quantity: true } }),
     ]);
     res.json({
@@ -39,38 +41,50 @@ exports.getStats = async (req, res) => {
 
 exports.getVoteTrend = async (req, res) => {
   try {
-    const { range = 'THIS_YEAR' } = req.query;
+    const { range = "THIS_YEAR" } = req.query;
     const now = new Date();
     let startDate, endDate;
-    let groupBy = 'day'; // default
+    let groupBy = "day"; // default
 
     switch (range) {
-      case 'LAST_MONTH':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      case "LAST_MONTH":
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          now.getDate(),
+        );
         endDate = now;
         break;
-      case 'LAST_3_MONTHS':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      case "LAST_3_MONTHS":
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - 3,
+          now.getDate(),
+        );
         endDate = now;
         break;
-      case 'LAST_6_MONTHS':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+      case "LAST_6_MONTHS":
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - 6,
+          now.getDate(),
+        );
         endDate = now;
         break;
-      case 'THIS_YEAR':
+      case "THIS_YEAR":
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = now;
-        groupBy = 'month';
+        groupBy = "month";
         break;
-      case 'LAST_5_YEARS':
+      case "LAST_5_YEARS":
         startDate = new Date(now.getFullYear() - 4, 0, 1);
         endDate = now;
-        groupBy = 'year';
+        groupBy = "year";
         break;
       default:
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = now;
-        groupBy = 'month';
+        groupBy = "month";
     }
 
     const votes = await prisma.vote.findMany({
@@ -85,27 +99,27 @@ exports.getVoteTrend = async (req, res) => {
 
     const trendMap = new Map();
 
-    if (groupBy === 'year') {
+    if (groupBy === "year") {
       for (let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
         trendMap.set(`${y}`, 0);
       }
-      votes.forEach(v => {
+      votes.forEach((v) => {
         const yearStr = v.votedAt.getFullYear().toString();
         if (trendMap.has(yearStr)) {
           trendMap.set(yearStr, trendMap.get(yearStr) + (v.quantity || 1));
         }
       });
-    } else if (groupBy === 'month') {
+    } else if (groupBy === "month") {
       const start = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
       const end = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
       let current = new Date(start);
       while (current <= end) {
-        const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`;
         trendMap.set(key, 0);
         current.setMonth(current.getMonth() + 1);
       }
-      votes.forEach(v => {
-        const key = `${v.votedAt.getFullYear()}-${String(v.votedAt.getMonth() + 1).padStart(2, '0')}`;
+      votes.forEach((v) => {
+        const key = `${v.votedAt.getFullYear()}-${String(v.votedAt.getMonth() + 1).padStart(2, "0")}`;
         if (trendMap.has(key)) {
           trendMap.set(key, trendMap.get(key) + (v.quantity || 1));
         }
@@ -116,11 +130,11 @@ exports.getVoteTrend = async (req, res) => {
       for (let i = 0; i <= diffDays; i++) {
         const d = new Date(startDate);
         d.setDate(startDate.getDate() + i);
-        const key = d.toISOString().split('T')[0];
+        const key = d.toISOString().split("T")[0];
         trendMap.set(key, 0);
       }
-      votes.forEach(v => {
-        const key = v.votedAt.toISOString().split('T')[0];
+      votes.forEach((v) => {
+        const key = v.votedAt.toISOString().split("T")[0];
         if (trendMap.has(key)) {
           trendMap.set(key, trendMap.get(key) + (v.quantity || 1));
         }
@@ -140,21 +154,24 @@ exports.getVoteTrend = async (req, res) => {
 
 exports.getTopVoters = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;   // 👈 now configurable, default 10
+    const limit = parseInt(req.query.limit) || 10; // 👈 now configurable, default 10
     const topVoters = await prisma.vote.groupBy({
       by: ["userId"],
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
       take: limit,
     });
-    const userIds = topVoters.map(v => v.userId);
+    const userIds = topVoters.map((v) => v.userId);
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, firstName: true, lastName: true },
     });
-    const result = topVoters.map(v => {
-      const user = users.find(u => u.id === v.userId);
-      return { name: user ? `${user.firstName} ${user.lastName}` : "Unknown", votes: v._count.id };
+    const result = topVoters.map((v) => {
+      const user = users.find((u) => u.id === v.userId);
+      return {
+        name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+        votes: v._count.id,
+      };
     });
     res.json({ topVoters: result });
   } catch (err) {
@@ -167,8 +184,13 @@ exports.getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, email: true, firstName: true, lastName: true,
-        role: true, isActive: true, createdAt: true,
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -185,10 +207,18 @@ exports.deleteUser = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return res.status(404).json({ error: "User not found" });
     if (user.id === req.user.id) {
-      return res.status(403).json({ error: "You cannot delete your own account" });
+      return res
+        .status(403)
+        .json({ error: "You cannot delete your own account" });
     }
 
-    const relatedModels = ["refreshToken", "verificationToken", "candidate", "vote", "auditLog"];
+    const relatedModels = [
+      "refreshToken",
+      "verificationToken",
+      "candidate",
+      "vote",
+      "auditLog",
+    ];
     for (const model of relatedModels) {
       if (prisma[model]) {
         await prisma[model].deleteMany({ where: { userId: id } });
@@ -218,7 +248,15 @@ exports.updateUserRole = async (req, res) => {
     const updatedUser = await prisma.user.update({
       where: { id },
       data: { role },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
     });
     res.json({ user: updatedUser });
   } catch (err) {
@@ -231,8 +269,12 @@ exports.getAllCandidates = async (req, res) => {
   try {
     const candidates = await prisma.candidate.findMany({
       include: {
-        user: { select: { id: true, email: true, firstName: true, lastName: true } },
-        election: { select: { id: true, title: true, status: true, category: true } },
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
+        election: {
+          select: { id: true, title: true, status: true, category: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -249,18 +291,24 @@ exports.updateCandidate = async (req, res) => {
     const { party, slogan, bio, candidateNumber } = req.body;
     const avatarUrl = req.file ? req.file.path : undefined;
     const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate) return res.status(404).json({ error: "Candidate not found" });
+    if (!candidate)
+      return res.status(404).json({ error: "Candidate not found" });
     const updated = await prisma.candidate.update({
       where: { id },
       data: {
         party: party !== undefined ? party : candidate.party,
         slogan: slogan !== undefined ? slogan : candidate.slogan,
         bio: bio !== undefined ? bio : candidate.bio,
-        candidateNumber: candidateNumber !== undefined ? candidateNumber : candidate.candidateNumber,
+        candidateNumber:
+          candidateNumber !== undefined
+            ? candidateNumber
+            : candidate.candidateNumber,
         ...(avatarUrl && { avatarUrl }),
       },
       include: {
-        user: { select: { id: true, email: true, firstName: true, lastName: true } },
+        user: {
+          select: { id: true, email: true, firstName: true, lastName: true },
+        },
         election: { select: { id: true, title: true } },
       },
     });
@@ -275,7 +323,8 @@ exports.deleteCandidate = async (req, res) => {
   try {
     const { id } = req.params;
     const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate) return res.status(404).json({ error: "Candidate not found" });
+    if (!candidate)
+      return res.status(404).json({ error: "Candidate not found" });
     await prisma.candidate.delete({ where: { id } });
     res.json({ message: "Candidate deleted successfully" });
   } catch (err) {
@@ -297,12 +346,14 @@ exports.approveCandidate = async (req, res) => {
     await prisma.notification.create({
       data: {
         userId: candidate.user.id,
-        title: status === 'APPROVED' ? 'Candidacy Approved 🎉' : 'Candidacy Update',
-        message: status === 'APPROVED'
-          ? `Your application for "${candidate.election.title}" has been approved. Good luck!`
-          : `Your application for "${candidate.election.title}" has been reviewed and not approved at this time.`,
-        type: 'CANDIDACY_UPDATE',
-        link: '/contestant/profile-campaign',
+        title:
+          status === "APPROVED" ? "Candidacy Approved 🎉" : "Candidacy Update",
+        message:
+          status === "APPROVED"
+            ? `Your application for "${candidate.election.title}" has been approved. Good luck!`
+            : `Your application for "${candidate.election.title}" has been reviewed and not approved at this time.`,
+        type: "CANDIDACY_UPDATE",
+        link: "/contestant/profile-campaign",
       },
     });
 
@@ -315,15 +366,32 @@ exports.approveCandidate = async (req, res) => {
 
 exports.createCandidateFromAdmin = async (req, res) => {
   try {
-    const { firstName, lastName, email, party, electionId, slogan, bio, candidateNumber } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      party,
+      electionId,
+      slogan,
+      bio,
+      candidateNumber,
+    } = req.body;
     const avatarUrl = req.file ? req.file.path : null;
 
-    const election = await prisma.election.findUnique({ where: { id: electionId } });
+    const election = await prisma.election.findUnique({
+      where: { id: electionId },
+    });
     if (!election) return res.status(404).json({ error: "Election not found" });
 
-    const candidateCount = await prisma.candidate.count({ where: { electionId, status: "APPROVED" } });
+    const candidateCount = await prisma.candidate.count({
+      where: { electionId, status: "APPROVED" },
+    });
     if (election.maxCandidates && candidateCount >= election.maxCandidates) {
-      return res.status(400).json({ error: `Candidate limit reached for this election (max ${election.maxCandidates})` });
+      return res
+        .status(400)
+        .json({
+          error: `Candidate limit reached for this election (max ${election.maxCandidates})`,
+        });
     }
 
     let user = await prisma.user.findUnique({ where: { email } });
@@ -335,19 +403,33 @@ exports.createCandidateFromAdmin = async (req, res) => {
       const passwordHash = await bcrypt.hash(tempPassword, 12);
       user = await prisma.user.create({
         data: {
-          email, firstName, lastName, passwordHash,
-          role: "CONTESTANT", isVerified: false,
+          email,
+          firstName,
+          lastName,
+          passwordHash,
+          role: "CONTESTANT",
+          isVerified: false,
         },
       });
       isNewUser = true;
     } else {
-      const existingCandidate = await prisma.candidate.findUnique({ where: { userId: user.id } });
-      if (existingCandidate) return res.status(400).json({ error: "User already has a candidate profile" });
+      const existingCandidate = await prisma.candidate.findFirst({
+        where: { userId: user.id, electionId },
+      });
+      if (existingCandidate) {
+        return res
+          .status(400)
+          .json({
+            error: "User already has a candidate profile for this election",
+          });
+      }
     }
 
     // Generate candidate number
-    const existingCandidatesCount = await prisma.candidate.count({ where: { electionId } });
-    const sequence = String(existingCandidatesCount + 1).padStart(2, '0');
+    const existingCandidatesCount = await prisma.candidate.count({
+      where: { electionId },
+    });
+    const sequence = String(existingCandidatesCount + 1).padStart(2, "0");
     const electionShortId = electionId.slice(0, 6);
     const generatedCandidateNumber = `CN-${electionShortId}-${sequence}`;
 
@@ -366,7 +448,12 @@ exports.createCandidateFromAdmin = async (req, res) => {
     // Send emails (non‑blocking)
     if (isNewUser && tempPassword) {
       try {
-        await emailService.sendWelcomePassword(email, firstName, lastName, tempPassword);
+        await emailService.sendWelcomePassword(
+          email,
+          firstName,
+          lastName,
+          tempPassword,
+        );
       } catch (emailErr) {
         console.error("Failed to send welcome email:", emailErr);
       }
@@ -374,7 +461,7 @@ exports.createCandidateFromAdmin = async (req, res) => {
       try {
         await emailService.sendEmail({
           to: email,
-          subject: 'You have been added as a candidate',
+          subject: "You have been added as a candidate",
           html: `<p>Hello ${firstName}, you have been added as a candidate in VoteUp. Please log in to manage your campaign.</p>`,
         });
       } catch (emailErr) {
@@ -405,32 +492,32 @@ exports.getAuditLogs = async (req, res) => {
 
 exports.getRevenueTrend = async (req, res) => {
   try {
-    const { range = 'THIS_YEAR' } = req.query;
+    const { range = "THIS_YEAR" } = req.query;
     const now = new Date();
     let startDate, endDate;
-    let groupBy = 'month'; // 'year' for LAST_5_YEARS
+    let groupBy = "month"; // 'year' for LAST_5_YEARS
 
     switch (range) {
-      case 'LAST_MONTH':
+      case "LAST_MONTH":
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
         break;
-      case 'LAST_3_MONTHS':
+      case "LAST_3_MONTHS":
         startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
         endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
         break;
-      case 'LAST_6_MONTHS':
+      case "LAST_6_MONTHS":
         startDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
         endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
         break;
-      case 'THIS_YEAR':
+      case "THIS_YEAR":
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
         break;
-      case 'LAST_5_YEARS':
+      case "LAST_5_YEARS":
         startDate = new Date(now.getFullYear() - 4, 0, 1);
         endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-        groupBy = 'year';
+        groupBy = "year";
         break;
       default:
         startDate = new Date(now.getFullYear(), 0, 1);
@@ -439,14 +526,14 @@ exports.getRevenueTrend = async (req, res) => {
 
     const revenueData = [];
 
-    if (groupBy === 'year') {
+    if (groupBy === "year") {
       for (let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
         const startOfYear = new Date(y, 0, 1);
         const endOfYear = new Date(y, 11, 31, 23, 59, 59);
         const agg = await prisma.payment.aggregate({
           _sum: { amount: true },
           where: {
-            status: 'COMPLETED',
+            status: "COMPLETED",
             createdAt: { gte: startOfYear, lte: endOfYear },
           },
         });
@@ -455,16 +542,30 @@ exports.getRevenueTrend = async (req, res) => {
     } else {
       let current = new Date(startDate);
       while (current <= endDate) {
-        const monthStart = new Date(current.getFullYear(), current.getMonth(), 1);
-        const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0, 23, 59, 59);
+        const monthStart = new Date(
+          current.getFullYear(),
+          current.getMonth(),
+          1,
+        );
+        const monthEnd = new Date(
+          current.getFullYear(),
+          current.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+        );
         const agg = await prisma.payment.aggregate({
           _sum: { amount: true },
           where: {
-            status: 'COMPLETED',
+            status: "COMPLETED",
             createdAt: { gte: monthStart, lte: monthEnd },
           },
         });
-        const label = monthStart.toLocaleString('default', { month: 'short', year: 'numeric' });
+        const label = monthStart.toLocaleString("default", {
+          month: "short",
+          year: "numeric",
+        });
         revenueData.push({ month: label, revenue: agg._sum.amount || 0 });
         current.setMonth(current.getMonth() + 1);
       }
@@ -479,8 +580,12 @@ exports.getRevenueTrend = async (req, res) => {
 
 exports.getPaymentMethods = async (req, res) => {
   try {
-    const count = await prisma.payment.count({ where: { status: 'COMPLETED' } });
-    res.json({ methods: [{ name: 'Vote Purchase', value: count, color: '#7c6fff' }] });
+    const count = await prisma.payment.count({
+      where: { status: "COMPLETED" },
+    });
+    res.json({
+      methods: [{ name: "Vote Purchase", value: count, color: "#7c6fff" }],
+    });
   } catch (err) {
     console.error("Payment methods error:", err);
     res.status(500).json({ error: "Failed to fetch payment methods" });
@@ -494,22 +599,26 @@ exports.getRecentPayments = async (req, res) => {
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { firstName: true, lastName: true, email: true } },
-        candidate: {                                  // ← add candidate
+        candidate: {
+          // ← add candidate
           select: {
-            user: { select: { firstName: true, lastName: true } }
-          }
+            user: { select: { firstName: true, lastName: true } },
+          },
         },
         votes: { select: { quantity: true } },
       },
     });
 
-    const paymentsWithDetails = payments.map(p => ({
+    const paymentsWithDetails = payments.map((p) => ({
       ...p,
       totalVotes: p.votes.reduce((sum, v) => sum + v.quantity, 0),
-      voterName: `${p.user?.firstName || ''} ${p.user?.lastName || ''}`.trim() || p.user?.email || 'N/A',
+      voterName:
+        `${p.user?.firstName || ""} ${p.user?.lastName || ""}`.trim() ||
+        p.user?.email ||
+        "N/A",
       contestantName: p.candidate?.user
         ? `${p.candidate.user.firstName} ${p.candidate.user.lastName}`
-        : '—',
+        : "—",
     }));
 
     res.json({ payments: paymentsWithDetails });
@@ -527,14 +636,18 @@ exports.getTopVoters = async (req, res) => {
       orderBy: { _count: { id: "desc" } },
       take: 5,
     });
-    const userIds = topVoters.map(v => v.userId);
+    const userIds = topVoters.map((v) => v.userId);
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, firstName: true, lastName: true },
     });
-    const result = topVoters.map(v => {
-      const user = users.find(u => u.id === v.userId);
-      return { name: user ? `${user.firstName} ${user.lastName}` : "Unknown", votes: v._count.id, amount: 0 };
+    const result = topVoters.map((v) => {
+      const user = users.find((u) => u.id === v.userId);
+      return {
+        name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+        votes: v._count.id,
+        amount: 0,
+      };
     });
     res.json({ topVoters: result });
   } catch (err) {
@@ -547,8 +660,18 @@ exports.getAllVotes = async (req, res) => {
   try {
     const votes = await prisma.vote.findMany({
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true, createdAt: true } },
-        candidate: { include: { user: { select: { firstName: true, lastName: true } } } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            createdAt: true,
+          },
+        },
+        candidate: {
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
         election: { select: { title: true, status: true } },
       },
       orderBy: { votedAt: "desc" },
@@ -566,8 +689,14 @@ exports.deleteVote = async (req, res) => {
     const vote = await prisma.vote.findUnique({ where: { id } });
     if (!vote) return res.status(404).json({ error: "Vote not found" });
     await prisma.$transaction([
-      prisma.candidate.update({ where: { id: vote.candidateId }, data: { votesReceived: { decrement: vote.quantity || 1 } } }),
-      prisma.election.update({ where: { id: vote.electionId }, data: { totalVotes: { decrement: vote.quantity || 1 } } }),
+      prisma.candidate.update({
+        where: { id: vote.candidateId },
+        data: { votesReceived: { decrement: vote.quantity || 1 } },
+      }),
+      prisma.election.update({
+        where: { id: vote.electionId },
+        data: { totalVotes: { decrement: vote.quantity || 1 } },
+      }),
       prisma.vote.delete({ where: { id } }),
     ]);
     res.json({ message: "Vote deleted successfully" });
@@ -584,7 +713,7 @@ exports.getNotifications = async (req, res) => {
     const [notifications, total] = await Promise.all([
       prisma.notification.findMany({
         where: { userId: req.user.id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: parseInt(limit),
         select: {
@@ -594,15 +723,20 @@ exports.getNotifications = async (req, res) => {
           type: true,
           isRead: true,
           link: true,
-          createdAt: true,   // ← must be here!
+          createdAt: true, // ← must be here!
         },
       }),
       prisma.notification.count({ where: { userId: req.user.id } }),
     ]);
-    res.json({ notifications, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({
+      notifications,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
   } catch (err) {
-    console.error('Get notifications error:', err);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    console.error("Get notifications error:", err);
+    res.status(500).json({ error: "Failed to fetch notifications" });
   }
 };
 
@@ -615,8 +749,8 @@ exports.markNotificationRead = async (req, res) => {
     });
     res.json({ success: true });
   } catch (err) {
-    console.error('Mark notification read error:', err);
-    res.status(500).json({ error: 'Failed to mark notification as read' });
+    console.error("Mark notification read error:", err);
+    res.status(500).json({ error: "Failed to mark notification as read" });
   }
 };
 
@@ -628,8 +762,8 @@ exports.markAllNotificationsRead = async (req, res) => {
     });
     res.json({ success: true });
   } catch (err) {
-    console.error('Mark all notifications read error:', err);
-    res.status(500).json({ error: 'Failed to mark all notifications as read' });
+    console.error("Mark all notifications read error:", err);
+    res.status(500).json({ error: "Failed to mark all notifications as read" });
   }
 };
 
@@ -637,14 +771,14 @@ exports.getUnreadNotificationCount = async (req, res) => {
   try {
     const count = await prisma.notification.count({
       where: {
-        userId: req.user.id,   
+        userId: req.user.id,
         isRead: false,
       },
     });
     res.json({ count });
   } catch (err) {
-    console.error('Unread notification count error:', err);
-    res.status(500).json({ error: 'Failed to fetch unread count' });
+    console.error("Unread notification count error:", err);
+    res.status(500).json({ error: "Failed to fetch unread count" });
   }
 };
 
@@ -654,22 +788,22 @@ exports.getElectionRequests = async (req, res) => {
     const { status, search, page = 1, limit = 20 } = req.query;
     const where = {};
 
-    if (status && status !== 'ALL') {
+    if (status && status !== "ALL") {
       where.status = status;
     }
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { organization: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+        { organization: { contains: search, mode: "insensitive" } },
       ];
     }
 
     const [requests, total] = await Promise.all([
       prisma.electionRequest.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (parseInt(page) - 1) * parseInt(limit),
         take: parseInt(limit),
       }),
@@ -683,8 +817,8 @@ exports.getElectionRequests = async (req, res) => {
       totalPages: Math.ceil(total / parseInt(limit)),
     });
   } catch (err) {
-    console.error('Get election requests error:', err);
-    res.status(500).json({ error: 'Failed to fetch election requests' });
+    console.error("Get election requests error:", err);
+    res.status(500).json({ error: "Failed to fetch election requests" });
   }
 };
 
@@ -694,9 +828,9 @@ exports.updateElectionRequestStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['PENDING', 'REVIEWED', 'COMPLETED', 'ARCHIVED'];
+    const validStatuses = ["PENDING", "REVIEWED", "COMPLETED", "ARCHIVED"];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      return res.status(400).json({ error: "Invalid status" });
     }
 
     const request = await prisma.electionRequest.update({
@@ -706,8 +840,8 @@ exports.updateElectionRequestStatus = async (req, res) => {
 
     res.json({ request });
   } catch (err) {
-    console.error('Update request status error:', err);
-    res.status(500).json({ error: 'Failed to update request' });
+    console.error("Update request status error:", err);
+    res.status(500).json({ error: "Failed to update request" });
   }
 };
 
@@ -716,10 +850,10 @@ exports.deleteElectionRequest = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.electionRequest.delete({ where: { id } });
-    res.json({ message: 'Request deleted' });
+    res.json({ message: "Request deleted" });
   } catch (err) {
-    console.error('Delete request error:', err);
-    res.status(500).json({ error: 'Failed to delete request' });
+    console.error("Delete request error:", err);
+    res.status(500).json({ error: "Failed to delete request" });
   }
 };
 
@@ -729,21 +863,20 @@ exports.replyToElectionRequest = async (req, res) => {
     const { message } = req.body;
 
     const request = await prisma.electionRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (!request) return res.status(404).json({ error: "Request not found" });
 
     const sent = await emailService.sendEmail({
       to: request.email,
-      subject: 'Response to your election request',
+      subject: "Response to your election request",
       html: `<p>${message}</p>`,
     });
 
-    if (!sent) return res.status(500).json({ error: 'Failed to send reply email' });
+    if (!sent)
+      return res.status(500).json({ error: "Failed to send reply email" });
 
-    res.json({ success: true, message: 'Reply sent' });
+    res.json({ success: true, message: "Reply sent" });
   } catch (err) {
-    console.error('Reply error:', err);
-    res.status(500).json({ error: 'Failed to send reply' });
+    console.error("Reply error:", err);
+    res.status(500).json({ error: "Failed to send reply" });
   }
 };
-
-

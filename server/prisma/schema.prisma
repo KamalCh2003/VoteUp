@@ -71,7 +71,7 @@ model User {
   notifications      Notification[]
   payments           Payment[]
   auditLogs          AuditLog[]
-  candidate          Candidate?
+  candidates         Candidate[]
   verificationTokens VerificationToken[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -79,8 +79,8 @@ model User {
 
 model Candidate {
   id              String          @id @default(uuid())
-  userId          String          @unique
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String          
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarUrl       String?
   electionId      String
   election        Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
