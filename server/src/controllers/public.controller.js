@@ -6,7 +6,7 @@ exports.requestElection = async (req, res) => {
     const { name, email, phone, organization, message } = req.body;
     const adminEmail = process.env.ADMIN_EMAIL;
 
-    // Save to DB
+    // Save the request to the database
     const request = await prisma.electionRequest.create({
       data: {
         name,
@@ -17,7 +17,7 @@ exports.requestElection = async (req, res) => {
       },
     });
 
-    // Try to send email (non‑blocking)
+    // Send email to admin (non‑blocking)
     if (adminEmail) {
       const htmlContent = `
         <h3>New Election Request</h3>
@@ -35,6 +35,20 @@ exports.requestElection = async (req, res) => {
       }).catch(err => console.error('Email failed:', err));
     }
 
+    // Notify all admins via in-app notification
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map(admin => ({
+          userId: admin.id,
+          title: 'New Election Request',
+          message: `${name || 'Someone'} from ${organization || 'an organization'} has requested a new election.`,
+          type: 'SYSTEM_ALERT',
+          link: '/admin/election-requests',
+        })),
+      });
+    }
+
     res.json({ success: true, message: 'Request submitted successfully' });
   } catch (err) {
     console.error('Election request error:', err);
@@ -44,13 +58,15 @@ exports.requestElection = async (req, res) => {
 
 exports.getPublicStats = async (req, res) => {
   try {
-    const [activeElections, totalVotes] = await Promise.all([
+    const [activeElections, totalVotes, totalVoters] = await Promise.all([
       prisma.election.count({ where: { status: 'ACTIVE' } }),
       prisma.vote.aggregate({ _sum: { quantity: true } }),
+      prisma.user.count({ where: { role: 'VOTER' } }),
     ]);
     res.json({
       activeElections,
       totalVotes: totalVotes._sum.quantity || 0,
+      totalVoters,
     });
   } catch (err) {
     console.error('Public stats error:', err);

@@ -1,6 +1,6 @@
 // src/pages/ResultsPage.jsx
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Clock, RefreshCw, Search } from 'lucide-react';
+import { Trophy, Calendar, Clock, RefreshCw, Search, X } from 'lucide-react';
 import api from '../../services/api';
 
 export default function ResultsPage() {
@@ -12,7 +12,8 @@ export default function ResultsPage() {
   const [selectedCandidates, setSelectedCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [timeLeft, setTimeLeft] = useState({});
-  const hasInitialized = useRef(false); // track first load
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
+  const hasInitialized = useRef(false);
 
   const getTimeRemaining = useCallback((endDate) => {
     const total = Date.parse(endDate) - Date.now();
@@ -52,13 +53,11 @@ export default function ResultsPage() {
       setEndedElections(ended);
       setLastUpdated(new Date());
 
-      // Determine if currently selected election is still valid
       const currentId = selectedElection?.id;
       const stillActive = active.some(e => e.id === currentId);
       const stillEnded = ended.some(e => e.id === currentId);
       const selectionValid = stillActive || stillEnded;
 
-      // On first load, auto-select first active election if any
       if (!hasInitialized.current) {
         hasInitialized.current = true;
         if (active.length > 0) {
@@ -71,16 +70,13 @@ export default function ResultsPage() {
           setSelectedElection(election);
           setSelectedCandidates(sorted);
         } else {
-          // No active elections – leave selection null
           setSelectedElection(null);
           setSelectedCandidates([]);
         }
       } else if (!selectionValid) {
-        // The user's selection is gone (deleted) – clear it
         setSelectedElection(null);
         setSelectedCandidates([]);
       } else if (stillActive) {
-        // Refresh the selected active election data
         const { data } = await api.get(`/elections/${currentId}`);
         const election = data.election;
         const sorted = [...(election.candidates || [])].sort(
@@ -89,7 +85,6 @@ export default function ResultsPage() {
         setSelectedElection(election);
         setSelectedCandidates(sorted);
       } else if (stillEnded) {
-        // Refresh the selected ended election data
         const { data } = await api.get(`/elections/${currentId}`);
         const election = data.election;
         const sorted = [...(election.candidates || [])].sort(
@@ -99,7 +94,6 @@ export default function ResultsPage() {
         setSelectedCandidates(sorted);
       }
 
-      // Update timers for active elections
       const initialTime = {};
       active.forEach((e) => {
         initialTime[e.id] = getTimeRemaining(e.endDate);
@@ -141,6 +135,10 @@ export default function ResultsPage() {
         );
         setSelectedElection(election);
         setSelectedCandidates(sorted);
+
+        if (window.innerWidth < 1024) {
+          setMobileModalOpen(true);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -199,6 +197,83 @@ export default function ResultsPage() {
     );
   };
 
+  const renderResultContent = () => (
+    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className={`p-5 border-b ${
+        selectedElection.status === 'ACTIVE' ? 'bg-green-50' : 'bg-red-50'
+      }`}>
+        <h2 className="text-xl font-bold">{selectedElection.title}</h2>
+        <p className="text-sm text-gray-500">{selectedElection.description}</p>
+        <div className="flex gap-4 text-xs text-gray-500 mt-2">
+          <span>
+            <Calendar size={12} className="inline mr-1" />
+            {new Date(selectedElection.startDate).toLocaleDateString()} -{' '}
+            {new Date(selectedElection.endDate).toLocaleDateString()}
+          </span>
+          <span>{selectedElection.status}</span>
+        </div>
+      </div>
+
+      <table className="w-full text-sm">
+        <thead className="bg-gray-100 text-gray-600">
+          <tr>
+            {selectedElection.status === 'ENDED' && (
+              <th className="p-3 text-left">Rank</th>
+            )}
+            <th className="p-3 text-left">Candidate</th>
+            <th className="p-3 text-left">Party</th>
+            {selectedElection.status === 'ENDED' && (
+              <th className="p-3 text-right">Votes</th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {selectedCandidates.map((c, i) => {
+            const avatarUrl = c.avatarUrl;
+            const initials = `${c.user?.firstName?.[0] || ''}${c.user?.lastName?.[0] || ''}`;
+            return (
+              <tr key={c.id} className="border-t">
+                {selectedElection.status === 'ENDED' && (
+                  <td className="p-3 font-bold">#{i + 1}</td>
+                )}
+                <td className="p-3 flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={initials} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-white text-xs font-bold">{initials}</span>
+                    )}
+                  </div>
+                  <span>{c.user?.firstName} {c.user?.lastName}</span>
+                </td>
+                <td className="p-3 text-gray-600">{c.party || 'Independent'}</td>
+                {selectedElection.status === 'ENDED' && (
+                  <td className="p-3 text-right font-mono text-gray-700">
+                    {c.votesReceived?.toLocaleString() || 0}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+          {selectedCandidates.length === 0 && (
+            <tr>
+              <td
+                colSpan={selectedElection.status === 'ENDED' ? 4 : 2}
+                className="text-center p-6 text-gray-400"
+              >
+                No candidates found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <div className="p-3 text-xs text-gray-500 text-right border-t">
+        Total candidates: {selectedCandidates.length}
+      </div>
+    </div>
+  );
+
   if (loading && !selectedElection) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -210,7 +285,6 @@ export default function ResultsPage() {
   return (
     <div className="min-h-screen text-gray-900">
       <div className="mx-auto max-w-7xl px-6 py-8 flex flex-col lg:flex-row gap-8">
-        {/* LEFT PANEL */}
         <div className="lg:w-1/3 space-y-6">
           <div className="text-xs text-gray-500 flex items-center gap-2">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
@@ -251,103 +325,30 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="lg:w-2/3">
+        <div className="hidden lg:block lg:w-2/3">
           {!selectedElection ? (
             <div className="bg-white border rounded-xl p-10 text-center text-gray-500">
               Select an election to view results
             </div>
           ) : (
-            <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-              {/* Election Header – green for active, red for ended */}
-              <div className={`p-5 border-b ${
-                selectedElection.status === 'ACTIVE' ? 'bg-green-800' : 'bg-red-700'
-              }`}>
-                <h2 className="text-xl font-bold text-white">{selectedElection.title}</h2>
-                <p className="text-sm text-white">{selectedElection.description}</p>
-                <div className="flex gap-4 text-xs text-white mt-2">
-                  <span>
-                    <Calendar size={12} className="inline mr-1" />
-                    {new Date(selectedElection.startDate).toLocaleDateString()} -{' '}
-                    {new Date(selectedElection.endDate).toLocaleDateString()}
-                  </span>
-                  <span>{selectedElection.status}</span>
-                </div>
-              </div>
-
-              {/* Candidate table – always visible, with avatar always, rank/share only for ENDED */}
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 text-gray-600">
-                  <tr>
-                    {selectedElection.status === 'ENDED' && (
-                      <th className="p-3 text-left">Rank</th>
-                    )}
-                    <th className="p-3 text-left">Candidate</th>
-                    <th className="p-3 text-left">Party</th>
-                    {selectedElection.status === 'ENDED' && (
-                      <th className="p-3 text-right">Share</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedCandidates.map((c, i) => {
-                    const total = selectedElection.totalVotes || 1;
-                    const share = ((c.votesReceived / total) * 100).toFixed(1);
-                    const avatarUrl = c.avatarUrl;
-                    const initials = `${c.user?.firstName?.[0] || ''}${c.user?.lastName?.[0] || ''}`;
-                    return (
-                      <tr key={c.id} className="border-t">
-                        {selectedElection.status === 'ENDED' && (
-                          <td className="p-3 font-bold">#{i + 1}</td>
-                        )}
-                        <td className="p-3 flex items-center gap-3">
-                          {/* Avatar */}
-                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {avatarUrl ? (
-                              <img
-                                src={avatarUrl}
-                                alt={initials}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-white text-xs font-bold">
-                                {initials}
-                              </span>
-                            )}
-                          </div>
-                          <span>
-                            {c.user?.firstName} {c.user?.lastName}
-                          </span>
-                        </td>
-                        <td className="p-3 text-gray-600">
-                          {c.party || 'Independent'}
-                        </td>
-                        {selectedElection.status === 'ENDED' && (
-                          <td className="p-3 text-right">{share}%</td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                  {selectedCandidates.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={selectedElection.status === 'ENDED' ? 4 : 2}
-                        className="text-center p-6 text-gray-400"
-                      >
-                        No candidates found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              <div className="p-3 text-xs text-gray-500 text-right border-t">
-                Total candidates: {selectedCandidates.length}
-              </div>
-            </div>
+            renderResultContent()
           )}
         </div>
       </div>
+
+      {mobileModalOpen && selectedElection && (
+        <div className="fixed inset-0 z-50 lg:hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setMobileModalOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-white/90 hover:bg-gray-100 transition text-gray-500 z-10"
+            >
+              <X size={20} />
+            </button>
+            {renderResultContent()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

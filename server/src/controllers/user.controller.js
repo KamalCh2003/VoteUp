@@ -18,7 +18,7 @@ exports.getProfile = async (req, res) => {
         isVerified: true,
         anonymousMode: true,
         twoFactorEnabled: true,
-        candidate: {
+        candidates: {
           select: {
             id: true,
             status: true,
