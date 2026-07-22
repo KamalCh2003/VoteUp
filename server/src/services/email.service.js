@@ -1,37 +1,55 @@
-// services/email.service.js
-const nodemailer = require('nodemailer');
-
-let transporter = null;
-
 const getTransporter = () => {
   if (transporter) return transporter;
+
+  console.log("===== EMAIL CONFIG =====");
+  console.log("EMAIL_USER:", process.env.EMAIL_USER);
+  console.log("EMAIL_PASS exists:", !!process.env.EMAIL_PASS);
+  console.log("CLIENT_URL:", process.env.CLIENT_URL);
+  console.log("========================");
+
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn("⚠️ Email credentials missing. OTP will be shown in console.");
     return null;
   }
+
   transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
+
   return transporter;
 };
 
 const sendEmail = async ({ to, subject, html }) => {
   const transporter = getTransporter();
-  if (!transporter) return false;
+
+  if (!transporter) {
+    console.log("❌ Transporter not created.");
+    return false;
+  }
+
   try {
-    await transporter.sendMail({
+    console.log("📧 Attempting to send email...");
+    console.log("To:", to);
+    console.log("Subject:", subject);
+
+    const info = await transporter.sendMail({
       from: `"VoteUp" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
     });
+
+    console.log("✅ Email sent successfully!");
+    console.log(info);
+
     return true;
   } catch (err) {
-    console.error("Email send error:", err);
+    console.error("❌ Email send error:");
+    console.error(err);
     return false;
   }
 };
@@ -142,6 +160,8 @@ const emailWrapper = (content) => `
 `;
 
 const sendVerificationOtp = async (email, otp) => {
+  console.log("📨 sendVerificationOtp called for:", email);
+
   const content = `
     <h2 style="margin-top:0; color:#111827;">Verify your email address</h2>
     <p style="color:#4b5563;">Thanks for joining VoteUp! Please use the verification code below to complete your registration.</p>
@@ -150,12 +170,19 @@ const sendVerificationOtp = async (email, otp) => {
     </div>
     <p style="color:#4b5563; font-size:14px;">This code is valid for <strong>10 minutes</strong>. If you didn't request this, please ignore this email.</p>
   `;
+
   const html = emailWrapper(content);
-  const sent = await sendEmail({ to: email, subject: 'Verify your email – VoteUp', html });
+  const sent = await sendEmail({
+    to: email,
+    subject: "Verify your email – VoteUp",
+    html,
+  });
+
   if (!sent) {
     console.log(`📧 [DEV] OTP for ${email}: ${otp}`);
     return { devOtp: otp };
   }
+
   return { sent: true };
 };
 
