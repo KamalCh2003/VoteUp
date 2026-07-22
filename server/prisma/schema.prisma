@@ -206,7 +206,7 @@ model ElectionRequest {
   phone        String?
   organization String?
   message      String
-  status       String   @default("PENDING")  // PENDING, REVIEWED, COMPLETED, ARCHIVED
+  status       String   @default("PENDING")  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

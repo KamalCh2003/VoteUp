@@ -23,7 +23,7 @@ const getTransporter = () => {
     return transporter;
   }
 
-  console.warn('⚠️ SMTP not configured – emails will not be sent. Set SMTP_* env variables.');
+  console.warn('SMTP not configured – emails will not be sent. Set SMTP_* env variables.');
   return null;
 };
 

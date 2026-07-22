@@ -63,9 +63,9 @@ export default function HeroSection() {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 py-8 md:py-1 mb-10">
+      <div className="mx-auto max-w-7xl px-6 py-16 md:py-8 mb-10">
         {/* Active Election Badge */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-10">
           {loadingStats ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-5 py-2 text-sm text-gray-400 shadow-sm animate-pulse">
               <Sparkles size={14} />
@@ -133,7 +133,7 @@ export default function HeroSection() {
               </p>
             ) : (
               <>
-                <div className="text-sm text-gray-600 mb-3 text-center font-medium">
+                <div className="text-sm text-gray-600 mb-1 text-center font-medium">
                   {recentElection.title}
                 </div>
 
@@ -143,10 +143,10 @@ export default function HeroSection() {
                     return (
                       <div
                         key={candidate.id}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition"
+                        className="flex items-center gap-3 py-1 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition"
                       >
                         {/* Avatar */}
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden">
+                        <div className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden">
                           {avatarUrl ? (
                             <img
                               src={avatarUrl}
