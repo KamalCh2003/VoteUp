@@ -1,3 +1,7 @@
+const nodemailer = require("nodemailer");
+
+let transporter = null;
+
 const getTransporter = () => {
   if (transporter) return transporter;
 
@@ -8,7 +12,7 @@ const getTransporter = () => {
   console.log("========================");
 
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("⚠️ Email credentials missing. OTP will be shown in console.");
+    console.warn("⚠️ Email credentials missing.");
     return null;
   }
 
