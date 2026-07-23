@@ -1,6 +1,6 @@
 // client/src/context/AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import { createContext, useContext, useState, useEffect } from "react";
+import api from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -9,9 +9,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (token) {
-      api.get('/users/me')
+      api
+        .get("/users/me")
         .then(({ data }) => setUser(data.user))
         .catch(() => localStorage.clear())
         .finally(() => setLoading(false));
@@ -21,23 +22,25 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
-  
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    const { data } = await api.post("/auth/login", { email, password });
+
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
 
     setUser(data.user);
     return data.user;
   };
 
   const register = async (formData) => {
-    const { data } = await api.post('/auth/register', formData);
+    const { data } = await api.post("/auth/register", formData);
+    console.log("Axios response:", res);
+    console.log("Axios data:", res.data);
     return data;
   };
 
   const setAuth = (userData, accessToken, refreshToken) => {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
     setUser(userData);
   };
 
@@ -52,10 +55,18 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, loading, login, register, logout, setAuth, updateUser,
-      isAuthenticated: !!user 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        setAuth,
+        updateUser,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
