@@ -12,15 +12,17 @@ const getTransporter = () => {
   console.log("========================");
 
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("⚠️ Email credentials missing.");
+    console.warn("Email credentials missing.");
     return null;
   }
 
   transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,           
+    secure: true,         
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: process.env.EMAIL_PASS,   
     },
   });
 

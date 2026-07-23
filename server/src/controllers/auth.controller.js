@@ -7,39 +7,37 @@ const passport = require('passport');
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-
 exports.register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role } = req.body;   
+    const { email, password, firstName, lastName, role } = req.body;
 
-    // Check only by email
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(400).json({ error: 'Email already exists' });
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        firstName,
-        lastName,
-        role: role || 'VOTER',
-      },
-    });
 
     const otp = generateOtp();
+
+    const metadata = JSON.stringify({
+      firstName,
+      lastName,
+      email,
+      passwordHash,
+      role: role || 'VOTER',
+    });
+
     await prisma.verificationToken.create({
       data: {
-        userId: user.id,
         token: otp,
         type: 'EMAIL_VERIFY',
+        metadata,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
 
     const emailResult = await emailService.sendVerificationOtp(email, otp);
 
-    let message = 'Registration successful. Check your email for the verification code.';
+    let message = 'Please check your email for the verification code.';
     let devOtp = null;
     if (emailResult?.devOtp) {
       devOtp = emailResult.devOtp;
@@ -62,31 +60,46 @@ exports.verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
     if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(400).json({ error: 'User not found' });
-
     const vToken = await prisma.verificationToken.findFirst({
       where: {
-        userId: user.id,
         token: otp,
         type: 'EMAIL_VERIFY',
         used: false,
         expiresAt: { gte: new Date() },
       },
     });
-    if (!vToken) return res.status(400).json({ error: 'Invalid or expired OTP' });
 
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: user.id }, data: { isVerified: true } }),
-      prisma.verificationToken.update({ where: { id: vToken.id }, data: { used: true } }),
-    ]);
+    if (!vToken || !vToken.metadata) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    const userData = JSON.parse(vToken.metadata);
+    if (userData.email !== email) {
+      return res.status(400).json({ error: 'Email does not match registration data' });
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        email: userData.email,
+        passwordHash: userData.passwordHash,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: userData.role,
+        isVerified: true,
+      },
+    });
+
+    await prisma.verificationToken.update({
+      where: { id: vToken.id },
+      data: { used: true, userId: user.id },
+    });
 
     const payload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = generateToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
     res.json({
-      message: 'Email verified successfully',
+      message: 'Email verified and account created successfully',
       accessToken,
       refreshToken,
       user: {
@@ -104,24 +117,34 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-
 exports.resendOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(400).json({ error: 'User not found' });
 
-    await prisma.verificationToken.updateMany({
-      where: { userId: user.id, type: 'EMAIL_VERIFY', used: false },
+    const oldToken = await prisma.verificationToken.findFirst({
+      where: {
+        type: 'EMAIL_VERIFY',
+        used: false,
+        metadata: { contains: email },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!oldToken || !oldToken.metadata) {
+      return res.status(400).json({ error: 'No pending registration found for this email' });
+    }
+
+    await prisma.verificationToken.update({
+      where: { id: oldToken.id },
       data: { used: true },
     });
 
     const otp = generateOtp();
     await prisma.verificationToken.create({
       data: {
-        userId: user.id,
         token: otp,
         type: 'EMAIL_VERIFY',
+        metadata: oldToken.metadata,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
@@ -145,7 +168,6 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-// LOGIN 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -242,7 +264,6 @@ exports.refreshToken = async (req, res) => {
     res.status(401).json({ error: 'Invalid refresh token' });
   }
 };
-
 
 exports.googleAuth = passport.authenticate('google', { scope: ['profile', 'email'] });
 

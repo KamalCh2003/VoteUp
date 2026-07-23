@@ -31,12 +31,10 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  const register = async (formData) => {
-    const { data } = await api.post("/auth/register", formData);
-    console.log("Axios response:", res);
-    console.log("Axios data:", res.data);
-    return data;
-  };
+ const register = async (formData) => {
+  const { data } = await api.post("/auth/register", formData);
+  return data;
+};
 
   const setAuth = (userData, accessToken, refreshToken) => {
     localStorage.setItem("accessToken", accessToken);
