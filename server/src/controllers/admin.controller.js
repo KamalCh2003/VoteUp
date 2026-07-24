@@ -154,7 +154,7 @@ exports.getVoteTrend = async (req, res) => {
 
 exports.getTopVoters = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10; // 👈 now configurable, default 10
+    const limit = parseInt(req.query.limit) || 10; 
     const topVoters = await prisma.vote.groupBy({
       by: ["userId"],
       _count: { id: true },
@@ -495,7 +495,7 @@ exports.getRevenueTrend = async (req, res) => {
     const { range = "THIS_YEAR" } = req.query;
     const now = new Date();
     let startDate, endDate;
-    let groupBy = "month"; // 'year' for LAST_5_YEARS
+    let groupBy = "month"; 
 
     switch (range) {
       case "LAST_MONTH":
@@ -723,7 +723,7 @@ exports.getNotifications = async (req, res) => {
           type: true,
           isRead: true,
           link: true,
-          createdAt: true, // ← must be here!
+          createdAt: true, 
         },
       }),
       prisma.notification.count({ where: { userId: req.user.id } }),

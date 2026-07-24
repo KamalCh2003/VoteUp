@@ -15,8 +15,8 @@ const authenticate = async (req, res, next) => {
       select: { 
         id: true, 
         email: true, 
-        firstName: true,   // ✅ added
-        lastName: true,    // ✅ added
+        firstName: true,   
+        lastName: true,    
         role: true, 
         isActive: true, 
         isVerified: true 

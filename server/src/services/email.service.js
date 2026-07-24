@@ -38,7 +38,7 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 
   try {
-    console.log("📧 Attempting to send email...");
+    console.log("Attempting to send email...");
     console.log("To:", to);
     console.log("Subject:", subject);
 
@@ -49,12 +49,12 @@ const sendEmail = async ({ to, subject, html }) => {
       html,
     });
 
-    console.log("✅ Email sent successfully!");
+    console.log("Email sent successfully!");
     console.log(info);
 
     return true;
   } catch (err) {
-    console.error("❌ Email send error:");
+    console.error("Email send error:");
     console.error(err);
     return false;
   }
@@ -185,7 +185,7 @@ const sendVerificationOtp = async (email, otp) => {
   });
 
   if (!sent) {
-    console.log(`📧 [DEV] OTP for ${email}: ${otp}`);
+    console.log(`[DEV] OTP for ${email}: ${otp}`);
     return { devOtp: otp };
   }
 
@@ -194,7 +194,6 @@ const sendVerificationOtp = async (email, otp) => {
 
 const sendPasswordResetEmail = async (email, token) => {
   const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
-  // This email uses a separate inline template, so we add the same border style directly
   const html = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f9fafb;">
       <!-- Header -->

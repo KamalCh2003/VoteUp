@@ -9,9 +9,7 @@ const crypto = require("crypto");
 
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 
-// ─────────────────────────────────────────────────────────────
 //  REGISTER with OTP (email verification)
-// ─────────────────────────────────────────────────────────────
 const registerWithOtp = async ({
   firstName,
   lastName,
@@ -67,7 +65,7 @@ const registerWithOtp = async ({
       userId: user.id,
       token: otp,
       type: "EMAIL_VERIFY",
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), 
     },
   });
 
@@ -86,9 +84,8 @@ const registerWithOtp = async ({
   };
 };
 
-// ─────────────────────────────────────────────────────────────
 //  VERIFY OTP and auto‑login (returns JWT tokens)
-// ─────────────────────────────────────────────────────────────
+
 const verifyOtpAndLogin = async (email, otp) => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new ApiError(404, "User not found");
@@ -123,9 +120,7 @@ const verifyOtpAndLogin = async (email, otp) => {
   return { user, tokens };
 };
 
-// ─────────────────────────────────────────────────────────────
 //  RESEND OTP
-// ─────────────────────────────────────────────────────────────
 const resendOtp = async (email) => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new ApiError(404, "User not found");
@@ -150,9 +145,7 @@ const resendOtp = async (email) => {
   return { devOtp: emailResult.devOtp || null };
 };
 
-// ─────────────────────────────────────────────────────────────
 //  STANDARD LOGIN (email + password)
-// ─────────────────────────────────────────────────────────────
 const loginUser = async ({ email, password }) => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new ApiError(401, "Invalid email or password");
@@ -182,9 +175,7 @@ const loginUser = async ({ email, password }) => {
   return { user, tokens };
 };
 
-// ─────────────────────────────────────────────────────────────
 //  REFRESH TOKEN (rotation)
-// ─────────────────────────────────────────────────────────────
 const refreshTokens = async (oldRefreshToken) => {
   const tokenDoc = await prisma.refreshToken.findUnique({
     where: { token: oldRefreshToken },
@@ -214,9 +205,7 @@ const refreshTokens = async (oldRefreshToken) => {
   return { user: tokenDoc.user, tokens };
 };
 
-// ─────────────────────────────────────────────────────────────
 //  GOOGLE LOGIN (called after Passport authentication)
-// ─────────────────────────────────────────────────────────────
 const googleLogin = async (googleUser) => {
   const user = await prisma.user.findUnique({
     where: { id: googleUser.id },

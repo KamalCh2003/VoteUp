@@ -2,16 +2,14 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const catchAsync = require('../utils/catchAsync');
 
-/**
- * Get all dashboard statistics
- */
+ 
 const getDashboardStats = catchAsync(async (req, res) => {
   // Run queries in parallel for efficiency
   const [totalUsers, totalCandidates, elections, totalVotes, recentActivities] = await Promise.all([
     prisma.user.count(),
     prisma.candidate.count(),
     prisma.election.findMany({ select: { status: true } }),
-    prisma.vote.count(), // assuming Vote model stores each cast vote
+    prisma.vote.count(), 
     prisma.auditLog.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
