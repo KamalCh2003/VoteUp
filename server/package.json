@@ -11,9 +11,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:seed": "node src/prisma/seed.js"
-},
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@sendinblue/client": "^3.3.1",
     "axios": "^1.17.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^1.41.3",
@@ -30,6 +31,7 @@
     "nodemailer": "^6.9.16",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "resend": "^6.18.1",
     "stripe": "^17.4.0",
     "uuid": "^11.0.3",
     "winston": "^3.15.0"
