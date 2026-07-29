@@ -32,6 +32,7 @@ exports.register = async (req, res) => {
         type: 'EMAIL_VERIFY',
         metadata,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        userId: null, // Explicitly set to null since user doesn't exist yet
       },
     });
 
@@ -146,6 +147,7 @@ exports.resendOtp = async (req, res) => {
         type: 'EMAIL_VERIFY',
         metadata: oldToken.metadata,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        userId: null, // Explicitly set to null since user doesn't exist yet
       },
     });
 
