@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
         type: 'EMAIL_VERIFY',
         metadata,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        userId: null, // Explicitly set to null since user doesn't exist yet
+        userId: null,
       },
     });
 
@@ -147,7 +147,7 @@ exports.resendOtp = async (req, res) => {
         type: 'EMAIL_VERIFY',
         metadata: oldToken.metadata,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        userId: null, // Explicitly set to null since user doesn't exist yet
+        userId: null,
       },
     });
 
@@ -267,7 +267,10 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
-exports.googleAuth = passport.authenticate('google', { scope: ['profile', 'email'] });
+exports.googleAuth = passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  prompt: 'select_account', // Force account selection page
+});
 
 exports.googleCallback = (req, res, next) => {
   passport.authenticate('google', { session: false }, (err, user) => {
