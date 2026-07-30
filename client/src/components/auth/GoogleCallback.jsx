@@ -9,10 +9,9 @@ export default function GoogleCallback() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setAuth } = useAuth();
-  const processed = useRef(false); // prevents double processing
+  const processed = useRef(false); 
 
   useEffect(() => {
-    // Avoid running twice (React StrictMode or manual revisits)
     if (processed.current) return;
     
     const params = new URLSearchParams(location.search);
@@ -26,13 +25,11 @@ export default function GoogleCallback() {
         const user = JSON.parse(decodeURIComponent(userParam));
         setAuth(user, accessToken, refreshToken);
         
-        // Show success only once
         toast.success('Google login successful!');
         
-        // Clean URL parameters (optional, prevents re-trigger)
+
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Redirect based on role
+    
         switch (user.role) {
           case 'ADMIN':
             navigate('/admin', { replace: true });

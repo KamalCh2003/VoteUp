@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
       lastName,
       email,
       passwordHash,
-      role: role || 'VOTER',
+      role: role || 'VOTER', 
     });
 
     await prisma.verificationToken.create({
@@ -269,7 +269,7 @@ exports.refreshToken = async (req, res) => {
 
 exports.googleAuth = passport.authenticate('google', {
   scope: ['profile', 'email'],
-  prompt: 'select_account', // Force account selection page
+  prompt: 'select_account', 
 });
 
 exports.googleCallback = (req, res, next) => {
