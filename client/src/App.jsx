@@ -31,9 +31,10 @@ import PaymentSuccess from "./components/payment/PaymentSuccess";
 import PaymentFailed from "./components/payment/PaymentFailed";
 import NotFound from "./components/common/NotFound";
 import AdminHome from "./components/admin/AdminHome";
+import AdminLayout from "./components/admin/AdminLayout";
 import ElectionDetails from "./components/elections/ElectionDetails";
 import VotePaymentPage from "./components/payment/VotePaymentPage";
-import ContestantProfileCampaign from "./components/contestant/ContestantProfileCampaign";   // ✅ added
+import ContestantProfileCampaign from "./components/contestant/ContestantProfileCampaign";
 import ContestantDashboard from "./components/contestant/ContestantDashboard";
 import CandidateHistory from "./components/contestant/CandidateHistory";
 import PaymentCallback from "./components/payment/PaymentCallback";
@@ -42,8 +43,16 @@ import ResetPassword from "./components/auth/ResetPassword";
 import ResetLinkSent from "./components/auth/ResetLinkSent";
 import RequestElection from "./components/common/RequestElection";
 import SystemSettings from "./components/admin/SystemSettings";
+import DashboardOverview from "./components/admin/DashboardOverview";
+import Leaderboard from "./components/admin/Leaderboard";
+import UserManager from "./components/admin/UserManager";
+import ContestantManagement from "./components/admin/CandidateManager";
+import ElectionManager from "./components/admin/ElectionManager";
+import VoteVerifier from "./components/admin/VoteVerifier";
+import FinanceView from "./components/admin/FinanceView";
+import ElectionRequestManager from "./components/admin/ElectionRequestManager";
+import NotificationCenter from "./components/admin/NotificationCenter";
 
-// Scroll‑to‑top component
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -103,15 +112,99 @@ function AppContent() {
             path="/admin"
             element={
               <Protected roles={["ADMIN"]}>
-                <AdminHome />
+                <AdminLayout>
+                  <DashboardOverview />
+                </AdminLayout>
               </Protected>
             }
           />
           <Route
-            path="/admin/*"
+            path="/admin/dashboard"
             element={
               <Protected roles={["ADMIN"]}>
-                <AdminHome />
+                <AdminLayout>
+                  <DashboardOverview />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/leaderboard"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <Leaderboard />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <UserManager />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/candidates"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <ContestantManagement />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/elections"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <ElectionManager />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/vote-verifier"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <VoteVerifier />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/finance"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <FinanceView />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/election-requests"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <ElectionRequestManager />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/notifications"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <NotificationCenter />
+                </AdminLayout>
               </Protected>
             }
           />
@@ -119,7 +212,19 @@ function AppContent() {
             path="/admin/settings"
             element={
               <Protected roles={["ADMIN"]}>
-                <SystemSettings />
+                <AdminLayout>
+                  <SystemSettings />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <DashboardOverview />
+                </AdminLayout>
               </Protected>
             }
           />
@@ -127,7 +232,6 @@ function AppContent() {
       ) : (
         <main className="min-h-screen">
           <Routes>
-            {/* Public pages */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
@@ -143,7 +247,6 @@ function AppContent() {
             <Route path="/reset-link-sent" element={<ResetLinkSent />} />
             <Route path="/request-election" element={<RequestElection />} />
 
-            {/* Voter routes */}
             <Route
               path="/voter/home"
               element={
@@ -193,8 +296,6 @@ function AppContent() {
               }
             />
 
-            {/* Contestant routes */}
-            {/* ✅ New route that matches the navbar link */}
             <Route
               path="/contestant/profile"
               element={
@@ -244,7 +345,6 @@ function AppContent() {
               }
             />
 
-            {/* Payment routes */}
             <Route
               path="/payment/success"
               element={
