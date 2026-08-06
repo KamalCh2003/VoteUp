@@ -3,18 +3,12 @@ const ctrl = require('../controllers/candidate.controller');
 const { authenticate } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
-// Apply for candidacy (with profile image)
-router.post('/apply', authenticate, upload.single('profileImage'), ctrl.apply);
-
-// Get own candidacy
+router.post('/apply', authenticate, upload.single('avatar'), ctrl.apply);
 router.get('/me', authenticate, ctrl.getMyCandidacy);
-
-// Update profile (optional image)
-router.put('/me', authenticate, upload.single('profileImage'), ctrl.updateProfile);
-
-// Analytics
+router.put('/me', authenticate, upload.single('avatar'), ctrl.updateProfile);
 router.get('/me/analytics', authenticate, ctrl.getAnalytics);
 router.get('/me/analytics/detailed', authenticate, ctrl.getDetailedAnalytics);
+router.get('/me/history', authenticate, ctrl.getHistory);
 router.get('/history', authenticate, ctrl.getHistory);
 
 module.exports = router;

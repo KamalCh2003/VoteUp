@@ -80,8 +80,9 @@ exports.apply = async (req, res) => {
 
 exports.getMyCandidacy = async (req, res) => {
   try {
-    const candidate = await prisma.candidate.findUnique({
+    const candidate = await prisma.candidate.findFirst({
       where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
       include: { election: true },
     });
     res.json({ candidate });
@@ -95,7 +96,10 @@ exports.updateProfile = async (req, res) => {
     const userId = req.user.id;
     const { slogan, bio, manifesto, websiteUrl, twitterHandle, instagramHandle } = req.body;
 
-    const existing = await prisma.candidate.findUnique({ where: { userId } });
+    const existing = await prisma.candidate.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
     if (!existing) {
       return res.status(404).json({ error: 'Candidate profile not found. You must apply first.' });
     }
@@ -106,7 +110,7 @@ exports.updateProfile = async (req, res) => {
     }
 
     const candidate = await prisma.candidate.update({
-      where: { userId },
+      where: { id: existing.id },   // use the unique record id
       data: {
         ...(slogan !== undefined && { slogan }),
         ...(bio !== undefined && { bio }),
@@ -127,8 +131,9 @@ exports.updateProfile = async (req, res) => {
 
 exports.getAnalytics = async (req, res) => {
   try {
-    const candidate = await prisma.candidate.findUnique({
+    const candidate = await prisma.candidate.findFirst({
       where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
       include: { election: true },
     });
     if (!candidate) return res.status(404).json({ error: 'Not a candidate' });
@@ -144,8 +149,9 @@ exports.getAnalytics = async (req, res) => {
 exports.getDetailedAnalytics = async (req, res) => {
   try {
     const userId = req.user.id;
-    const candidate = await prisma.candidate.findUnique({
+    const candidate = await prisma.candidate.findFirst({
       where: { userId },
+      orderBy: { createdAt: 'desc' },
       include: { election: true },
     });
     if (!candidate) return res.status(404).json({ error: 'Not a candidate' });
@@ -153,13 +159,11 @@ exports.getDetailedAnalytics = async (req, res) => {
     const totalVotes = candidate.election.totalVotes || 0;
     const share = totalVotes > 0 ? ((candidate.votesReceived / totalVotes) * 100).toFixed(1) : 0;
 
-    // 1. Build date range (UTC)
     let startDate = new Date(candidate.election.startDate);
     let endDate = new Date(candidate.election.endDate);
     const now = new Date();
     if (endDate > now) endDate = now;
 
-    // 2. Create a map of UTC dates (YYYY-MM-DD) with 0 votes
     const dateMap = new Map();
     const current = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
     const end = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999));
@@ -173,7 +177,6 @@ exports.getDetailedAnalytics = async (req, res) => {
       current.setUTCDate(current.getUTCDate() + 1);
     }
 
-    // 3. Fetch votes in the range
     const votes = await prisma.vote.findMany({
       where: {
         candidateId: candidate.id,
@@ -182,7 +185,6 @@ exports.getDetailedAnalytics = async (req, res) => {
       select: { votedAt: true, quantity: true },
     });
 
-    // 4. Add vote quantities to the correct UTC date
     votes.forEach(v => {
       const d = new Date(v.votedAt);
       const year = d.getUTCFullYear();
@@ -198,7 +200,6 @@ exports.getDetailedAnalytics = async (req, res) => {
       .map(([date, votes]) => ({ date, votes }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // 5. Top supporters and recent activity (unchanged)
     const supporterVotes = await prisma.vote.findMany({
       where: { candidateId: candidate.id },
       include: { user: { select: { firstName: true, lastName: true } } },
