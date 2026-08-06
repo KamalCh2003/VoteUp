@@ -1,7 +1,7 @@
 // src/components/auth/RegisterForm.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -15,6 +15,7 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -26,53 +27,57 @@ export default function RegisterForm() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (errorMessage) setErrorMessage("");
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  console.log("1. Submit clicked");
-
-  setLoading(true);
-
-  try {
-    console.log("2. Calling register...");
-
-    const response = await register({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      role,
-    });
-
-    console.log("3. Register response:", response);
-
-    if (response.devOtp) {
-      console.log("4. Redirecting with OTP");
-
-      navigate(
-        `/verify-email?email=${encodeURIComponent(formData.email)}&otp=${response.devOtp}`
-      );
-
+    // Check for empty fields
+    if (
+      !formData.firstName.trim() ||
+      !formData.lastName.trim() ||
+      !formData.email.trim() ||
+      !formData.password.trim() ||
+      !formData.confirmPassword.trim()
+    ) {
+      setErrorMessage("Please fill all required fields");
       return;
     }
 
-    console.log("5. Redirecting without OTP");
+    // Check password match
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match");
+      return;
+    }
 
-    navigate(
-      `/verify-email?email=${encodeURIComponent(formData.email)}`
-    );
-  } catch (err) {
-    console.error("REGISTER ERROR", err);
+    setLoading(true);
+    setErrorMessage("");
 
-    toast.error(err?.response?.data?.error || "Registration failed");
-  } finally {
-    console.log("Finished");
-    setLoading(false);
-  }
-};
+    try {
+      const response = await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role,
+      });
 
+      if (response.devOtp) {
+        navigate(
+          `/verify-email?email=${encodeURIComponent(formData.email)}&otp=${response.devOtp}`
+        );
+        return;
+      }
+
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Registration failed";
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthLayout
@@ -105,7 +110,7 @@ export default function RegisterForm() {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
         <div className="grid grid-cols-2 gap-3">
           <input
             type="text"
@@ -175,11 +180,16 @@ export default function RegisterForm() {
           </button>
         </div>
 
+        {/* Inline error message */}
+        {errorMessage && (
+          <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-sm">
+            <AlertCircle size={16} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         <div className="border border-violet-200 bg-violet-50 rounded-xl p-3 flex gap-3">
-          <ShieldCheck
-            size={16}
-            className="text-violet-500 mt-0.5 flex-shrink-0"
-          />
+          <ShieldCheck size={16} className="text-violet-500 mt-0.5 flex-shrink-0" />
           <p className="text-gray-600 text-xs leading-relaxed">
             Your identity is verified securely and never shared.
           </p>
@@ -190,11 +200,7 @@ export default function RegisterForm() {
           disabled={loading}
           className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2 mt-1"
         >
-          {loading ? (
-            <Loader2 className="animate-spin" size={16} />
-          ) : (
-            "Create Account"
-          )}
+          {loading ? <Loader2 className="animate-spin" size={16} /> : "Create Account"}
         </button>
       </form>
 

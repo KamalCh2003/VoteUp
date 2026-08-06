@@ -18,6 +18,14 @@ export default function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Restore error from sessionStorage when component mounts
+  useEffect(() => {
+    const storedError = sessionStorage.getItem("loginError");
+    if (storedError) {
+      setErrorMessage(storedError);
+    }
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const error = params.get("error");
@@ -29,17 +37,23 @@ export default function LoginForm() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (errorMessage) setErrorMessage("");
+    if (errorMessage) {
+      setErrorMessage("");
+      sessionStorage.removeItem("loginError");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.password) {
-      setErrorMessage("Please fill all required fields");
+      const msg = "Please fill all required fields";
+      setErrorMessage(msg);
+      sessionStorage.setItem("loginError", msg);
       return;
     }
     setLoading(true);
     setErrorMessage("");
+    sessionStorage.removeItem("loginError");
     try {
       const user = await login(formData.email, formData.password);
       toast.success("Login Successful");
@@ -56,6 +70,7 @@ export default function LoginForm() {
     } catch (err) {
       const msg = err?.response?.data?.error || "Login failed";
       setErrorMessage(msg);
+      sessionStorage.setItem("loginError", msg);
     } finally {
       setLoading(false);
     }
