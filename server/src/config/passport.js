@@ -38,7 +38,7 @@ passport.use(
         console.log(`Google user processed: ${user.email}`);
         return done(null, user);
       } catch (err) {
-        console.error('❌ Google Strategy Error:', err);
+        console.error('Google Strategy Error:', err);
         return done(err, null);
       }
     }

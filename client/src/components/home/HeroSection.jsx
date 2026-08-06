@@ -92,7 +92,7 @@ export default function HeroSection() {
             </h1>
 
             <p className="mt-6 text-lg leading-8 text-gray-600 max-w-2xl lg:mx-0 mx-auto">
-              Cast votes with confidence. Blockchain-secured, fully transparent,
+              Cast votes with confidence. Fully transparent,
               and instantly verified results for every election.
             </p>
 

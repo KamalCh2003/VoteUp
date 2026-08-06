@@ -5,12 +5,11 @@ import { Bell, CheckCircle, XCircle, Clock, Loader2, Eye, Inbox } from 'lucide-r
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
-
 const formatRelativeDate = (dateString) => {
-  if (!dateString) return 'Unknown date';   // handle missing data
+  if (!dateString) return 'Unknown date';
 
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return dateString; // if invalid, show the raw value
+  if (isNaN(date.getTime())) return dateString;
 
   const now = new Date();
   const diffMs = now - date;
@@ -36,11 +35,12 @@ export default function NotificationCenter() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const toast = useToast();
+  const limit = 10;   // ✅ 10 items per page
 
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/notifications', { params: { page, limit: 20 } });
+      const res = await api.get('/admin/notifications', { params: { page, limit } });
       setNotifications(res.data.notifications || []);
       setTotal(res.data.total || 0);
     } catch (err) {
@@ -61,10 +61,7 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     fetchNotifications();
-    markAllAsRead();
   }, [page]);
-
- 
 
   const markAsRead = async (id, e) => {
     e.stopPropagation();
@@ -91,14 +88,12 @@ export default function NotificationCenter() {
     }
   };
 
-  const totalPages = Math.ceil(total / 20);
+  const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="bg-gray-50 p-6 rounded-xl">
-      <div className="flex items-center justify-end text-xs text-gray-500  mb-6">
-  
-          {notifications.filter(n => !n.isRead).length} unread
-        
+      <div className="flex items-center justify-end text-xs text-gray-500 mb-6">
+        {notifications.filter(n => !n.isRead).length} unread
       </div>
 
       {loading ? (
