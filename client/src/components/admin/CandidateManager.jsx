@@ -329,7 +329,7 @@ export default function ContestantManagement() {
                     {allSelected ? <SquareCheckBig size={18} className="text-violet-600" /> : someSelected ? <SquareCheckBig size={18} className="text-violet-400" /> : <Square size={18} />}
                   </button>
                 </th>
-                <th className="p-4">Avatar</th>
+                <th className="p-4">Profile</th>
                 <th className="p-4">Contestant</th>
                 <th className="p-4">Candidate No.</th>
                 <th className="p-4">Election</th>

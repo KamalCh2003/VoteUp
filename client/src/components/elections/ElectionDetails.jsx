@@ -212,7 +212,7 @@ export default function ElectionDetails() {
 
         {/* Election Header */}
         <div className="mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">{election.title}</h1>
+          <h1 className="text-2xl md:text-5xl font-bold text-gray-800 mb-3">{election.title}</h1>
           <p className="text-gray-600 text-lg hidden ">{election.description}</p>
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-500">
             <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export default function ElectionDetails() {
 
         {/* Candidates Grid – gray cards */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Candidates</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {election.candidates?.map((candidate) => {
             const isCopied = copiedCandidateId === candidate.id;
             let voteButtonText = "Vote";
@@ -270,9 +270,9 @@ export default function ElectionDetails() {
             return (
               <div
                 key={candidate.id}
-                className="group relative flex flex-col items-center text-center rounded-2xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-md hover:border-violet-300 hover:-translate-y-1"
+                className="group relative flex flex-col items-center text-center rounded-2xl border border-gray-200 p-4 transition-all duration-300 hover:shadow-md hover:border-violet-300 hover:-translate-y-1"
               >
-                <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-4 overflow-hidden">
+                <div className="h-40 w-36 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shadow-md mb-4 overflow-hidden">
                   {candidate.avatarUrl ? (
                     <img src={candidate.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -282,7 +282,7 @@ export default function ElectionDetails() {
                 <h3 className="text-xl font-bold text-gray-800 group-hover:text-violet-600 transition">
                   {candidate.user?.firstName} {candidate.user?.lastName}
                 </h3>
-                <p className="text-gray-500 text-sm mt-1">{candidate.party || "Independent"}</p>
+                <p className="hidden text-gray-500 text-sm mt-1">{candidate.party || "Independent"}</p>
                 {candidate.slogan && (
                   <p className="text-gray-500 text-xs mt-2 italic line-clamp-2">"{candidate.slogan}"</p>
                 )}
