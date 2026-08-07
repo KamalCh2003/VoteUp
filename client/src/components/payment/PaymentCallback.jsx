@@ -30,7 +30,6 @@ export default function PaymentCallback() {
         return;
       }
 
-      // 1. Retrieve pending vote data
       const pendingData = sessionStorage.getItem('pendingVote');
       if (!pendingData) {
         setStatus('error');
@@ -53,7 +52,7 @@ export default function PaymentCallback() {
       }
 
       try {
-        // 2. Verify payment with Khalti – send election metadata
+        // Verify payment – backend also creates the vote atomically
         const verifyRes = await api.post('/payments/khalti/verify', {
           pidx,
           transaction_id: transactionId,
@@ -63,35 +62,27 @@ export default function PaymentCallback() {
           quantity,
         });
 
-        const paymentId = verifyRes.data.paymentId;
+        const { voteCasted, voteError } = verifyRes.data;
 
-        // 3. Cast the vote
-        try {
-          await api.post('/votes', {
-            electionId,
-            candidateId,
-            quantity,
-            paymentId,
-          });
+        if (voteCasted) {
           setStatus('success');
           setMessage(`${quantity} vote(s) cast successfully!`);
           toast.success('Vote recorded!');
-          sessionStorage.removeItem('pendingVote');
-        } catch (voteErr) {
-          const errorMsg = voteErr.response?.data?.error || '';
-          if (errorMsg.toLowerCase().includes('already voted')) {
-            setStatus('success');
-            setMessage('You have already voted in this election.');
-            toast.info('Vote already counted');
-            sessionStorage.removeItem('pendingVote');
-          } else {
-            throw voteErr;
-          }
+        } else if (voteError) {
+          // Payment succeeded but vote could not be cast (e.g. already voted)
+          setStatus('success');   // still a successful payment
+          setMessage(voteError);
+          toast.info(voteError);
+        } else {
+          setStatus('success');
+          setMessage('Payment verified. Vote recorded.');
+          toast.success('Vote recorded!');
         }
 
-        const redirectTo = returnUrl || `/elections/${electionId}`;
-        navigate(redirectTo, { replace: true });
+        sessionStorage.removeItem('pendingVote');
 
+        const redirectTo = returnUrl || `/elections/${electionId}`;
+        setTimeout(() => navigate(redirectTo, { replace: true }), 2000);
       } catch (err) {
         console.error('Callback error:', err);
         setStatus('error');

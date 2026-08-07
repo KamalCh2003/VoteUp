@@ -58,15 +58,15 @@ exports.requestElection = async (req, res) => {
 
 exports.getPublicStats = async (req, res) => {
   try {
-    const [activeElections, totalVotes, totalVoters] = await Promise.all([
+    const [activeElections, totalVotes, totalUsers] = await Promise.all([
       prisma.election.count({ where: { status: 'ACTIVE' } }),
       prisma.vote.aggregate({ _sum: { quantity: true } }),
-      prisma.user.count({ where: { role: 'VOTER' } }),
+      prisma.user.count(),                          
     ]);
     res.json({
       activeElections,
       totalVotes: totalVotes._sum.quantity || 0,
-      totalVoters,
+      totalUsers,                                    
     });
   } catch (err) {
     console.error('Public stats error:', err);
