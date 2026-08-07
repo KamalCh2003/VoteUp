@@ -600,7 +600,6 @@ exports.getRecentPayments = async (req, res) => {
       include: {
         user: { select: { firstName: true, lastName: true, email: true } },
         candidate: {
-          // ← add candidate
           select: {
             user: { select: { firstName: true, lastName: true } },
           },
@@ -625,6 +624,104 @@ exports.getRecentPayments = async (req, res) => {
   } catch (err) {
     console.error("Recent payments error:", err);
     res.status(500).json({ error: "Failed to fetch payments" });
+  }
+};
+
+exports.getFreeVsPaidVotes = async (req, res) => {
+  try {
+    const [paid, free] = await Promise.all([
+      prisma.vote.aggregate({
+        _sum: { quantity: true },
+        where: { paymentId: { not: null } },
+      }),
+      prisma.vote.aggregate({
+        _sum: { quantity: true },
+        where: { paymentId: null },
+      }),
+    ]);
+
+    const paidVotes = paid._sum.quantity || 0;
+    const freeVotes = free._sum.quantity || 0;
+
+    res.json({
+      free: freeVotes,
+      paid: paidVotes,
+      total: freeVotes + paidVotes,
+    });
+  } catch (err) {
+    console.error('Free vs Paid votes error:', err);
+    res.status(500).json({ error: 'Failed to fetch vote breakdown' });
+  }
+};
+
+// ===== NEW FUNCTION =====
+exports.getTopElectionsByRevenue = async (req, res) => {
+  try {
+    // 1. Group votes by electionId where a completed payment exists
+    const voteGroups = await prisma.vote.groupBy({
+      by: ['electionId'],
+      where: {
+        paymentId: { not: null },
+        payment: { status: 'COMPLETED' },
+      },
+      _sum: {
+        quantity: true,
+      },
+      orderBy: {
+        _sum: {
+          quantity: 'desc',
+        },
+      },
+      take: 10,
+    });
+
+    const electionIds = voteGroups.map((g) => g.electionId);
+
+    // 2. Fetch election details
+    const elections = await prisma.election.findMany({
+      where: { id: { in: electionIds } },
+      select: { id: true, title: true, status: true },
+    });
+
+    // 3. Compute revenue per election (sum of completed payments linked to votes in that election)
+    const revenueByElection = await Promise.all(
+      electionIds.map(async (electionId) => {
+        const paymentAgg = await prisma.payment.aggregate({
+          _sum: { amount: true },
+          where: {
+            status: 'COMPLETED',
+            votes: {
+              some: { electionId },
+            },
+          },
+        });
+        return {
+          electionId,
+          revenue: paymentAgg._sum.amount || 0,
+        };
+      })
+    );
+
+    // 4. Combine and sort by revenue descending
+    const result = voteGroups
+      .map((group) => {
+        const election = elections.find((e) => e.id === group.electionId);
+        const rev = revenueByElection.find((r) => r.electionId === group.electionId);
+        return {
+          id: group.electionId,
+          title: election?.title || 'Unknown',
+          status: election?.status || 'UNKNOWN',
+          votes: group._sum.quantity || 0,
+          revenue: rev?.revenue || 0,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    res.json({ topElections: result });
+  } catch (err) {
+    console.error('Top elections by revenue error:', err);
+    res.status(500).json({ error: 'Failed to fetch top elections' });
   }
 };
 
