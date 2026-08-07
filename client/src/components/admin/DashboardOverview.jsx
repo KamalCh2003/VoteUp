@@ -2,9 +2,11 @@
 import { useEffect, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import {
   Users, Vote, UserCheck, TrendingUp, Calendar, BarChart, Clock, Trophy,
+  PieChart as PieChartIcon, DollarSign,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -34,6 +36,8 @@ export default function DashboardOverview() {
   const [activeElections, setActiveElections] = useState([]);
   const [voteTrend, setVoteTrend] = useState([]);
   const [topVoters, setTopVoters] = useState([]);
+  const [freePaidData, setFreePaidData] = useState([]);
+  const [topElectionsRevenue, setTopElectionsRevenue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trendRange, setTrendRange] = useState('THIS_YEAR');
   const toast = useToast();
@@ -57,6 +61,30 @@ export default function DashboardOverview() {
     }
   };
 
+  const fetchFreePaid = async () => {
+    try {
+      const res = await api.get('/admin/votes/free-paid');
+      const { free, paid } = res.data;
+      setFreePaidData([
+        { name: 'Free Votes', value: free, color: '#8b5cf6' },
+        { name: 'Paid Votes', value: paid, color: '#10b981' },
+      ]);
+    } catch (err) {
+      console.error('Free/Paid votes error:', err);
+      toast.error('Failed to load vote breakdown');
+    }
+  };
+
+  const fetchTopElectionsByRevenue = async () => {
+    try {
+      const res = await api.get('/admin/finance/top-elections-revenue');
+      setTopElectionsRevenue(res.data.topElections || []);
+    } catch (err) {
+      console.error('Top elections revenue error:', err);
+      toast.error('Failed to load top elections');
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -71,6 +99,8 @@ export default function DashboardOverview() {
 
         await fetchTrend(trendRange);
         await fetchTopVoters();
+        await fetchFreePaid();
+        await fetchTopElectionsByRevenue();
       } catch (err) {
         console.error(err);
         toast.error('Failed to load dashboard data');
@@ -176,9 +206,9 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Charts Row: Vote Trend + Active Elections */}
+      {/* ---- Row 1: Vote Trend + Vote Type Breakdown Pie Chart ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Vote Trend Chart with Range Selector */}
+        {/* Vote Trend */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -217,7 +247,41 @@ export default function DashboardOverview() {
           </ResponsiveContainer>
         </div>
 
-        {/* Active Elections */}
+        {/* Vote Type Breakdown Pie Chart */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 flex flex-col items-center justify-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 self-start flex items-center gap-2">
+            <PieChartIcon size={18} className="text-violet-600" />
+            Vote Type Breakdown
+          </h3>
+          {freePaidData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={freePaidData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={4}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {freePaidData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <Legend verticalAlign="bottom" iconType="circle" />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-gray-500">No data yet</p>
+          )}
+        </div>
+      </div>
+
+      {/* ---- Row 2: Active Elections + Top Performing Elections by Revenue (2 columns) ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Active Elections (Left) */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Vote size={18} className="text-cyan-600" />
@@ -232,7 +296,9 @@ export default function DashboardOverview() {
                   <div key={election.id}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="font-medium text-gray-900">{election.title}</span>
-                      <span className="text-gray-500">{progress}%</span>
+                      <span className="text-gray-500">
+                        {election.totalVotes?.toLocaleString()} votes · {progress}%
+                      </span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
                       <div
@@ -241,7 +307,7 @@ export default function DashboardOverview() {
                       />
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
-                      {election.totalVotes?.toLocaleString()} votes · Ends {new Date(election.endDate).toLocaleDateString()}
+                      Ends {new Date(election.endDate).toLocaleDateString()}
                     </p>
                   </div>
                 );
@@ -251,9 +317,57 @@ export default function DashboardOverview() {
             <p className="text-sm text-gray-500">No active elections at the moment.</p>
           )}
         </div>
+
+        {/* Top Performing Elections by Revenue (Right) */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <DollarSign size={18} className="text-emerald-600" />
+            Top Performing Elections by Revenue
+          </h3>
+          {topElectionsRevenue.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500">
+                    <th className="text-left py-2 px-4 font-medium">Election</th>
+                    <th className="text-right py-2 px-4 font-medium">Votes</th>
+                    <th className="text-right py-2 px-4 font-medium">Revenue</th>
+                    <th className="text-right py-2 px-4 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topElectionsRevenue.map((election) => (
+                    <tr key={election.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 font-medium text-gray-900">{election.title}</td>
+                      <td className="py-3 px-4 text-right text-gray-700">{election.votes.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right text-emerald-600 font-medium">
+                        रू {election.revenue.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span
+                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            election.status === 'ACTIVE'
+                              ? 'bg-green-100 text-green-700'
+                              : election.status === 'UPCOMING'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {election.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No paid voting data available.</p>
+          )}
+        </div>
       </div>
 
-      {/* Top 10 Most Active Voters */}
+      {/* ---- Row 3: Top 10 Most Active Voters ---- */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Trophy size={18} className="text-amber-500" />
