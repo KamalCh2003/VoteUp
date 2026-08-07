@@ -82,7 +82,7 @@ export default function ApplyCandidacy() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-6">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-xl bg-white border border-gray-200 rounded-3xl shadow-xl p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-md">

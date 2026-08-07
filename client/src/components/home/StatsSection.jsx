@@ -5,7 +5,7 @@ import api from '../../services/api';
 
 export default function StatsSection() {
   const [stats, setStats] = useState({
-    totalVoters: 0,
+    totalUsers: 0,
     totalVotes: 0,
     totalElections: 0,
     securityLevel: '100%',
@@ -24,7 +24,7 @@ export default function StatsSection() {
           electionsRes.data.elections?.length || 0;
 
         setStats({
-          totalVoters: publicStats.data.totalVoters || 0,
+          totalUsers: publicStats.data.totalUsers || 0,
           totalVotes: publicStats.data.totalVotes || 0,
           totalElections,
           securityLevel:
@@ -41,8 +41,8 @@ export default function StatsSection() {
 
   const statsData = [
     {
-      title: 'Voters',
-      value: stats.totalVoters.toLocaleString(),
+      title: 'Users',
+      value: stats.totalUsers.toLocaleString(),
       icon: Users,
       color: 'from-violet-500 to-purple-600',
       bg: 'bg-violet-50',
