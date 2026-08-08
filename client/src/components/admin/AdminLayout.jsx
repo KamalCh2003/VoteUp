@@ -20,6 +20,7 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  Shield, // <-- added for Audit Logs
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import LogoutConfirmModal from "../common/LogoutConfirmModal";
@@ -45,7 +46,7 @@ const EyeOff = ({ size = 18 }) => (
 );
 
 export default function AdminLayout({ children }) {
-  const { user, logout } = useAuth(); // Get user from auth context
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -74,24 +75,18 @@ export default function AdminLayout({ children }) {
     return (first + last).toUpperCase() || "A";
   };
 
-  // Get user's full name
   const getFullName = () => {
     if (!user) return "Admin";
     return `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Admin";
   };
 
-  // Get user's role label
   const getRoleLabel = () => {
     if (!user) return "Administrator";
     switch (user.role) {
-      case "ADMIN":
-        return "Super Admin";
-      case "CONTESTANT":
-        return "Contestant";
-      case "VOTER":
-        return "Voter";
-      default:
-        return "Administrator";
+      case "ADMIN": return "Super Admin";
+      case "CONTESTANT": return "Contestant";
+      case "VOTER": return "Voter";
+      default: return "Administrator";
     }
   };
 
@@ -149,7 +144,7 @@ export default function AdminLayout({ children }) {
     }
   };
 
-  // Menu groups matching the HTML prototype
+  // Menu groups – added "Audit Logs"
   const menuGroups = [
     {
       label: "Overview",
@@ -172,6 +167,7 @@ export default function AdminLayout({ children }) {
       items: [
         { id: "leaderboard", label: "Leaderboard", icon: Trophy, path: "/admin/leaderboard" },
         { id: "vote-verifier", label: "Vote Verifier", icon: Eye, path: "/admin/vote-verifier" },
+        { id: "audit", label: "Audit Logs", icon: Shield, path: "/admin/audit-logs" }, // 👈 NEW
       ],
     },
     {

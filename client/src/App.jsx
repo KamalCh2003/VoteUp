@@ -51,6 +51,7 @@ import VoteVerifier from "./components/admin/VoteVerifier";
 import FinanceView from "./components/admin/FinanceView";
 import ElectionRequestManager from "./components/admin/ElectionRequestManager";
 import NotificationCenter from "./components/admin/NotificationCenter";
+import AuditLogs from "./components/admin/AuditLogs";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -87,8 +88,7 @@ function AppContent() {
     "/voter-profile",
   ];
   const shouldHideNavbar =
-    hideNavbarPaths.includes(location.pathname) ||
-    isAdminRoute;
+    hideNavbarPaths.includes(location.pathname) || isAdminRoute;
 
   const showContestantNavbar = isContestantRoute && !shouldHideNavbar;
   const showPublicNavbar = !shouldHideNavbar && !isContestantRoute;
@@ -193,6 +193,16 @@ function AppContent() {
               <Protected roles={["ADMIN"]}>
                 <AdminLayout>
                   <ElectionRequestManager />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/audit-logs"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <AuditLogs />
                 </AdminLayout>
               </Protected>
             }
