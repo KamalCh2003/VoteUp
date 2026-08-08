@@ -8,6 +8,9 @@ import LiveElectionSection from '../home/LiveElectionSection';
 import WhoCanUse from '../home/WhoCanUse';
 import FeaturesSection from '../home/FeaturesSection';
 import ElectionRequestCTA from '../home/ElectionRequestCTA';
+import TestimonialsSection from '../home/TestimonialsSection';
+import FAQSection from '../home/FAQSection';
+
 
 export default function Landing() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -53,6 +56,8 @@ export default function Landing() {
       <LiveElectionSection />
       <WhoCanUse />
       <FeaturesSection />
+      <TestimonialsSection />
+      <FAQSection />
       <ElectionRequestCTA />
     </div>
   );

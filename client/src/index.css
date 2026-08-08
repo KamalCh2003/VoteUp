@@ -1,4 +1,84 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body { @apply bg-white text-blue-950; }
+
+@layer base {
+    :root {
+        --purple: #6D28D9;
+        --purple-light: #F3ECFE;
+        --purple-hover: #5B21B6;
+        --blue: #2563EB;
+        --cyan: #06B6D4;
+        --success: #22C55E;
+        --success-bg: #ECFDF3;
+        --warning: #F59E0B;
+        --warning-bg: #FFFBEB;
+        --danger: #EF4444;
+        --danger-bg: #FEF2F2;
+        --bg: #F8FAFC;
+        --card: #FFFFFF;
+        --text: #0F172A;
+        --text2: #64748B;
+        --border: #E2E8F0;
+        --radius-lg: 16px;
+        --radius-card: 20px;
+        --radius-btn: 12px;
+        --radius-input: 12px;
+        --font: 'Inter', sans-serif;
+        --font-head: 'Plus Jakarta Sans', sans-serif;
+        --font-num: 'IBM Plex Sans', sans-serif;
+        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+        --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+        --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.10);
+        --grad: linear-gradient(135deg, #6D28D9 0%, #2563EB 100%);
+    }
+
+    [data-theme="dark"] {
+        --bg: #0F172A;
+        --card: #161F32;
+        --text: #F1F5F9;
+        --text2: #94A3B8;
+        --border: #263149;
+        --purple-light: #241A3D;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+        --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        font-size: 16px;
+        line-height: 1.5;
+        transition: background 0.25s, color 0.25s;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, .head {
+        font-family: var(--font-head);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+
+    .num {
+        font-family: var(--font-num);
+    }
+
+    ::selection {
+        background: var(--purple);
+        color: #fff;
+    }
+
+
+}
+

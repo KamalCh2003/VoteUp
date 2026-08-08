@@ -1,134 +1,103 @@
+// src/components/layout/Footer.jsx
 import { Link } from 'react-router-dom';
 import { Vote, Mail, Phone, MapPin } from 'lucide-react';
-import {
-  FaFacebookF,
-  FaInstagram,
-  FaLinkedinIn,
-  FaGithub,
-} from 'react-icons/fa';
-import { useAuth } from '../../context/AuthContext';
+import { FaFacebookF, FaInstagram, FaLinkedinIn, FaGithub } from 'react-icons/fa';
 
 export default function Footer() {
-  const { user } = useAuth();
+    return (
+        <footer className="border-t border-[#E2E8F0] bg-white">
+            <div className="mx-auto max-w-7xl px-6 py-14">
+                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
+                    {/* Brand */}
+                    <div className="lg:col-span-2">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white text-sm font-bold">
+                                V
+                            </div>
+                            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A]">
+                                Vote<span className="text-purple-600">Up</span>
+                            </h2>
+                        </div>
+                        <p className="mt-4 max-w-md text-sm leading-relaxed text-[#64748B]">
+                            Secure digital voting for student unions, talent shows, corporate boards, and community elections.
+                        </p>
+                        <div className="mt-5 flex items-center gap-2.5">
+                            <a
+                                href="#"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-200 bg-purple-50 text-purple-600 transition hover:bg-purple-700 hover:text-white"
+                            >
+                                <FaFacebookF size={13} />
+                            </a>
+                            <a
+                                href="#"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-200 bg-purple-50 text-purple-600 transition hover:bg-purple-700 hover:text-white"
+                            >
+                                <FaInstagram size={13} />
+                            </a>
+                            <a
+                                href="#"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-200 bg-purple-50 text-purple-600 transition hover:bg-purple-700 hover:text-white"
+                            >
+                                <FaLinkedinIn size={13} />
+                            </a>
+                            <a
+                                href="#"
+                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-purple-200 bg-purple-50 text-purple-600 transition hover:bg-purple-700 hover:text-white"
+                            >
+                                <FaGithub size={13} />
+                            </a>
+                        </div>
+                    </div>
 
-  return (
-    <footer className="mt-24 border-t border-gray-200 bg-white">
-      {/* Main Footer */}
-      <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
-          {/* Brand */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                <Vote size={22} />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Vote<span className="text-violet-600">Up</span>
-              </h2>
+                    {/* Product */}
+                    <div>
+                        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#64748B]">Product</h3>
+                        <ul className="space-y-2.5 text-sm">
+                            <li><Link to="/elections" className="text-[#64748B] hover:text-purple-600 transition">Elections</Link></li>
+                            <li><Link to="/results" className="text-[#64748B] hover:text-purple-600 transition">Results</Link></li>
+                            <li><Link to="/request-election" className="text-[#64748B] hover:text-purple-600 transition">Create Election</Link></li>
+                            <li><Link to="/about" className="text-[#64748B] hover:text-purple-600 transition">About</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Legal */}
+                    <div>
+                        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#64748B]">Legal</h3>
+                        <ul className="space-y-2.5 text-sm">
+                            <li><Link to="/privacy" className="text-[#64748B] hover:text-purple-600 transition">Privacy Policy</Link></li>
+                            <li><Link to="/terms" className="text-[#64748B] hover:text-purple-600 transition">Terms of Service</Link></li>
+                            <li><Link to="/cookies" className="text-[#64748B] hover:text-purple-600 transition">Compliance</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Contact */}
+                    <div>
+                        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#64748B]">Contact</h3>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex gap-3">
+                                <Mail size={16} className="mt-0.5 text-purple-600 flex-shrink-0" />
+                                <span className="text-[#64748B]">support@voteup.io</span>
+                            </div>
+                            <div className="flex gap-3">
+                                <Phone size={16} className="mt-0.5 text-purple-600 flex-shrink-0" />
+                                <span className="text-[#64748B]">+977-1-4XXXXXX</span>
+                            </div>
+                            <div className="flex gap-3">
+                                <MapPin size={16} className="mt-0.5 text-purple-600 flex-shrink-0" />
+                                <span className="text-[#64748B]">Kathmandu, Nepal</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p className="mt-5 max-w-md text-sm leading-7 text-gray-600">
-              VoteUp is a modern digital voting platform designed for
-              elections, competitions, student unions, awards, organizations,
-              and community engagement with transparency and security.
-            </p>
-            <div className="mt-6 flex items-center gap-3">
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-600 transition hover:border-violet-200 hover:bg-violet-700 hover:text-white">
-                <FaFacebookF size={14} />
-              </a>
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-600 transition hover:border-violet-200 hover:bg-violet-700 hover:text-white">
-                <FaInstagram size={14} />
-              </a>
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-600 transition hover:border-violet-200 hover:bg-violet-700 hover:text-white">
-                <FaLinkedinIn size={14} />
-              </a>
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-600 transition hover:border-violet-200 hover:bg-violet-700 hover:text-white">
-                <FaGithub size={14} />
-              </a>
+
+            {/* Bottom */}
+            <div className="border-t border-[#E2E8F0]">
+                <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-5 text-xs md:flex-row">
+                    <p className="text-[#64748B]">© 2026 VoteUp Technologies. All rights reserved.</p>
+                    <p className="text-[#64748B]">Made for transparent elections everywhere.</p>
+                </div>
             </div>
-          </div>
-
-          {/* Product & Features – flex row on mobile, separate columns on lg */}
-          <div className="flex justify-between lg:contents">
-            
-            {/* Features */}
-            <div>
-              <h3 className="mb-5 font-semibold text-gray-900">Features</h3>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li>Secure Voting</li>
-                <li>Live Results</li>
-                <li>Contest Management</li>
-                <li>Candidate Profiles</li>
-                <li>Admin Dashboard</li>
-              </ul>
-            </div>
-
-            {/* Product */}
-            <div>
-              <h3 className="mb-5 font-semibold text-gray-900">Product</h3>
-              <ul className="space-y-3 text-sm">
-                <li>
-                  <Link to="/elections" className="text-gray-600 hover:text-violet-600">
-                    Elections
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/results" className="text-gray-600 hover:text-violet-600">
-                    Results
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/request-election" className="text-gray-600 hover:text-violet-600">
-                    Create Election
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/about" className="text-gray-600 hover:text-violet-600">
-                    About
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="mb-5 font-semibold text-gray-900">Contact</h3>
-            <div className="space-y-4 text-sm">
-              <div className="flex gap-3">
-                <Mail size={16} className="mt-0.5 text-violet-600" />
-                <span className="text-gray-600">support@voteup.com</span>
-              </div>
-              <div className="flex gap-3">
-                <Phone size={16} className="mt-0.5 text-violet-600" />
-                <span className="text-gray-600">+977 9800000000</span>
-              </div>
-              <div className="flex gap-3">
-                <MapPin size={16} className="mt-0.5 text-violet-600" />
-                <span className="text-gray-600">Kathmandu, Nepal</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom */}
-      <div className="border-t border-gray-200">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm md:flex-row">
-          <p className="text-gray-500">© 2026 VoteUp. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <Link to="/privacy" className="text-gray-500 hover:text-violet-600">
-              Privacy Policy
-            </Link>
-            <Link to="/terms" className="text-gray-500 hover:text-violet-600">
-              Terms of Service
-            </Link>
-            <Link to="/cookies" className="text-gray-500 hover:text-violet-600">
-              Cookies
-            </Link>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
+        </footer>
+    );
 }

@@ -3,7 +3,9 @@ import StatsSection from '../home/StatsSection';
 import LiveElectionSection from '../home/LiveElectionSection';
 import WhoCanUse from '../home/WhoCanUse';
 import FeaturesSection from '../home/FeaturesSection';
-import ElectionRequestCTA from '../home/ElectionRequestCTA'; 
+import TestimonialsSection from '../home/TestimonialsSection';
+import FAQSection from '../home/FAQSection';
+import ElectionRequestCTA from '../home/ElectionRequestCTA';
 
 export default function Home() {
   return (
@@ -26,6 +28,10 @@ export default function Home() {
       <WhoCanUse />
 
       <FeaturesSection />
+
+      <TestimonialsSection />
+
+      <FAQSection />
 
       <ElectionRequestCTA />
     </div>
