@@ -1,6 +1,7 @@
 const prisma = require("../config/database");
 const bcrypt = require("bcrypt");
 const emailService = require("../services/email.service");
+const { createAuditLog } = require("../utils/audit");
 
 exports.getStats = async (req, res) => {
   try {
@@ -44,7 +45,7 @@ exports.getVoteTrend = async (req, res) => {
     const { range = "THIS_YEAR" } = req.query;
     const now = new Date();
     let startDate, endDate;
-    let groupBy = "day"; // default
+    let groupBy = "day";
 
     switch (range) {
       case "LAST_MONTH":
@@ -125,7 +126,6 @@ exports.getVoteTrend = async (req, res) => {
         }
       });
     } else {
-      // day grouping
       const diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
       for (let i = 0; i <= diffDays; i++) {
         const d = new Date(startDate);
@@ -154,7 +154,7 @@ exports.getVoteTrend = async (req, res) => {
 
 exports.getTopVoters = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10; 
+    const limit = parseInt(req.query.limit) || 10;
     const topVoters = await prisma.vote.groupBy({
       by: ["userId"],
       _count: { id: true },
@@ -225,6 +225,15 @@ exports.deleteUser = async (req, res) => {
       }
     }
     await prisma.user.delete({ where: { id } });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "USER_DELETED",
+      details: `Deleted user ${user.email} (${user.firstName} ${user.lastName})`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ message: "User deleted successfully" });
   } catch (err) {
     console.error("Delete user error:", err);
@@ -258,6 +267,15 @@ exports.updateUserRole = async (req, res) => {
         createdAt: true,
       },
     });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "USER_ROLE_UPDATED",
+      details: `Changed role of ${user.email} from ${user.role} to ${role}`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ user: updatedUser });
   } catch (err) {
     console.error("Update role error:", err);
@@ -312,6 +330,15 @@ exports.updateCandidate = async (req, res) => {
         election: { select: { id: true, title: true } },
       },
     });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "CANDIDATE_UPDATED",
+      details: `Updated candidate ${updated.user.email} (ID: ${id})`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ candidate: updated });
   } catch (err) {
     console.error("Update candidate error:", err);
@@ -322,10 +349,22 @@ exports.updateCandidate = async (req, res) => {
 exports.deleteCandidate = async (req, res) => {
   try {
     const { id } = req.params;
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    const candidate = await prisma.candidate.findUnique({
+      where: { id },
+      include: { user: true, election: true },
+    });
     if (!candidate)
       return res.status(404).json({ error: "Candidate not found" });
     await prisma.candidate.delete({ where: { id } });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "CANDIDATE_DELETED",
+      details: `Deleted candidate ${candidate.user.email} from election "${candidate.election.title}"`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ message: "Candidate deleted successfully" });
   } catch (err) {
     console.error("Delete candidate error:", err);
@@ -355,6 +394,14 @@ exports.approveCandidate = async (req, res) => {
         type: "CANDIDACY_UPDATE",
         link: "/contestant/profile-campaign",
       },
+    });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: `CANDIDATE_${status}`,
+      details: `Set candidate ${candidate.user.email} status to ${status} for election "${candidate.election.title}"`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
     res.json({ candidate });
@@ -425,7 +472,6 @@ exports.createCandidateFromAdmin = async (req, res) => {
       }
     }
 
-    // Generate candidate number
     const existingCandidatesCount = await prisma.candidate.count({
       where: { electionId },
     });
@@ -469,6 +515,14 @@ exports.createCandidateFromAdmin = async (req, res) => {
       }
     }
 
+    await createAuditLog({
+      userId: req.user.id,
+      event: "CANDIDATE_CREATED",
+      details: `Created candidate ${user.email} for election "${election.title}"`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.status(201).json({ candidate });
   } catch (err) {
     console.error("Admin add candidate error:", err);
@@ -479,9 +533,18 @@ exports.createCandidateFromAdmin = async (req, res) => {
 exports.getAuditLogs = async (req, res) => {
   try {
     const logs = await prisma.auditLog.findMany({
-      take: 100,
+      take: 200,
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { email: true } } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
     });
     res.json({ logs });
   } catch (err) {
@@ -495,7 +558,7 @@ exports.getRevenueTrend = async (req, res) => {
     const { range = "THIS_YEAR" } = req.query;
     const now = new Date();
     let startDate, endDate;
-    let groupBy = "month"; 
+    let groupBy = "month";
 
     switch (range) {
       case "LAST_MONTH":
@@ -654,10 +717,8 @@ exports.getFreeVsPaidVotes = async (req, res) => {
   }
 };
 
-// ===== NEW FUNCTION =====
 exports.getTopElectionsByRevenue = async (req, res) => {
   try {
-    // 1. Group votes by electionId where a completed payment exists
     const voteGroups = await prisma.vote.groupBy({
       by: ['electionId'],
       where: {
@@ -677,13 +738,11 @@ exports.getTopElectionsByRevenue = async (req, res) => {
 
     const electionIds = voteGroups.map((g) => g.electionId);
 
-    // 2. Fetch election details
     const elections = await prisma.election.findMany({
       where: { id: { in: electionIds } },
       select: { id: true, title: true, status: true },
     });
 
-    // 3. Compute revenue per election (sum of completed payments linked to votes in that election)
     const revenueByElection = await Promise.all(
       electionIds.map(async (electionId) => {
         const paymentAgg = await prisma.payment.aggregate({
@@ -702,7 +761,6 @@ exports.getTopElectionsByRevenue = async (req, res) => {
       })
     );
 
-    // 4. Combine and sort by revenue descending
     const result = voteGroups
       .map((group) => {
         const election = elections.find((e) => e.id === group.electionId);
@@ -722,34 +780,6 @@ exports.getTopElectionsByRevenue = async (req, res) => {
   } catch (err) {
     console.error('Top elections by revenue error:', err);
     res.status(500).json({ error: 'Failed to fetch top elections' });
-  }
-};
-
-exports.getTopVoters = async (req, res) => {
-  try {
-    const topVoters = await prisma.vote.groupBy({
-      by: ["userId"],
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
-      take: 5,
-    });
-    const userIds = topVoters.map((v) => v.userId);
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, firstName: true, lastName: true },
-    });
-    const result = topVoters.map((v) => {
-      const user = users.find((u) => u.id === v.userId);
-      return {
-        name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
-        votes: v._count.id,
-        amount: 0,
-      };
-    });
-    res.json({ topVoters: result });
-  } catch (err) {
-    console.error("Top voters error:", err);
-    res.status(500).json({ error: "Failed to fetch top voters" });
   }
 };
 
@@ -783,8 +813,16 @@ exports.getAllVotes = async (req, res) => {
 exports.deleteVote = async (req, res) => {
   try {
     const { id } = req.params;
-    const vote = await prisma.vote.findUnique({ where: { id } });
+    const vote = await prisma.vote.findUnique({
+      where: { id },
+      include: {
+        user: { select: { email: true, firstName: true, lastName: true } },
+        candidate: { include: { user: { select: { firstName: true, lastName: true } } } },
+        election: { select: { title: true } },
+      },
+    });
     if (!vote) return res.status(404).json({ error: "Vote not found" });
+
     await prisma.$transaction([
       prisma.candidate.update({
         where: { id: vote.candidateId },
@@ -796,6 +834,15 @@ exports.deleteVote = async (req, res) => {
       }),
       prisma.vote.delete({ where: { id } }),
     ]);
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "VOTE_DELETED",
+      details: `Deleted vote from ${vote.user.email} for candidate ${vote.candidate.user.firstName} ${vote.candidate.user.lastName} in election "${vote.election.title}"`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ message: "Vote deleted successfully" });
   } catch (err) {
     console.error("Delete vote error:", err);
@@ -820,7 +867,7 @@ exports.getNotifications = async (req, res) => {
           type: true,
           isRead: true,
           link: true,
-          createdAt: true, 
+          createdAt: true,
         },
       }),
       prisma.notification.count({ where: { userId: req.user.id } }),
@@ -879,7 +926,6 @@ exports.getUnreadNotificationCount = async (req, res) => {
   }
 };
 
-// Get all election requests (for admin)
 exports.getElectionRequests = async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
@@ -919,7 +965,6 @@ exports.getElectionRequests = async (req, res) => {
   }
 };
 
-// Update request status
 exports.updateElectionRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -935,6 +980,14 @@ exports.updateElectionRequestStatus = async (req, res) => {
       data: { status },
     });
 
+    await createAuditLog({
+      userId: req.user.id,
+      event: "REQUEST_STATUS_UPDATED",
+      details: `Updated election request from ${request.email} to status ${status}`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ request });
   } catch (err) {
     console.error("Update request status error:", err);
@@ -942,11 +995,22 @@ exports.updateElectionRequestStatus = async (req, res) => {
   }
 };
 
-// Delete request
 exports.deleteElectionRequest = async (req, res) => {
   try {
     const { id } = req.params;
+    const request = await prisma.electionRequest.findUnique({ where: { id } });
+    if (!request) return res.status(404).json({ error: "Request not found" });
+
     await prisma.electionRequest.delete({ where: { id } });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "REQUEST_DELETED",
+      details: `Deleted election request from ${request.email}`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
     res.json({ message: "Request deleted" });
   } catch (err) {
     console.error("Delete request error:", err);
@@ -970,6 +1034,14 @@ exports.replyToElectionRequest = async (req, res) => {
 
     if (!sent)
       return res.status(500).json({ error: "Failed to send reply email" });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: "REQUEST_REPLIED",
+      details: `Sent reply to ${request.email} regarding their election request`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
 
     res.json({ success: true, message: "Reply sent" });
   } catch (err) {
