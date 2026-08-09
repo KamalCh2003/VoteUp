@@ -35,7 +35,7 @@ app.use(cors({
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 
-app.set("trust proxy", 1);
+app.set("trust proxy", true);
 // Rate limiter
 app.use(generalLimiter);
 
@@ -74,7 +74,7 @@ app.use('/api/public', publicRoutes);
 app.get('/', (req, res) => {
   res.json({
     name: "VoteUp API",
-    message: "Server is running successfully 🚀",
+    message: "Server is running successfully ",
     status: "OK"
   });
 });
