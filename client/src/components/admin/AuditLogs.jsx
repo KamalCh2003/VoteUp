@@ -22,6 +22,7 @@ export default function AuditLogs() {
   const filtered = logs.filter(log => {
     const matchesSearch =
       log.user?.email?.toLowerCase().includes(search.toLowerCase()) ||
+      log.user?.role?.toLowerCase().includes(search.toLowerCase()) ||
       log.event?.toLowerCase().includes(search.toLowerCase()) ||
       log.ipAddress?.includes(search) ||
       log.result?.toLowerCase().includes(search.toLowerCase());
@@ -31,6 +32,21 @@ export default function AuditLogs() {
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
+  };
+
+  // Helper to get role badge style
+  const getRoleBadge = (role) => {
+    if (!role) return <span className="badge badge-neutral">System</span>;
+    switch (role) {
+      case 'ADMIN':
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">Admin</span>;
+      case 'CONTESTANT':
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-700 border border-cyan-200">Contestant</span>;
+      case 'VOTER':
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">Voter</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">{role}</span>;
+    }
   };
 
   return (
@@ -76,6 +92,7 @@ export default function AuditLogs() {
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Time</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Event</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">User</th>
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Role</th> {/* 👈 new column */}
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Result</th>
                 <th className="text-right py-4 px-6 font-medium text-gray-500">Details</th>
               </tr>
@@ -106,6 +123,7 @@ export default function AuditLogs() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-gray-700">{log.user?.email || 'System'}</td>
+                    <td className="py-4 px-6">{getRoleBadge(log.user?.role)}</td> {/* 👈 role badge */}
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
                         log.result === 'OK' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
@@ -123,7 +141,7 @@ export default function AuditLogs() {
                   </tr>
                   {expandedId === log.id && (
                     <tr key={`${log.id}-details`} className="bg-gray-50">
-                      <td colSpan={5} className="py-4 px-6 text-gray-600 text-xs">
+                      <td colSpan={6} className="py-4 px-6 text-gray-600 text-xs"> {/* 👈 colSpan updated to 6 */}
                         <div className="flex flex-col gap-1.5">
                           <div className="flex gap-2">
                             <span className="text-gray-500">IP:</span>
@@ -141,7 +159,7 @@ export default function AuditLogs() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-gray-500">
+                  <td colSpan={6} className="text-center py-12 text-gray-500"> {/* 👈 colSpan updated to 6 */}
                     No audit logs found.
                   </td>
                 </tr>
