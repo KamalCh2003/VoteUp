@@ -20,14 +20,13 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
-  Shield, // <-- added for Audit Logs
+  Shield,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import LogoutConfirmModal from "../common/LogoutConfirmModal";
 import AdminProfilePage from "./AdminProfilePage";
 import api from "../../services/api";
 
-// EyeOff icon (for password visibility toggle)
 const EyeOff = ({ size = 18 }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -53,6 +52,8 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingCandidatesCount, setPendingCandidatesCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -67,7 +68,6 @@ export default function AdminLayout({ children }) {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Get user initials for avatar
   const getInitials = () => {
     if (!user) return "A";
     const first = user.firstName?.[0] || "";
@@ -99,9 +99,26 @@ export default function AdminLayout({ children }) {
     }
   };
 
+  const fetchPendingCounts = async () => {
+    try {
+      const [candidatesRes, requestsRes] = await Promise.all([
+        api.get("/admin/candidates", { params: { status: "PENDING", limit: 1 } }),
+        api.get("/admin/election-requests", { params: { status: "PENDING", limit: 1 } }),
+      ]);
+      setPendingCandidatesCount(candidatesRes.data.candidates?.length || 0);
+      setPendingRequestsCount(requestsRes.data.requests?.length || 0);
+    } catch (err) {
+      console.error("Failed to fetch pending counts:", err);
+    }
+  };
+
   useEffect(() => {
     fetchUnreadCount();
-    intervalRef.current = setInterval(fetchUnreadCount, 30000);
+    fetchPendingCounts();
+    intervalRef.current = setInterval(() => {
+      fetchUnreadCount();
+      fetchPendingCounts();
+    }, 30000);
     return () => clearInterval(intervalRef.current);
   }, []);
 
@@ -144,7 +161,6 @@ export default function AdminLayout({ children }) {
     }
   };
 
-  // Menu groups – added "Audit Logs"
   const menuGroups = [
     {
       label: "Overview",
@@ -156,10 +172,22 @@ export default function AdminLayout({ children }) {
       label: "Manage",
       items: [
         { id: "users", label: "Users", icon: Users, path: "/admin/users" },
-        { id: "candidates", label: "Contestants", icon: UserCheck, path: "/admin/candidates" },
+        { 
+          id: "candidates", 
+          label: "Contestants", 
+          icon: UserCheck, 
+          path: "/admin/candidates",
+          badge: pendingCandidatesCount > 0 ? pendingCandidatesCount : null,
+        },
         { id: "elections", label: "Elections", icon: Vote, path: "/admin/elections" },
         { id: "finance", label: "Payments", icon: CreditCard, path: "/admin/finance" },
-        { id: "election-requests", label: "Requests", icon: FileText, path: "/admin/election-requests" },
+        { 
+          id: "election-requests", 
+          label: "Requests", 
+          icon: FileText, 
+          path: "/admin/election-requests",
+          badge: pendingRequestsCount > 0 ? pendingRequestsCount : null,
+        },
       ],
     },
     {
@@ -167,13 +195,19 @@ export default function AdminLayout({ children }) {
       items: [
         { id: "leaderboard", label: "Leaderboard", icon: Trophy, path: "/admin/leaderboard" },
         { id: "vote-verifier", label: "Vote Verifier", icon: Eye, path: "/admin/vote-verifier" },
-        { id: "audit", label: "Audit Logs", icon: Shield, path: "/admin/audit-logs" }, // 👈 NEW
+        { id: "audit", label: "Audit Logs", icon: Shield, path: "/admin/audit-logs" },
       ],
     },
     {
       label: "System",
       items: [
-        { id: "notifications", label: "Notifications", icon: Bell, path: "/admin/notifications" },
+        { 
+          id: "notifications", 
+          label: "Notifications", 
+          icon: Bell, 
+          path: "/admin/notifications",
+          badge: unreadCount > 0 ? unreadCount : null,
+        },
         { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
       ],
     },
@@ -203,7 +237,6 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-[#0F172A] font-['Inter',sans-serif]">
-      {/* SIDEBAR */}
       <aside
         className={`${
           sidebarOpen ? "w-[250px]" : "w-[72px]"
@@ -256,6 +289,11 @@ export default function AdminLayout({ children }) {
                   >
                     <Icon size={18} className="flex-shrink-0" />
                     {sidebarOpen && <span className="truncate text-sm">{item.label}</span>}
+                    {sidebarOpen && item.badge && (
+                      <span className="ml-auto bg-[#EF4444] text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -291,7 +329,6 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col min-h-screen">
         <header className="h-16 border-b border-[#E2E8F0] bg-white/90 backdrop-blur-xl px-6 flex justify-between items-center shadow-sm sticky top-0 z-10">
           <div className="flex items-center gap-4 flex-1">
@@ -383,7 +420,6 @@ export default function AdminLayout({ children }) {
         <div className="p-6 flex-1 overflow-auto">{children}</div>
       </main>
 
-      {/* Modals */}
       <LogoutConfirmModal
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
