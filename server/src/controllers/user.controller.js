@@ -1,6 +1,7 @@
 // controllers/user.controller.js
 const bcrypt = require('bcrypt');
 const prisma = require('../config/database');
+const { createAuditLog } = require('../utils/audit'); // 👈 added
 
 exports.getProfile = async (req, res) => {
   try {
@@ -13,7 +14,7 @@ exports.getProfile = async (req, res) => {
         lastName: true,
         phone: true,
         avatarUrl: true,
-        googleId: true,          
+        googleId: true,
         role: true,
         isVerified: true,
         anonymousMode: true,
@@ -32,6 +33,7 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 };
+
 exports.updateProfile = async (req, res) => {
   try {
     const { firstName, lastName, phone, anonymousMode } = req.body;
@@ -40,7 +42,7 @@ exports.updateProfile = async (req, res) => {
       data: {
         ...(firstName && { firstName }),
         ...(lastName && { lastName }),
-        ...(phone !== undefined && { phone }),   // allows empty string to clear phone
+        ...(phone !== undefined && { phone }),
         ...(anonymousMode !== undefined && { anonymousMode }),
       },
       select: {
@@ -48,13 +50,22 @@ exports.updateProfile = async (req, res) => {
         email: true,
         firstName: true,
         lastName: true,
-        phone: true,            // ← now returned
+        phone: true,
         avatarUrl: true,
         role: true,
         isVerified: true,
-        // add any other fields your AuthContext uses (e.g., googleId, twoFactorEnabled, etc.)
       },
     });
+
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'PROFILE_UPDATED',
+      details: `Updated profile fields: ${Object.keys(req.body).join(', ')}`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
     res.json({ user });
   } catch (err) {
     console.error('Update profile error:', err);
@@ -74,6 +85,16 @@ exports.changePassword = async (req, res) => {
       where: { id: req.user.id },
       data: { passwordHash },
     });
+
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'PASSWORD_CHANGED',
+      details: 'User changed their password',
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
     res.json({ message: 'Password updated' });
   } catch (err) {
     console.error('Change password error:', err);
@@ -88,6 +109,16 @@ exports.uploadAvatar = async (req, res) => {
       where: { id: req.user.id },
       data: { avatarUrl: req.file.path },
     });
+
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'AVATAR_UPLOADED',
+      details: 'User uploaded a new avatar',
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
     res.json({ avatarUrl: user.avatarUrl });
   } catch (err) {
     console.error('Upload avatar error:', err);

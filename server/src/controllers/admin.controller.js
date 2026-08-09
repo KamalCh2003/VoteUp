@@ -205,39 +205,26 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.id === req.user.id) {
-      return res
-        .status(403)
-        .json({ error: "You cannot delete your own account" });
+      return res.status(403).json({ error: 'You cannot delete your own account' });
     }
 
-    const relatedModels = [
-      "refreshToken",
-      "verificationToken",
-      "candidate",
-      "vote",
-      "auditLog",
-    ];
-    for (const model of relatedModels) {
-      if (prisma[model]) {
-        await prisma[model].deleteMany({ where: { userId: id } });
-      }
-    }
+    // Delete related records...
     await prisma.user.delete({ where: { id } });
 
     await createAuditLog({
       userId: req.user.id,
-      event: "USER_DELETED",
+      event: 'USER_DELETED',
       details: `Deleted user ${user.email} (${user.firstName} ${user.lastName})`,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      result: "OK",
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
-    res.json({ message: "User deleted successfully" });
+    res.json({ message: 'User deleted successfully' });
   } catch (err) {
-    console.error("Delete user error:", err);
-    res.status(500).json({ error: "Failed to delete user" });
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 };
 
@@ -245,41 +232,31 @@ exports.updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    const validRoles = ["VOTER", "CONTESTANT", "ADMIN"];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: "Invalid role" });
-    }
+    const validRoles = ['VOTER', 'CONTESTANT', 'ADMIN'];
+    if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.id === req.user.id) {
-      return res.status(403).json({ error: "You cannot change your own role" });
+      return res.status(403).json({ error: 'You cannot change your own role' });
     }
     const updatedUser = await prisma.user.update({
       where: { id },
       data: { role },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
     });
 
     await createAuditLog({
       userId: req.user.id,
-      event: "USER_ROLE_UPDATED",
+      event: 'USER_ROLE_UPDATED',
       details: `Changed role of ${user.email} from ${user.role} to ${role}`,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      result: "OK",
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
     res.json({ user: updatedUser });
   } catch (err) {
-    console.error("Update role error:", err);
-    res.status(500).json({ error: "Failed to update user role" });
+    console.error('Update role error:', err);
+    res.status(500).json({ error: 'Failed to update user role' });
   }
 };
 
@@ -542,6 +519,7 @@ exports.getAuditLogs = async (req, res) => {
             email: true,
             firstName: true,
             lastName: true,
+            role: true,
           },
         },
       },
@@ -821,7 +799,7 @@ exports.deleteVote = async (req, res) => {
         election: { select: { title: true } },
       },
     });
-    if (!vote) return res.status(404).json({ error: "Vote not found" });
+    if (!vote) return res.status(404).json({ error: 'Vote not found' });
 
     await prisma.$transaction([
       prisma.candidate.update({
@@ -837,16 +815,16 @@ exports.deleteVote = async (req, res) => {
 
     await createAuditLog({
       userId: req.user.id,
-      event: "VOTE_DELETED",
+      event: 'VOTE_DELETED',
       details: `Deleted vote from ${vote.user.email} for candidate ${vote.candidate.user.firstName} ${vote.candidate.user.lastName} in election "${vote.election.title}"`,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      result: "OK",
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
-    res.json({ message: "Vote deleted successfully" });
+    res.json({ message: 'Vote deleted successfully' });
   } catch (err) {
-    console.error("Delete vote error:", err);
-    res.status(500).json({ error: "Failed to delete vote" });
+    console.error('Delete vote error:', err);
+    res.status(500).json({ error: 'Failed to delete vote' });
   }
 };
 
@@ -926,6 +904,55 @@ exports.getUnreadNotificationCount = async (req, res) => {
   }
 };
 
+exports.submitElectionRequest = async (req, res) => {
+  try {
+    const { name, email, phone, organization, message } = req.body;
+
+    if (!email || !message) {
+      return res.status(400).json({ error: "Email and message are required" });
+    }
+
+    const request = await prisma.electionRequest.create({
+      data: {
+        name: name || null,
+        email,
+        phone: phone || null,
+        organization: organization || null,
+        message,
+        status: "PENDING",
+      },
+    });
+
+    const userId = req.user?.id || null;
+    await createAuditLog({
+      userId,
+      event: "ELECTION_REQUEST_SUBMITTED",
+      details: `Election request submitted by ${email} (${name || "Anonymous"})${userId ? ` (User ID: ${userId})` : ""}`,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
+    });
+
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map(admin => ({
+          userId: admin.id,
+          title: "New Election Request",
+          message: `${name || "Someone"} (${email}) requested an election.`,
+          type: "SYSTEM_ALERT",
+          link: "/admin/election-requests",
+        })),
+      });
+    }
+
+    res.status(201).json({ request });
+  } catch (err) {
+    console.error("Submit election request error:", err);
+    res.status(500).json({ error: "Failed to submit request" });
+  }
+};
+
+
 exports.getElectionRequests = async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
@@ -969,11 +996,8 @@ exports.updateElectionRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-
-    const validStatuses = ["PENDING", "REVIEWED", "COMPLETED", "ARCHIVED"];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
-    }
+    const validStatuses = ['PENDING', 'REVIEWED', 'COMPLETED', 'ARCHIVED'];
+    if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
     const request = await prisma.electionRequest.update({
       where: { id },
@@ -982,16 +1006,16 @@ exports.updateElectionRequestStatus = async (req, res) => {
 
     await createAuditLog({
       userId: req.user.id,
-      event: "REQUEST_STATUS_UPDATED",
+      event: 'REQUEST_STATUS_UPDATED',
       details: `Updated election request from ${request.email} to status ${status}`,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      result: "OK",
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
     res.json({ request });
   } catch (err) {
-    console.error("Update request status error:", err);
-    res.status(500).json({ error: "Failed to update request" });
+    console.error('Update request status error:', err);
+    res.status(500).json({ error: 'Failed to update request' });
   }
 };
 
@@ -999,22 +1023,22 @@ exports.deleteElectionRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const request = await prisma.electionRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (!request) return res.status(404).json({ error: 'Request not found' });
 
     await prisma.electionRequest.delete({ where: { id } });
 
     await createAuditLog({
       userId: req.user.id,
-      event: "REQUEST_DELETED",
+      event: 'REQUEST_DELETED',
       details: `Deleted election request from ${request.email}`,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      result: "OK",
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
-    res.json({ message: "Request deleted" });
+    res.json({ message: 'Request deleted' });
   } catch (err) {
-    console.error("Delete request error:", err);
-    res.status(500).json({ error: "Failed to delete request" });
+    console.error('Delete request error:', err);
+    res.status(500).json({ error: 'Failed to delete request' });
   }
 };
 
@@ -1022,30 +1046,27 @@ exports.replyToElectionRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const { message } = req.body;
-
     const request = await prisma.electionRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: "Request not found" });
+    if (!request) return res.status(404).json({ error: 'Request not found' });
 
     const sent = await emailService.sendEmail({
       to: request.email,
-      subject: "Response to your election request",
+      subject: 'Response to your election request',
       html: `<p>${message}</p>`,
     });
-
-    if (!sent)
-      return res.status(500).json({ error: "Failed to send reply email" });
+    if (!sent) return res.status(500).json({ error: 'Failed to send reply email' });
 
     await createAuditLog({
       userId: req.user.id,
-      event: "REQUEST_REPLIED",
+      event: 'REQUEST_REPLIED',
       details: `Sent reply to ${request.email} regarding their election request`,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      result: "OK",
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
-    res.json({ success: true, message: "Reply sent" });
+    res.json({ success: true, message: 'Reply sent' });
   } catch (err) {
-    console.error("Reply error:", err);
-    res.status(500).json({ error: "Failed to send reply" });
+    console.error('Reply error:', err);
+    res.status(500).json({ error: 'Failed to send reply' });
   }
 };
