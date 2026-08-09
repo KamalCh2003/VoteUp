@@ -52,6 +52,7 @@ import FinanceView from "./components/admin/FinanceView";
 import ElectionRequestManager from "./components/admin/ElectionRequestManager";
 import NotificationCenter from "./components/admin/NotificationCenter";
 import AuditLogs from "./components/admin/AuditLogs";
+import ElectionDetailView from "./components/admin/ElectionDetailView";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -167,6 +168,18 @@ function AppContent() {
               </Protected>
             }
           />
+
+          <Route
+            path="/admin/elections/:id"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <ElectionDetailView />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+
           <Route
             path="/admin/vote-verifier"
             element={

@@ -1,5 +1,6 @@
 // src/components/admin/ElectionManager.jsx
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom'; // 👈 added for navigation
 import api from '../../services/api';
 import {
   Search,
@@ -19,6 +20,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  Eye, // 👈 added for view icon
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
@@ -61,6 +63,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel, loading = fa
 }
 
 export default function ElectionManager() {
+  const navigate = useNavigate(); // 👈 for navigation to detail
   const [elections, setElections] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -441,7 +444,13 @@ export default function ElectionManager() {
                       </button>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="font-medium text-gray-800">{e.title}</span>
+                      {/* 👇 Clickable title navigates to detail */}
+                      <span
+                        className="font-medium text-gray-800 cursor-pointer hover:text-violet-600 transition"
+                        onClick={() => navigate(`/admin/elections/${e.id}`)}
+                      >
+                        {e.title}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-gray-600">{e.category || 'General'}</td>
                     <td className="py-4 px-4 text-gray-500 text-xs">
@@ -479,6 +488,14 @@ export default function ElectionManager() {
                             <StopCircle size={16} />
                           </button>
                         )}
+                        {/* 👇 View button navigates to detail */}
+                        <button
+                          onClick={() => navigate(`/admin/elections/${e.id}`)}
+                          className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition"
+                          title="View"
+                        >
+                          <Eye size={16} />
+                        </button>
                         <button onClick={() => handleEdit(e)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition" title="Edit Election">
                           <Pencil size={16} />
                         </button>

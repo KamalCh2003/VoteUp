@@ -1,4 +1,5 @@
 // src/components/admin/DashboardOverview.jsx
+import React, { Fragment } from 'react'; // 👈 added React import
 import { useEffect, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -6,10 +7,11 @@ import {
 } from 'recharts';
 import {
   Users, Vote, UserCheck, TrendingUp, Calendar, BarChart, Clock, Trophy,
-  PieChart as PieChartIcon, DollarSign,
+  PieChart as PieChartIcon, DollarSign, Shield, Eye, MoreHorizontal,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { Link } from 'react-router-dom';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -21,6 +23,23 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
   }
   return null;
+};
+
+// Helper to format relative time
+const formatRelativeTime = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString();
 };
 
 export default function DashboardOverview() {
@@ -41,6 +60,11 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [trendRange, setTrendRange] = useState('THIS_YEAR');
   const toast = useToast();
+
+  // Recent Activity – always keep only 5 most recent logs
+  const [recentLogs, setRecentLogs] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState(null);
 
   const fetchTrend = async (range) => {
     try {
@@ -85,6 +109,21 @@ export default function DashboardOverview() {
     }
   };
 
+  // Fetch audit logs and keep only the 5 most recent
+  const fetchRecentActivities = async () => {
+    setActivityLoading(true);
+    try {
+      const res = await api.get('/admin/audit-logs');
+      const logs = (res.data.logs || []).slice(0, 5);
+      setRecentLogs(logs);
+    } catch (err) {
+      console.error('Failed to fetch recent activities:', err);
+      toast.error('Failed to load recent activity');
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -101,6 +140,7 @@ export default function DashboardOverview() {
         await fetchTopVoters();
         await fetchFreePaid();
         await fetchTopElectionsByRevenue();
+        await fetchRecentActivities();
       } catch (err) {
         console.error(err);
         toast.error('Failed to load dashboard data');
@@ -114,6 +154,10 @@ export default function DashboardOverview() {
   useEffect(() => {
     if (!loading) fetchTrend(trendRange);
   }, [trendRange, loading]);
+
+  const toggleExpand = (id) => {
+    setExpandedLogId(expandedLogId === id ? null : id);
+  };
 
   if (loading) {
     return (
@@ -208,7 +252,6 @@ export default function DashboardOverview() {
 
       {/* ---- Row 1: Vote Trend + Vote Type Breakdown Pie Chart ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Vote Trend */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -247,7 +290,6 @@ export default function DashboardOverview() {
           </ResponsiveContainer>
         </div>
 
-        {/* Vote Type Breakdown Pie Chart */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 flex flex-col items-center justify-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 self-start flex items-center gap-2">
             <PieChartIcon size={18} className="text-violet-600" />
@@ -279,9 +321,8 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ---- Row 2: Active Elections + Top Performing Elections by Revenue (2 columns) ---- */}
+      {/* ---- Row 2: Active Elections + Top Performing Elections by Revenue ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Active Elections (Left) */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Vote size={18} className="text-cyan-600" />
@@ -318,7 +359,6 @@ export default function DashboardOverview() {
           )}
         </div>
 
-        {/* Top Performing Elections by Revenue (Right) */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <DollarSign size={18} className="text-emerald-600" />
@@ -368,7 +408,7 @@ export default function DashboardOverview() {
       </div>
 
       {/* ---- Row 3: Top 10 Most Active Voters ---- */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Trophy size={18} className="text-amber-500" />
           Top 10 Most Active Voters
@@ -392,6 +432,118 @@ export default function DashboardOverview() {
           </div>
         ) : (
           <p className="text-sm text-gray-500">No voting activity recorded yet.</p>
+        )}
+      </div>
+
+      {/* ---- Recent Activity – 5 most recent logs, no pagination ---- */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Shield size={18} className="text-violet-600" />
+            Recent Activity
+          </h3>
+          <Link
+            to="/admin/audit-logs"
+            className="text-sm font-medium text-violet-600 hover:text-violet-700 transition flex items-center gap-1"
+          >
+            View all logs
+            <Eye size={16} />
+          </Link>
+        </div>
+
+        {activityLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-600" />
+          </div>
+        ) : recentLogs.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">No activity recorded yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500">
+                  <th className="text-left py-3 px-4 font-medium">Time</th>
+                  <th className="text-left py-3 px-4 font-medium">Event</th>
+                  <th className="text-left py-3 px-4 font-medium">User</th>
+                  <th className="text-left py-3 px-4 font-medium">Result</th>
+                  <th className="text-right py-3 px-4 font-medium">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentLogs.map((log) => (
+                  <Fragment key={log.id}>
+                    <tr
+                      className="hover:bg-gray-50 transition cursor-pointer"
+                      onClick={() => toggleExpand(log.id)}
+                    >
+                      <td className="py-3 px-4 text-gray-500 text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={13} />
+                          {formatRelativeTime(log.createdAt)}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold border ${
+                            log.event.includes('LOGIN')
+                              ? 'bg-cyan-100 text-cyan-700 border-cyan-200'
+                              : log.event.includes('VOTE')
+                              ? 'bg-violet-100 text-violet-700 border-violet-200'
+                              : log.event.includes('PAYMENT')
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : log.event.includes('FAILED') || log.event.includes('REJECTED')
+                              ? 'bg-red-100 text-red-700 border-red-200'
+                              : 'bg-gray-100 text-gray-700 border-gray-200'
+                          }`}
+                        >
+                          {log.event}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">{log.user?.email || 'System'}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold border ${
+                            log.result === 'OK'
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : log.result === 'Blocked'
+                              ? 'bg-red-100 text-red-700 border-red-200'
+                              : 'bg-amber-100 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          {log.result}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button className="text-gray-500 hover:text-gray-700 transition">
+                          {expandedLogId === log.id ? (
+                            <MoreHorizontal size={16} className="rotate-90" />
+                          ) : (
+                            <MoreHorizontal size={16} />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedLogId === log.id && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={5} className="py-3 px-4 text-gray-600 text-xs">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex gap-2">
+                              <span className="text-gray-500">IP:</span>
+                              <span className="text-gray-800">{log.ipAddress || 'N/A'}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="text-gray-500">Details:</span>
+                              <span className="text-gray-800">{log.details || 'No additional details'}</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
