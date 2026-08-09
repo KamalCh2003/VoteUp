@@ -1,6 +1,16 @@
-const prisma = require("../config/database");
+// utils/audit.js
+const prisma = require('../config/database');
 
-async function createAuditLog({ userId, event, details, ipAddress, result = "OK" }) {
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const ips = forwarded.split(',').map(ip => ip.trim());
+    return ips[0]; 
+  }
+  return req.ip || 'unknown';
+}
+
+async function createAuditLog({ userId, event, details, ipAddress, result = 'OK' }) {
   try {
     await prisma.auditLog.create({
       data: {
@@ -12,8 +22,8 @@ async function createAuditLog({ userId, event, details, ipAddress, result = "OK"
       },
     });
   } catch (err) {
-    console.error("Failed to create audit log:", err);
+    console.error('Failed to create audit log:', err);
   }
 }
 
-module.exports = { createAuditLog };
+module.exports = { createAuditLog, getClientIp };

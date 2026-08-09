@@ -1,37 +1,46 @@
-const router = require('express').Router();
-const ctrl = require('../controllers/admin.controller');
-const { authenticate } = require('../middleware/auth');
-const { requireRole } = require('../middleware/roleCheck');
-const upload = require('../middleware/upload');
+// src/routes/admin.routes.js
+const router = require("express").Router();
+const ctrl = require("../controllers/admin.controller");
+const { authenticate } = require("../middleware/auth");
+const { requireRole } = require("../middleware/roleCheck");
+const upload = require("../middleware/upload");
 
-router.use(authenticate, requireRole('ADMIN'));
+router.post("/election-requests", ctrl.submitElectionRequest);
 
-router.get('/stats', ctrl.getStats);
-router.get('/votes/trend', ctrl.getVoteTrend);
-router.get('/users', ctrl.getUsers);
-router.delete('/users/:id', ctrl.deleteUser);
-router.patch('/users/:id/role', ctrl.updateUserRole);
-router.get('/candidates', ctrl.getAllCandidates);
-router.post('/create-candidate', upload.single('avatar'), ctrl.createCandidateFromAdmin);
-router.put('/candidates/:id', upload.single('avatar'), ctrl.updateCandidate);
-router.patch('/candidates/:id/status', ctrl.approveCandidate);
-router.delete('/candidates/:id', ctrl.deleteCandidate);
-router.get('/votes', ctrl.getAllVotes);
-router.delete('/votes/:id', ctrl.deleteVote);
-router.get('/finance/revenue-trend', ctrl.getRevenueTrend);
-router.get('/finance/payment-methods', ctrl.getPaymentMethods)
-router.get('/finance/top-elections-revenue', ctrl.getTopElectionsByRevenue);
-router.get('/finance/top-voters', ctrl.getTopVoters);
-router.get('/finance/recent-payments', ctrl.getRecentPayments);
-router.get('/votes/free-paid', ctrl.getFreeVsPaidVotes);
-router.get('/audit-logs', ctrl.getAuditLogs);
-router.get('/notifications', ctrl.getNotifications);
-router.patch('/notifications/:id/read', ctrl.markNotificationRead);
-router.patch('/notifications/mark-all-read', ctrl.markAllNotificationsRead);
-router.get('/notifications/unread-count', ctrl.getUnreadNotificationCount);
-router.get('/election-requests', ctrl.getElectionRequests);
-router.patch('/election-requests/:id/status', ctrl.updateElectionRequestStatus);
-router.delete('/election-requests/:id', ctrl.deleteElectionRequest);
-router.post('/election-requests/:id/reply', ctrl.replyToElectionRequest);
+router.use(authenticate, requireRole("ADMIN"));
+
+router.get("/stats", ctrl.getStats);
+router.get("/votes/trend", ctrl.getVoteTrend);
+router.get("/finance/revenue-trend", ctrl.getRevenueTrend);
+router.get("/finance/payment-methods", ctrl.getPaymentMethods);
+router.get("/finance/top-elections-revenue", ctrl.getTopElectionsByRevenue);
+router.get("/finance/top-voters", ctrl.getTopVoters);
+router.get("/finance/recent-payments", ctrl.getRecentPayments);
+router.get("/votes/free-paid", ctrl.getFreeVsPaidVotes);
+
+router.get("/users", ctrl.getUsers);
+router.delete("/users/:id", ctrl.deleteUser);
+router.patch("/users/:id/role", ctrl.updateUserRole);
+
+router.get("/candidates", ctrl.getAllCandidates);
+router.post("/create-candidate", upload.single("avatar"), ctrl.createCandidateFromAdmin);
+router.put("/candidates/:id", upload.single("avatar"), ctrl.updateCandidate);
+router.patch("/candidates/:id/status", ctrl.approveCandidate);
+router.delete("/candidates/:id", ctrl.deleteCandidate);
+
+router.get("/votes", ctrl.getAllVotes);
+router.delete("/votes/:id", ctrl.deleteVote);
+
+router.get("/audit-logs", ctrl.getAuditLogs);
+
+router.get("/notifications", ctrl.getNotifications);
+router.patch("/notifications/:id/read", ctrl.markNotificationRead);
+router.patch("/notifications/mark-all-read", ctrl.markAllNotificationsRead);
+router.get("/notifications/unread-count", ctrl.getUnreadNotificationCount);
+
+router.get("/election-requests", ctrl.getElectionRequests);
+router.patch("/election-requests/:id/status", ctrl.updateElectionRequestStatus);
+router.delete("/election-requests/:id", ctrl.deleteElectionRequest);
+router.post("/election-requests/:id/reply", ctrl.replyToElectionRequest);
 
 module.exports = router;

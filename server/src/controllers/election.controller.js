@@ -1,17 +1,15 @@
+// controllers/election.controller.js
 const prisma = require('../config/database');
+const { createAuditLog } = require('../utils/audit');
 
 exports.getAll = async (req, res) => {
   try {
-    // 1. Move expired active elections to ENDED
+    // Move expired active elections to ENDED
     await prisma.election.updateMany({
-      where: {
-        status: 'ACTIVE',
-        endDate: { lte: new Date() },
-      },
+      where: { status: 'ACTIVE', endDate: { lte: new Date() } },
       data: { status: 'ENDED' },
     });
 
-    // 2. Fetch elections as usual
     const { status, category, limit } = req.query;
     const where = {};
     if (status) where.status = status;
@@ -117,6 +115,15 @@ exports.create = async (req, res) => {
       },
     });
 
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'ELECTION_CREATED',
+      details: `Created election "${election.title}" (ID: ${election.id})`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
     res.status(201).json({ election });
   } catch (err) {
     console.error('Election creation error:', err);
@@ -208,6 +215,16 @@ exports.update = async (req, res) => {
       where: { id },
       data: updateData,
     });
+
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'ELECTION_UPDATED',
+      details: `Updated election "${election.title}" (ID: ${election.id})`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
     res.json({ election });
   } catch (err) {
     console.error('Election update error:', err);
@@ -217,9 +234,24 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    await prisma.election.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    const election = await prisma.election.findUnique({ where: { id } });
+    if (!election) return res.status(404).json({ error: 'Election not found' });
+
+    await prisma.election.delete({ where: { id } });
+
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'ELECTION_DELETED',
+      details: `Deleted election "${election.title}" (ID: ${election.id})`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
     res.json({ message: 'Election deleted' });
   } catch (err) {
+    console.error('Delete election error:', err);
     res.status(500).json({ error: 'Failed to delete election' });
   }
 };

@@ -1,4 +1,6 @@
+// controllers/candidate.controller.js
 const prisma = require('../config/database');
+const { createAuditLog } = require('../utils/audit');
 
 function timeAgo(date) {
   const seconds = Math.floor((new Date() - new Date(date)) / 1000);
@@ -55,6 +57,7 @@ exports.apply = async (req, res) => {
       },
     });
 
+    // Notify admins
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
     if (admins.length > 0) {
       const candidateName = `${req.user.firstName} ${req.user.lastName}`;
@@ -70,6 +73,15 @@ exports.apply = async (req, res) => {
         })),
       });
     }
+
+    // Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'CANDIDACY_APPLIED',
+      details: `Applied as candidate for election ${electionId} with party "${party || 'Independent'}"`,
+      ipAddress: getClientIp(req),
+      result: 'OK',
+    });
 
     res.status(201).json({ candidate });
   } catch (err) {
@@ -110,7 +122,7 @@ exports.updateProfile = async (req, res) => {
     }
 
     const candidate = await prisma.candidate.update({
-      where: { id: existing.id },   // use the unique record id
+      where: { id: existing.id },
       data: {
         ...(slogan !== undefined && { slogan }),
         ...(bio !== undefined && { bio }),
@@ -120,6 +132,15 @@ exports.updateProfile = async (req, res) => {
         ...(instagramHandle !== undefined && { instagramHandle }),
         ...(req.file && { avatarUrl }),
       },
+    });
+
+    // 🔐 Audit log
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'CANDIDATE_PROFILE_UPDATED',
+      details: `Updated candidate profile for election ${candidate.electionId}`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
     });
 
     res.json({ candidate });
@@ -256,4 +277,3 @@ exports.getHistory = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch history' });
   }
 };
-
