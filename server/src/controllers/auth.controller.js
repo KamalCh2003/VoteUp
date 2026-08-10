@@ -11,6 +11,13 @@ exports.register = async (req, res) => {
   try {
     const { email, password, firstName, lastName, role } = req.body;
 
+    if (!firstName || firstName.length < 3) {
+      return res.status(400).json({ error: 'First name must be at least 3 characters' });
+    }
+    if (!lastName || lastName.length < 3) {
+      return res.status(400).json({ error: 'Last name must be at least 3 characters' });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(400).json({ error: 'Email already exists' });
 
@@ -23,7 +30,7 @@ exports.register = async (req, res) => {
       lastName,
       email,
       passwordHash,
-      role: role || 'VOTER', 
+      role: role || 'VOTER',
     });
 
     await prisma.verificationToken.create({
@@ -55,7 +62,6 @@ exports.register = async (req, res) => {
     res.status(500).json({ error: 'Registration failed' });
   }
 };
-
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;

@@ -1,3 +1,4 @@
+// controllers/electionRequest.controller.js
 const prisma = require('../config/database');
 const emailService = require('../services/email.service');
 
@@ -58,15 +59,18 @@ exports.requestElection = async (req, res) => {
 
 exports.getPublicStats = async (req, res) => {
   try {
-    const [activeElections, totalVotes, totalUsers] = await Promise.all([
+    const [activeElections, totalElections, totalVotesAgg, totalUsers] = await Promise.all([
       prisma.election.count({ where: { status: 'ACTIVE' } }),
+      prisma.election.count(), // total elections
       prisma.vote.aggregate({ _sum: { quantity: true } }),
-      prisma.user.count(),                          
+      prisma.user.count(),
     ]);
+
     res.json({
       activeElections,
-      totalVotes: totalVotes._sum.quantity || 0,
-      totalUsers,                                    
+      totalElections,        // 👈 added for the auth layout
+      totalVotes: totalVotesAgg._sum.quantity || 0,
+      totalUsers,
     });
   } catch (err) {
     console.error('Public stats error:', err);
