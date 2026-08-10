@@ -32,6 +32,7 @@ router.get("/votes", ctrl.getAllVotes);
 router.delete("/votes/:id", ctrl.deleteVote);
 
 router.get("/audit-logs", ctrl.getAuditLogs);
+router.get('/analytics', ctrl.getAnalytics);
 
 router.get("/notifications", ctrl.getNotifications);
 router.patch("/notifications/:id/read", ctrl.markNotificationRead);

@@ -35,7 +35,7 @@ app.use(cors({
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 // Rate limiter
 app.use(generalLimiter);
 

@@ -57,14 +57,12 @@ model User {
   passwordHash       String
   firstName          String
   lastName           String
-  // nationalId      removed
   phone              String?
   avatarUrl          String?
-  // gender          removed
   role               Role                @default(VOTER)
   isVerified         Boolean             @default(false)
   isActive           Boolean             @default(true)
-  googleId           String?             @unique      // ← stays as is
+  googleId           String?             @unique
   twoFactorEnabled   Boolean             @default(false)
   anonymousMode      Boolean             @default(true)
   votes              Vote[]
@@ -72,6 +70,7 @@ model User {
   payments           Payment[]
   auditLogs          AuditLog[]
   candidates         Candidate[]
+  paymentIntents     PaymentIntent[]     
   verificationTokens VerificationToken[]
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -80,7 +79,7 @@ model User {
 model Candidate {
   id              String          @id @default(uuid())
   userId          String          
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarUrl       String?
   electionId      String
   election        Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
@@ -158,6 +157,25 @@ model Payment {
   votes                 Vote[]
 }
 
+model PaymentIntent {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pidx          String?  @unique
+  transactionId String?  @unique
+  electionId    String
+  candidateId   String
+  quantity      Int
+  amount        Int
+  status        String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([pidx])
+  @@index([status])
+}
+
 model Notification {
   id        String    @id @default(uuid())
   userId    String
@@ -196,7 +214,7 @@ model VerificationToken {
 model SystemSetting {
   id        String   @id @default(uuid())
   key       String   @unique
-  value     Json     // stores any type (string, number, boolean, object)
+  value     Json
   updatedAt DateTime @updatedAt
 }
 

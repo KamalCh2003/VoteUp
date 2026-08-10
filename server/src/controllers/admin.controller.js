@@ -1070,3 +1070,93 @@ exports.replyToElectionRequest = async (req, res) => {
     res.status(500).json({ error: 'Failed to send reply' });
   }
 };
+
+exports.getAnalytics = async (req, res) => {
+  try {
+    // 1. Total votes by category
+    const votesByCategory = await prisma.election.groupBy({
+      by: ['category'],
+      _sum: { totalVotes: true },
+      orderBy: { _sum: { totalVotes: 'desc' } },
+    });
+
+    // 2. Total revenue by category – raw query returns BigInt
+    const revenueByCategory = await prisma.$queryRaw`
+      SELECT e.category, SUM(p.amount) as revenue
+      FROM "Payment" p
+      JOIN "Vote" v ON v."paymentId" = p.id
+      JOIN "Election" e ON v."electionId" = e.id
+      WHERE p.status = 'COMPLETED'
+      GROUP BY e.category
+      ORDER BY revenue DESC
+    `;
+
+    // Convert BigInt to Number
+    const revenueByCategoryFormatted = revenueByCategory.map(item => ({
+      ...item,
+      revenue: Number(item.revenue) || 0,
+    }));
+
+    // 3. Top 5 elections by vote count
+    const topElections = await prisma.election.findMany({
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        totalVotes: true,
+        status: true,
+      },
+      orderBy: { totalVotes: 'desc' },
+      take: 5,
+    });
+
+    // 4. Monthly vote trend (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const monthlyVotes = await prisma.$queryRaw`
+      SELECT DATE_TRUNC('month', "votedAt") as month, COUNT(*) as votes
+      FROM "Vote"
+      WHERE "votedAt" >= ${sixMonthsAgo}
+      GROUP BY month
+      ORDER BY month ASC
+    `;
+
+    // Convert BigInt to Number
+    const monthlyVotesFormatted = monthlyVotes.map(item => ({
+      month: item.month,
+      votes: Number(item.votes) || 0,
+    }));
+
+    // 5. Payment method breakdown
+    const paymentsByMethod = await prisma.payment.groupBy({
+      by: ['type'],
+      _count: { id: true },
+      _sum: { amount: true },
+    });
+
+    // 6. Overall stats
+    const [totalVotes, totalRevenue, activeElections, totalUsers] = await Promise.all([
+      prisma.vote.count(),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED' } }),
+      prisma.election.count({ where: { status: 'ACTIVE' } }),
+      prisma.user.count(),
+    ]);
+
+    res.json({
+      votesByCategory,
+      revenueByCategory: revenueByCategoryFormatted,
+      topElections,
+      monthlyVotes: monthlyVotesFormatted,
+      paymentsByMethod,
+      overall: {
+        totalVotes,
+        totalRevenue: totalRevenue._sum.amount || 0,
+        activeElections,
+        totalUsers,
+      },
+    });
+  } catch (err) {
+    console.error('Analytics error:', err);
+    res.status(500).json({ error: 'Failed to fetch analytics data' });
+  }
+};
