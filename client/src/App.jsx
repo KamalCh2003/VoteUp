@@ -18,6 +18,9 @@ import RegisterForm from "./components/auth/RegisterForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import VerifyEmail from "./components/auth/VerifyEmail";
 import About from "./components/voter/About";
+import FAQSection from "./components/home/FAQSection";
+import FeaturesSection from "./components/home/FeaturesSection";
+import ContactSection from "./components/home/ElectionRequestCTA";
 import VoterHome from "./components/voter/VoterHome";
 import ElectionList from "./components/voter/ElectionList";
 import CastVote from "./components/voter/CastVote";
@@ -273,6 +276,10 @@ function AppContent() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
             <Route path="/about" element={<About />} />
+            <Route path="/FAQSection" element={<FAQSection />} />
+            <Route path="/FeaturesSection" element={<FeaturesSection />} />
+            <Route path="/ContactSection" element={<ContactSection />} />
+            <Route path="/elections" element={<ElectionList />} />
             <Route path="/results/:electionId" element={<ResultsView />} />
             <Route path="/elections/:id" element={<ElectionDetails />} />
             <Route path="/reset-password" element={<ResetPassword />} />

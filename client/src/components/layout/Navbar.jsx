@@ -65,19 +65,13 @@ export default function Navbar() {
         : 'text-[#64748B] hover:text-purple-600 hover:bg-purple-50'
     }`;
 
-  const mobileLinkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
-      isActive
-        ? 'text-purple-600 bg-purple-50'
-        : 'text-[#64748B] hover:text-purple-600 hover:bg-purple-50'
-    }`;
-
-  // If user is not logged in, show public navbar (without toggle)
+  // ─── PUBLIC NAVBAR (NOT LOGGED IN) ────────────────────────────────
   if (!user) {
     return (
       <>
         <header className="sticky top-0 z-50 border-b border-[#E2E8F0] bg-white/90 backdrop-blur-xl shadow-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
+            <div className="flex items-center gap-16">
             <NavLink
               to="/"
               className="flex items-center gap-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A]"
@@ -90,17 +84,23 @@ export default function Navbar() {
               </span>
             </NavLink>
 
-            <nav className="hidden items-center gap-8 text-sm md:flex">
-              <NavLink to="/" end className={linkClass}>
-                Home
+            {/* ── PUBLIC LINKS ── */}
+            <nav className="hidden items-center gap-2 text-sm md:flex">
+              <NavLink to="/FeaturesSection" className={linkClass}>
+                Features
               </NavLink>
-              <NavLink to="/elections" className={linkClass}>
+              <NavLink to="/ElectionList" className={linkClass}>
                 Elections
               </NavLink>
-              <NavLink to="/about" className={linkClass}>
+              <NavLink to="/FAQSection" className={linkClass}>
+                FAQ
+              </NavLink>
+                <NavLink to="/about" className={linkClass}>
                 About
               </NavLink>
+
             </nav>
+            </div>
 
             <div className="hidden items-center gap-3 md:flex">
               <NavLink
@@ -139,7 +139,7 @@ export default function Navbar() {
     );
   }
 
-  // ─── AUTHENTICATED VOTER NAVBAR ───
+  // AUTHENTICATED VOTER NAVBAR
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-[#E2E8F0] bg-white/90 backdrop-blur-xl shadow-sm">
