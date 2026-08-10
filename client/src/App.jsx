@@ -53,6 +53,7 @@ import ElectionRequestManager from "./components/admin/ElectionRequestManager";
 import NotificationCenter from "./components/admin/NotificationCenter";
 import AuditLogs from "./components/admin/AuditLogs";
 import ElectionDetailView from "./components/admin/ElectionDetailView";
+import AdminAnalytics from "./components/admin/AdminAnalytics";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -124,6 +125,16 @@ function AppContent() {
               <Protected roles={["ADMIN"]}>
                 <AdminLayout>
                   <DashboardOverview />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <AdminAnalytics />
                 </AdminLayout>
               </Protected>
             }

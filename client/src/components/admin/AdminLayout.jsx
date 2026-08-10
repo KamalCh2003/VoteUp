@@ -166,6 +166,7 @@ export default function AdminLayout({ children }) {
       label: "Overview",
       items: [
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
+        { id: "analytics", label: "Analytics", icon: Trophy, path: "/admin/analytics" },
       ],
     },
     {
