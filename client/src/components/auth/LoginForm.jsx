@@ -18,12 +18,9 @@ export default function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Restore error from sessionStorage when component mounts
   useEffect(() => {
     const storedError = sessionStorage.getItem("loginError");
-    if (storedError) {
-      setErrorMessage(storedError);
-    }
+    if (storedError) setErrorMessage(storedError);
   }, []);
 
   useEffect(() => {
@@ -84,93 +81,20 @@ export default function LoginForm() {
 
   return (
     <AuthLayout
-      title="Welcome Back"
-      subtitle="Sign in to continue voting for your favorites."
+      title="Welcome back"
+      subtitle="Log in to vote, track elections, and manage your account."
       backTo="/"
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div>
-          <label className="block text-gray-700 text-sm mb-1">
-            Email Address
-          </label>
-          <input
-            type="email"
-            name="email"
-            placeholder="you@example.com"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-          />
-        </div>
-        <div>
-          <label className="block text-gray-700 text-sm mb-1">Password</label>
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500"
-            >
-              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2 text-gray-600">
-            <input type="checkbox" className="accent-violet-500" /> Remember me
-          </label>
-          <Link
-            to="/forgot-password"
-            className="text-violet-600 hover:underline"
-          >
-            Forgot password?
-          </Link>
-        </div>
-
-        {errorMessage && (
-          <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-sm">
-            <AlertCircle size={16} />
-            <span>{errorMessage}</span>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2"
-        >
-          {loading ? <Loader2 className="animate-spin" size={16} /> : "Login"}
-        </button>
-      </form>
-
-      <div className="relative my-5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">Or continue with</span>
-        </div>
-      </div>
-
       <button
         onClick={handleGoogleLogin}
         disabled={googleLoading}
-        className="w-full h-11 flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 transition"
+        className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white py-2.5 text-sm font-semibold text-[#0F172A] hover:bg-[#F8FAFC] transition"
       >
         {googleLoading ? (
-          <Loader2 className="animate-spin" size={16} />
+          <Loader2 className="animate-spin" size={18} />
         ) : (
           <>
-            <svg width="20" height="20" viewBox="0 0 24 24">
+            <svg width="18" height="18" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -188,19 +112,91 @@ export default function LoginForm() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Sign in with Google
+            Continue with Google
           </>
         )}
       </button>
 
-      <div className="mt-6 text-center">
-        <p className="text-gray-600 text-sm">
-          New to VoteUp?{" "}
-          <Link to="/register" className="text-violet-600 hover:underline">
-            Create an account
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-[#E2E8F0]"></div>
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="px-2 text-[#64748B]">or continue with email</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-[#0F172A] mb-1">
+            Email address
+          </label>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-[#0F172A] mb-1">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 pr-11 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-[#64748B]"
+            >
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2 text-[#64748B]">
+            <input type="checkbox" className="accent-[#6D28D9]" /> Remember me
+          </label>
+          <Link
+            to="/forgot-password"
+            className="font-semibold text-[#6D28D9] hover:underline"
+          >
+            Forgot password?
           </Link>
-        </p>
-        <p className="text-xs text-gray-400 mt-4">Secure & Encrypted voting</p>
+        </div>
+
+        {errorMessage && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+            <AlertCircle size={16} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full h-11 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white font-semibold shadow-md shadow-purple-600/25 transition hover:brightness-105 disabled:opacity-70 flex items-center justify-center gap-2"
+        >
+          {loading ? <Loader2 className="animate-spin" size={16} /> : "Log in"}
+        </button>
+      </form>
+
+      <div className="mt-6 text-center text-sm text-[#64748B]">
+        Don't have an account?{" "}
+        <Link to="/register" className="font-semibold text-[#6D28D9] hover:underline">
+          Create one
+        </Link>
       </div>
     </AuthLayout>
   );

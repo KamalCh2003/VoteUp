@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
-import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import AuthLayout from "./AuthLayout";
@@ -33,7 +32,6 @@ export default function RegisterForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check for empty fields
     if (
       !formData.firstName.trim() ||
       !formData.lastName.trim() ||
@@ -45,7 +43,6 @@ export default function RegisterForm() {
       return;
     }
 
-    // Check password match
     if (formData.password !== formData.confirmPassword) {
       setErrorMessage("Passwords do not match");
       return;
@@ -81,18 +78,18 @@ export default function RegisterForm() {
 
   return (
     <AuthLayout
-      title="Create an account"
-      subtitle="Join thousands of verified voters"
+      title="Create your account"
+      subtitle="Register in under a minute and start voting."
       backTo="/"
     >
-      <div className="flex gap-2 mb-5 bg-gray-100 border border-gray-200 rounded-2xl p-1">
+      <div className="flex gap-2 mb-5 bg-[#F8FAFC] p-1">
         <button
           type="button"
           onClick={() => setRole("VOTER")}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${
             role === "VOTER"
-              ? "bg-violet-600 text-white"
-              : "text-gray-600 hover:text-gray-800"
+              ? "bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white shadow-sm"
+              : "text-[#64748B] hover:text-[#0F172A]"
           }`}
         >
           Voter
@@ -100,17 +97,17 @@ export default function RegisterForm() {
         <button
           type="button"
           onClick={() => setRole("CONTESTANT")}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${
             role === "CONTESTANT"
-              ? "bg-violet-600 text-white"
-              : "text-gray-600 hover:text-gray-800"
+              ? "bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white shadow-sm"
+              : "text-[#64748B] hover:text-[#0F172A]"
           }`}
         >
           Contestant
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="grid grid-cols-2 gap-3">
           <input
             type="text"
@@ -118,8 +115,7 @@ export default function RegisterForm() {
             placeholder="First name"
             value={formData.firstName}
             onChange={handleChange}
-            required
-            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
           />
           <input
             type="text"
@@ -127,8 +123,7 @@ export default function RegisterForm() {
             placeholder="Last name"
             value={formData.lastName}
             onChange={handleChange}
-            required
-            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
           />
         </div>
 
@@ -138,8 +133,7 @@ export default function RegisterForm() {
           placeholder="Email address"
           value={formData.email}
           onChange={handleChange}
-          required
-          className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
         />
 
         <div className="relative">
@@ -149,13 +143,12 @@ export default function RegisterForm() {
             placeholder="Password (min 8 characters)"
             value={formData.password}
             onChange={handleChange}
-            required
-            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 pr-11 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500"
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-[#64748B]"
           >
             {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
@@ -168,45 +161,43 @@ export default function RegisterForm() {
             placeholder="Confirm password"
             value={formData.confirmPassword}
             onChange={handleChange}
-            required
-            className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 pr-11 text-sm text-gray-800 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 pr-11 text-sm text-[#0F172A] outline-none focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]"
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500"
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-[#64748B]"
           >
             {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
         </div>
 
-        {/* Inline error message */}
         {errorMessage && (
-          <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
             <AlertCircle size={16} />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        <div className="border border-violet-200 bg-violet-50 rounded-xl p-3 flex gap-3">
-          <ShieldCheck size={16} className="text-violet-500 mt-0.5 flex-shrink-0" />
-          <p className="text-gray-600 text-xs leading-relaxed">
+        <div className="flex gap-3 rounded-xl border border-[#6D28D9]/20 bg-[#F3ECFE] p-3 text-xs text-[#64748B]">
+          <ShieldCheck size={16} className="mt-0.5 flex-shrink-0 text-[#6D28D9]" />
+          <span className="leading-relaxed">
             Your identity is verified securely and never shared.
-          </p>
+          </span>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-11 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 rounded-full text-white font-semibold text-sm flex items-center justify-center gap-2 mt-1"
+          className="w-full h-11 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white font-semibold shadow-md shadow-purple-600/25 transition hover:brightness-105 disabled:opacity-70 flex items-center justify-center gap-2"
         >
-          {loading ? <Loader2 className="animate-spin" size={16} /> : "Create Account"}
+          {loading ? <Loader2 className="animate-spin" size={16} /> : "Create account"}
         </button>
       </form>
 
-      <p className="text-center text-gray-500 mt-5 text-sm">
+      <p className="mt-6 text-center text-sm text-[#64748B]">
         Already have an account?{" "}
-        <Link to="/login" className="text-violet-600 hover:underline">
+        <Link to="/login" className="font-semibold text-[#6D28D9] hover:underline">
           Sign in
         </Link>
       </p>
