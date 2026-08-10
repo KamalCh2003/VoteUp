@@ -1,3 +1,4 @@
+// controllers/payment.controller.js
 const axios = require('axios');
 const paymentService = require('../services/payment.service');
 const prisma = require('../config/database');
@@ -74,19 +75,28 @@ exports.processVotePayment = async (req, res) => {
   }
 };
 
+
 exports.initiateKhaltiPayment = async (req, res) => {
   try {
     const { electionId, candidateId, quantity } = req.body;
     const userId = req.user.id;
+
     const election = await prisma.election.findUnique({
       where: { id: electionId },
       select: { votePrice: true, title: true },
     });
     if (!election) return res.status(404).json({ error: 'Election not found' });
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+    });
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
     const amount = election.votePrice * quantity;
     const purchaseOrderId = `${electionId}_${Date.now()}`;
     const returnUrl = `${process.env.CLIENT_URL}/payment/callback`;
-    const meta = Buffer.from(JSON.stringify({ userId, candidateId, electionId, quantity })).toString('base64');
 
     const khaltiRes = await axios.post(
       'https://dev.khalti.com/api/v2/epayment/initiate/',
@@ -95,12 +105,25 @@ exports.initiateKhaltiPayment = async (req, res) => {
         website_url: process.env.CLIENT_URL,
         amount: amount * 100,
         purchase_order_id: purchaseOrderId,
-        purchase_order_name: meta,
+        purchase_order_name: 'Vote payment',
       },
       {
         headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` },
       }
     );
+
+    // Store the payment intent locally
+    await prisma.paymentIntent.create({
+      data: {
+        userId,
+        pidx: khaltiRes.data.pidx,
+        electionId,
+        candidateId,
+        quantity,
+        amount,
+        status: 'PENDING',
+      },
+    });
 
     res.json({ paymentUrl: khaltiRes.data.payment_url });
   } catch (err) {
@@ -109,12 +132,11 @@ exports.initiateKhaltiPayment = async (req, res) => {
   }
 };
 
-
 exports.verifyKhaltiPayment = async (req, res) => {
   try {
     const { pidx, transaction_id, status, electionId, candidateId, quantity } = req.body;
+    console.log('verifyKhaltiPayment called:', { pidx, transaction_id, status, electionId, candidateId, quantity });
 
-    // 1. Basic validation
     if (!pidx || !status) {
       return res.status(400).json({ error: 'Missing pidx or status' });
     }
@@ -122,7 +144,6 @@ exports.verifyKhaltiPayment = async (req, res) => {
       return res.status(400).json({ error: 'Payment was not completed' });
     }
 
-    // 2. Verify with Khalti
     let verifyRes;
     try {
       verifyRes = await axios.post(
@@ -130,6 +151,7 @@ exports.verifyKhaltiPayment = async (req, res) => {
         { pidx },
         { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` } }
       );
+      console.log('Khalti lookup response:', verifyRes.data);
     } catch (apiErr) {
       console.error('Khalti lookup failed:', apiErr.response?.data || apiErr.message);
       return res.status(400).json({ error: 'Payment lookup failed. Please try again.' });
@@ -139,44 +161,68 @@ exports.verifyKhaltiPayment = async (req, res) => {
       return res.status(400).json({ error: 'Payment verification failed – status is ' + verifyRes.data.status });
     }
 
-    // 3. Extract metadata – prefer frontend fields, fallback to purchase_order_name
-    let userId = req.user?.id;            // may be undefined if token expired
-    let finalElectionId = electionId;
-    let finalCandidateId = candidateId;
-    let finalQuantity = quantity;
-
-    if (!finalElectionId || !finalCandidateId || !finalQuantity || !userId) {
-      try {
-        const metaStr = verifyRes.data.purchase_order_name || '';
-        if (!metaStr) throw new Error('No metadata found in payment');
-        const decoded = Buffer.from(metaStr, 'base64').toString('utf8');
-        const meta = JSON.parse(decoded);
-        finalElectionId = finalElectionId || meta.electionId;
-        finalCandidateId = finalCandidateId || meta.candidateId;
-        finalQuantity = finalQuantity || meta.quantity;
-        userId = userId || meta.userId;
-      } catch (e) {
-        console.error('Metadata decode error:', e.message);
-        return res.status(400).json({ error: 'Invalid payment metadata – please try again' });
-      }
+    const paymentIntent = await prisma.paymentIntent.findUnique({
+      where: { pidx },
+    });
+    if (!paymentIntent) {
+      console.error('No payment intent found for pidx:', pidx);
+      return res.status(404).json({ error: 'Payment intent not found. Please try again.' });
     }
 
-    if (!finalElectionId || !finalCandidateId || !finalQuantity || !userId) {
-      return res.status(400).json({ error: 'Incomplete election information – please restart the voting process' });
+    if (paymentIntent.status === 'COMPLETED') {
+      return res.json({ voteCasted: false, voteError: 'Payment already processed' });
     }
 
-    // 4. Validate election
+    const userId = paymentIntent.userId;
+    const finalElectionId = paymentIntent.electionId;
+    const finalCandidateId = paymentIntent.candidateId;
+    const finalQuantity = paymentIntent.quantity;
+
+    console.log(`Final data: userId=${userId}, electionId=${finalElectionId}, candidateId=${finalCandidateId}, quantity=${finalQuantity}`);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      console.error('User not found:', userId);
+      return res.status(400).json({ error: 'User not found. Please login again.' });
+    }
+
     const election = await prisma.election.findUnique({
       where: { id: finalElectionId },
       select: { votePrice: true, status: true },
     });
-    if (!election) return res.status(404).json({ error: 'Election not found' });
-    if (election.status !== 'ACTIVE') return res.status(400).json({ error: 'Election is not active' });
+    if (!election) {
+      console.error('Election not found:', finalElectionId);
+      return res.status(404).json({ error: 'Election not found' });
+    }
+    if (election.status !== 'ACTIVE') {
+      console.error('Election not active:', election.status);
+      return res.status(400).json({ error: 'Election is not active' });
+    }
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: finalCandidateId },
+    });
+    if (!candidate) {
+      console.error('Candidate not found:', finalCandidateId);
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
 
     const amount = election.votePrice * finalQuantity;
 
-    // 5. Atomically create payment and vote
     const result = await prisma.$transaction(async (tx) => {
+      await tx.paymentIntent.update({
+        where: { id: paymentIntent.id },
+        data: { status: 'COMPLETED', transactionId: transaction_id },
+      });
+
+      const existingPayment = await tx.payment.findFirst({
+        where: { stripePaymentIntentId: pidx, status: 'COMPLETED' },
+      });
+      if (existingPayment) {
+        console.log('Duplicate payment detected:', pidx);
+        return { payment: existingPayment, vote: null, voteError: 'Payment already processed' };
+      }
+
       const payment = await tx.payment.create({
         data: {
           userId,
@@ -187,39 +233,52 @@ exports.verifyKhaltiPayment = async (req, res) => {
           candidateId: finalCandidateId,
         },
       });
+      console.log('Payment created:', payment.id);
 
       let vote = null;
       let voteError = null;
-      try {
+
+      if (election.votePrice === 0) {
         const existingVote = await tx.vote.findFirst({
           where: { userId, electionId: finalElectionId },
         });
         if (existingVote) {
-          voteError = 'You have already voted in this election.';
-        } else {
-          vote = await tx.vote.create({
-            data: {
-              userId,
-              electionId: finalElectionId,
-              candidateId: finalCandidateId,
-              quantity: finalQuantity,
-              paymentId: payment.id,
-              txHash: pidx,
-            },
-          });
-          await tx.candidate.update({
-            where: { id: finalCandidateId },
-            data: { votesReceived: { increment: finalQuantity } },
-          });
-          await tx.election.update({
-            where: { id: finalElectionId },
-            data: { totalVotes: { increment: finalQuantity } },
-          });
+          console.log('User already voted in free election:', userId, finalElectionId);
+          voteError = 'You have already voted in this free election.';
+          return { payment, vote: null, voteError };
         }
+      }
+
+      // For paid elections, allow unlimited votes
+      try {
+        vote = await tx.vote.create({
+          data: {
+            userId,
+            electionId: finalElectionId,
+            candidateId: finalCandidateId,
+            quantity: finalQuantity,
+            paymentId: payment.id,
+            txHash: pidx,
+          },
+        });
+        console.log('Vote created:', vote.id);
+
+        await tx.candidate.update({
+          where: { id: finalCandidateId },
+          data: { votesReceived: { increment: finalQuantity } },
+        });
+        console.log('Candidate votes updated');
+
+        await tx.election.update({
+          where: { id: finalElectionId },
+          data: { totalVotes: { increment: finalQuantity } },
+        });
+        console.log('Election total votes updated');
       } catch (err) {
         console.error('Vote creation error:', err);
         voteError = err.message || 'Failed to record vote';
       }
+
       return { payment, vote, voteError };
     });
 

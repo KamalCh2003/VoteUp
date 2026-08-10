@@ -1,3 +1,4 @@
+// src/components/payment/PaymentCallback.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
@@ -72,11 +73,11 @@ export default function PaymentCallback() {
           // Payment succeeded but vote could not be cast (e.g. already voted)
           setStatus('success');   // still a successful payment
           setMessage(voteError);
-          toast.info(voteError);
+          toast(voteError); // react-hot-toast neutral toast
         } else {
-          setStatus('success');
-          setMessage('Payment verified. Vote recorded.');
-          toast.success('Vote recorded!');
+          setStatus('error');
+          setMessage('Unknown error occurred. Please contact support.');
+          toast.error('Unknown error');
         }
 
         sessionStorage.removeItem('pendingVote');
