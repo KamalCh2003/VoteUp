@@ -62,10 +62,10 @@ export default function LoginForm() {
       const redirect = from
         ? decodeURIComponent(from)
         : user.role === "ADMIN"
-          ? "/dashboard"
+          ? "/admin/dashboard"
           : user.role === "CONTESTANT"
             ? "/contestant/profile-campaign"
-            : "/voter/home";
+            : "/voter/dashboard";
       navigate(redirect);
     } catch (err) {
       const msg = err?.response?.data?.error || "Login failed";

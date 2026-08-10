@@ -24,6 +24,7 @@ import CastVote from "./components/voter/CastVote";
 import ResultsView from "./components/voter/ResultsView";
 import VoteHistory from "./components/voter/VoteHistory";
 import VoterProfile from "./components/voter/VoterProfile";
+import VoterDashboard from "./components/voter/VoterDashboard";
 import AnalyticsView from "./components/contestant/AnalyticsView";
 import ApplyCandidacy from "./components/contestant/ApplyCandidacy";
 import PaymentSuccess from "./components/payment/PaymentSuccess";
@@ -272,8 +273,6 @@ function AppContent() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
             <Route path="/about" element={<About />} />
-            <Route path="/elections" element={<ElectionList />} />
-            <Route path="/results" element={<ResultsView />} />
             <Route path="/results/:electionId" element={<ResultsView />} />
             <Route path="/elections/:id" element={<ElectionDetails />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -285,6 +284,22 @@ function AppContent() {
               element={
                 <Protected roles={["VOTER"]}>
                   <VoterHome />
+                </Protected>
+              }
+            />
+            <Route
+              path="/voter/dashboard"
+              element={
+                <Protected roles={["VOTER"]}>
+                  <VoterDashboard />
+                </Protected>
+              }
+              />
+              <Route
+              path="/voter/elections"
+              element={
+                <Protected roles={["VOTER"]}>
+                  <ElectionList />
                 </Protected>
               }
             />
@@ -305,18 +320,18 @@ function AppContent() {
               }
             />
             <Route
-              path="/voter/profile"
+              path="/voter/results"
               element={
                 <Protected roles={["VOTER"]}>
-                  <VoterProfile />
+                  <ResultsView />
                 </Protected>
               }
             />
             <Route
-              path="/history"
+              path="/voter/profile"
               element={
                 <Protected roles={["VOTER"]}>
-                  <VoteHistory />
+                  <VoterProfile />
                 </Protected>
               }
             />
