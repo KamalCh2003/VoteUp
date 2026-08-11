@@ -1,21 +1,27 @@
-// src/components/admin/AddElectionModal.jsx
+// src/components/admin/CreateElectionPage.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   X, Calendar, Clock, Users, Image as ImageIcon, Type, AlignLeft,
   Tag, Shield, Loader2, Vote, Phone, Mail, User, DollarSign,
   CreditCard, Gift, FileText, Check, ChevronRight, ChevronLeft,
+  ArrowLeft, Plus,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import AddCandidateModal from './AddCandidateModal'; // 👈 imported
 
 const steps = ['General', 'Voting', 'Candidates', 'Payment', 'Preview & Publish'];
 
-export default function AddElectionModal({ open, onClose, onSuccess, election }) {
-  const isEdit = !!election;
+export default function CreateElectionPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const toast = useToast();
   const today = new Date().toISOString().split('T')[0];
+
+  // 👇 State to control the candidate modal
+  const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
 
   const [form, setForm] = useState({
     title: '',
@@ -37,41 +43,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
 
   const [votingType, setVotingType] = useState('paid');
 
-  useEffect(() => {
-    if (open && isEdit && election) {
-      const start = election.startDate ? new Date(election.startDate) : null;
-      const end = election.endDate ? new Date(election.endDate) : null;
-      const price = election.votePrice ?? 100;
-      setForm({
-        title: election.title || '',
-        description: election.description || '',
-        category: election.category || 'Academic',
-        startDate: start && !isNaN(start.getTime()) ? start.toISOString().split('T')[0] : '',
-        startTime: start && !isNaN(start.getTime()) ? start.toTimeString().slice(0,5) : '08:00',
-        endDate: end && !isNaN(end.getTime()) ? end.toISOString().split('T')[0] : '',
-        endTime: end && !isNaN(end.getTime()) ? end.toTimeString().slice(0,5) : '17:00',
-        maxCandidates: election.maxCandidates || 10,
-        maxVoters: election.maxVoters || 0,
-        votePrice: price,
-        rules: election.rules || '',
-        organizerName: election.organizerName || '',
-        organizerEmail: election.organizerEmail || '',
-        organizerPhone: election.organizerPhone || '',
-        banner: null,
-      });
-      setVotingType(price > 0 ? 'paid' : 'free');
-    } else if (open && !isEdit) {
-      setForm({
-        title: '', description: '', category: 'Academic',
-        startDate: '', startTime: '08:00', endDate: '', endTime: '17:00',
-        maxCandidates: 10, maxVoters: 0, votePrice: 100,
-        rules: '', organizerName: '', organizerEmail: '', organizerPhone: '',
-        banner: null,
-      });
-      setVotingType('paid');
-    }
-  }, [open, isEdit, election]);
-
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (name === 'banner') {
@@ -88,7 +59,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
   };
 
   const nextStep = () => {
-    // Validate current step before proceeding
     if (currentStep === 0) {
       if (!form.title || !form.category || !form.description || !form.startDate || !form.endDate) {
         return toast.error('Please fill all required fields in General');
@@ -134,20 +104,15 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
         const formData = new FormData();
         Object.keys(payload).forEach(key => formData.append(key, payload[key]));
         formData.append('banner', form.banner);
-        const url = isEdit ? `/elections/${election.id}` : '/elections';
-        const method = isEdit ? 'put' : 'post';
-        request = api[method](url, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        request = api.post('/elections', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       } else {
-        const url = isEdit ? `/elections/${election.id}` : '/elections';
-        const method = isEdit ? 'put' : 'post';
-        request = api[method](url, payload);
+        request = api.post('/elections', payload);
       }
       await request;
-      toast.success(isEdit ? 'Election updated!' : 'Election created!');
-      onSuccess?.();
-      onClose();
+      toast.success('Election created successfully!');
+      navigate('/admin/elections');
     } catch (err) {
-      toast.error(err.response?.data?.error || (isEdit ? 'Update failed' : 'Creation failed'));
+      toast.error(err.response?.data?.error || 'Creation failed');
     } finally {
       setLoading(false);
     }
@@ -157,8 +122,8 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
     switch (currentStep) {
       case 0: return (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-1">Election Title *</label>
               <input type="text" name="title" value={form.title} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none" placeholder="e.g. Miss Nepal 2026" />
             </div>
@@ -175,10 +140,10 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
             <label className="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
             <textarea name="description" rows="3" value={form.description} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:border-violet-500 outline-none" placeholder="Describe the election" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Start Date *</label><input type="date" name="startDate" value={form.startDate} onChange={handleChange} min={isEdit ? undefined : today} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Start Date *</label><input type="date" name="startDate" value={form.startDate} onChange={handleChange} min={today} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Start Time *</label><input type="time" name="startTime" value={form.startTime} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">End Date *</label><input type="date" name="endDate" value={form.endDate} onChange={handleChange} min={isEdit ? undefined : form.startDate || today} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1">End Date *</label><input type="date" name="endDate" value={form.endDate} onChange={handleChange} min={form.startDate || today} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">End Time *</label><input type="time" name="endTime" value={form.endTime} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
           </div>
           <div>
@@ -197,13 +162,13 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
       );
       case 1: return (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Voting Method</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>Single choice</option><option>Ranked choice</option><option>Multiple picks</option></select></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Vote limit per user</label><input type="number" value="1" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Eligibility</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>All verified users</option><option>Invited only</option></select></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Results visibility</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>Live</option><option>After close</option><option>Admin only</option></select></div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Max Candidates *</label><input type="number" name="maxCandidates" value={form.maxCandidates} onChange={handleChange} min="1" max="50" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Max Voters (0 = unlimited)</label><input type="number" name="maxVoters" value={form.maxVoters} onChange={handleChange} min="0" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
           </div>
@@ -214,18 +179,28 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
             <p>Add candidates manually or upload a CSV. You can also add them later.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Candidate Name</label><input placeholder="Full name" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Party / Organization</label><input placeholder="Optional" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Candidate Name</label>
+              <input placeholder="Full name" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Party / Organization</label>
+              <input placeholder="Optional" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" />
+            </div>
           </div>
-          <button type="button" className="text-sm text-violet-600 hover:text-violet-700 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowAddCandidateModal(true)} // 👈 opens the modal
+            className="text-sm text-violet-600 hover:text-violet-700 flex items-center gap-1"
+          >
             <Plus size={16} /> Add another candidate
           </button>
         </div>
       );
       case 3: return (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Entry Fee (Rs)</label><input type="number" name="votePrice" value={form.votePrice} onChange={handleChange} min="0" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-1">Accepted Gateways</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>Khalti + eSewa + Stripe</option><option>Khalti only</option><option>eSewa only</option><option>Stripe only</option><option>Free election</option></select></div>
           </div>
@@ -265,70 +240,89 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-500 hover:text-gray-700">
-          <X size={20} />
-        </button>
+    <div className="bg-gray-50 min-h-screen px-6 py-8">
+      <button
+        onClick={() => navigate('/admin/elections')}
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6 transition"
+      >
+        <ArrowLeft size={18} /> Back to Elections
+      </button>
 
-        <div className="flex items-center gap-3 mb-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
             <Vote size={20} className="text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-800">{isEdit ? 'Edit Election' : 'Create New Election'}</h2>
-            <p className="text-sm text-gray-500">{isEdit ? 'Update election details' : 'Fill in all the required details'}</p>
+            <h2 className="text-2xl font-bold text-gray-800">Create New Election</h2>
+            <p className="text-sm text-gray-500">Fill in all the required details to launch your election</p>
           </div>
         </div>
+      </div>
 
-        {/* Wizard Steps */}
-        <div className="flex gap-1 mb-6 border-b border-gray-200 pb-2 overflow-x-auto">
-          {steps.map((label, i) => (
-            <div key={i} className="flex items-center flex-1 min-w-[80px]">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(i)}
-                className={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  i === currentStep ? 'bg-violet-100 text-violet-700' :
-                  i < currentStep ? 'text-emerald-600' : 'text-gray-400'
-                }`}
-              >
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                  i < currentStep ? 'bg-emerald-100 text-emerald-600' :
-                  i === currentStep ? 'bg-violet-600 text-white' :
-                  'bg-gray-100 text-gray-400'
-                }`}>
-                  {i < currentStep ? <Check size={12} /> : i + 1}
-                </span>
-                {label}
-              </button>
-              {i < steps.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-1 last:hidden" />}
-            </div>
-          ))}
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">{renderStep()}</div>
-
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-            <button type="button" onClick={currentStep === 0 ? onClose : prevStep} className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1">
-              {currentStep === 0 ? 'Cancel' : <><ChevronLeft size={16} /> Back</>}
-            </button>
+      <div className="flex gap-1 mb-8 border-b border-gray-200 pb-3 overflow-x-auto">
+        {steps.map((label, i) => (
+          <div key={i} className="flex items-center flex-1 min-w-[80px]">
             <button
               type="button"
-              onClick={currentStep === steps.length - 1 ? handleSubmit : nextStep}
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-semibold transition"
+              onClick={() => setCurrentStep(i)}
+              className={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold rounded-lg transition ${
+                i === currentStep ? 'bg-violet-100 text-violet-700' :
+                i < currentStep ? 'text-emerald-600' : 'text-gray-400'
+              }`}
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-              {currentStep === steps.length - 1 ? (loading ? 'Saving...' : 'Publish Election') : 'Continue'}
+              <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                i < currentStep ? 'bg-emerald-100 text-emerald-600' :
+                i === currentStep ? 'bg-violet-600 text-white' :
+                'bg-gray-100 text-gray-400'
+              }`}>
+                {i < currentStep ? <Check size={12} /> : i + 1}
+              </span>
+              {label}
             </button>
+            {i < steps.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-1 last:hidden" />}
           </div>
-        </form>
+        ))}
       </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="mb-8">{renderStep()}</div>
+
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={currentStep === 0 ? () => navigate('/admin/elections') : prevStep}
+            className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+          >
+            {currentStep === 0 ? 'Cancel' : <><ChevronLeft size={16} /> Back</>}
+          </button>
+          <button
+            type="button"
+            onClick={currentStep === steps.length - 1 ? handleSubmit : nextStep}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white text-sm font-semibold transition"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
+            {currentStep === steps.length - 1 ? (loading ? 'Saving...' : 'Publish Election') : 'Continue'}
+          </button>
+        </div>
+      </form>
+
+      {/* 👇 AddCandidateModal */}
+      <AddCandidateModal
+        open={showAddCandidateModal}
+        onClose={() => {
+          setShowAddCandidateModal(false);
+          // Optionally refresh candidate list (if you maintain one)
+          toast.info('You can add more candidates from the Candidates tab later.');
+        }}
+        onSuccess={() => {
+          // Candidate added – you could refresh a local list here.
+          setShowAddCandidateModal(false);
+          toast.success('Candidate added successfully!');
+        }}
+      />
     </div>
   );
 }

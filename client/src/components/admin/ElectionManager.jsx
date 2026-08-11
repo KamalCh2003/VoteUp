@@ -1,6 +1,6 @@
 // src/components/admin/ElectionManager.jsx
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom'; // 👈 added for navigation
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import {
   Search,
@@ -20,13 +20,12 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  Eye, // 👈 added for view icon
+  Eye,
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
 import AddElectionModal from './AddElectionModal';
 
-// Custom Confirmation Dialog (unchanged)
 function ConfirmDialog({ open, title, message, onConfirm, onCancel, loading = false }) {
   if (!open) return null;
   return (
@@ -63,7 +62,8 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel, loading = fa
 }
 
 export default function ElectionManager() {
-  const navigate = useNavigate(); // 👈 for navigation to detail
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [elections, setElections] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -74,13 +74,11 @@ export default function ElectionManager() {
   const [editingElection, setEditingElection] = useState(null);
   const toast = useToast();
 
-  // Batch selection states
   const [selectedIds, setSelectedIds] = useState([]);
   const [loadingBatch, setLoadingBatch] = useState(false);
 
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const itemsPerPage = 10;
 
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -90,8 +88,15 @@ export default function ElectionManager() {
     loading: false,
   });
 
+  // Auto-open create modal if URL contains openCreate=true
   useEffect(() => {
     fetchElections();
+    if (searchParams.get('openCreate') === 'true') {
+      setEditingElection(null);
+      setShowAddModal(true);
+      // Remove query param after opening
+      navigate('/admin/elections', { replace: true });
+    }
   }, []);
 
   const fetchElections = async () => {
@@ -147,12 +152,10 @@ export default function ElectionManager() {
     return searchMatch && statusMatch && categoryMatch && priceMatch && timeMatch;
   });
 
-  // Pagination logic
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedElections = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
 
-  // Selection logic
   const allIds = filtered.map(e => e.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
   const someSelected = selectedIds.length > 0 && !allSelected;
@@ -274,7 +277,6 @@ export default function ElectionManager() {
 
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -286,7 +288,6 @@ export default function ElectionManager() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
           <div className="relative w-full sm:w-60">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -298,13 +299,12 @@ export default function ElectionManager() {
             />
           </div>
 
-          {/* Status Filter */}
           <div className="flex items-center gap-2 px-2 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
             <Filter size={16} className="text-violet-500" />
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-white outline-none cursor-pointer "
+              className="bg-white outline-none cursor-pointer"
             >
               <option value="ALL">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -313,7 +313,6 @@ export default function ElectionManager() {
             </select>
           </div>
 
-          {/* Category Filter */}
           <div className="flex items-center gap-2 px-2 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
             <BarChart3 size={16} className="text-violet-500" />
             <select
@@ -328,7 +327,6 @@ export default function ElectionManager() {
             </select>
           </div>
 
-          {/* Paid/Free Filter */}
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
             <Filter size={16} className="text-violet-500" />
             <select
@@ -342,7 +340,6 @@ export default function ElectionManager() {
             </select>
           </div>
 
-          {/* Time Filter */}
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
             <Clock size={16} className="text-violet-500" />
             <select
@@ -372,7 +369,6 @@ export default function ElectionManager() {
         </div>
       </div>
 
-      {/* Batch actions bar */}
       {selectedIds.length > 0 && (
         <div className="mb-4 flex items-center gap-3 flex-wrap rounded-2xl bg-violet-50 border border-violet-200 px-5 py-3">
           <span className="text-violet-800 font-medium text-sm">
@@ -395,7 +391,6 @@ export default function ElectionManager() {
         </div>
       )}
 
-      {/* Table */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -436,15 +431,10 @@ export default function ElectionManager() {
                         onClick={() => toggleElection(e.id)}
                         className="text-gray-400 hover:text-violet-600 transition"
                       >
-                        {isSelected ? (
-                          <SquareCheckBig size={18} className="text-violet-600" />
-                        ) : (
-                          <SquareIcon size={18} />
-                        )}
+                        {isSelected ? <SquareCheckBig size={18} className="text-violet-600" /> : <SquareIcon size={18} />}
                       </button>
                     </td>
                     <td className="py-4 px-4">
-                      {/* 👇 Clickable title navigates to detail */}
                       <span
                         className="font-medium text-gray-800 cursor-pointer hover:text-violet-600 transition"
                         onClick={() => navigate(`/admin/elections/${e.id}`)}
@@ -488,7 +478,6 @@ export default function ElectionManager() {
                             <StopCircle size={16} />
                           </button>
                         )}
-                        {/* 👇 View button navigates to detail */}
                         <button
                           onClick={() => navigate(`/admin/elections/${e.id}`)}
                           className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition"
@@ -524,7 +513,6 @@ export default function ElectionManager() {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
       <AddElectionModal
         key={editingElection?.id ?? 'create'}
         open={showAddModal}
@@ -536,7 +524,6 @@ export default function ElectionManager() {
         election={editingElection}
       />
 
-      {/* Start/End Confirmation */}
       <ConfirmDialog
         open={confirmDialog.open}
         title={confirmDialog.action === 'start' ? 'Start Election' : 'End Election'}
