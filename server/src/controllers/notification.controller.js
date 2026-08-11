@@ -36,3 +36,49 @@ exports.markAllRead = async (req, res) => {
     res.status(500).json({ error: 'Failed to update' });
   }
 };
+
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const count = await prisma.notification.count({
+      where: { userId: req.user.id, isRead: false },
+    });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get unread count' });
+  }
+};
+
+exports.getAll = async (req, res) => {
+  try {
+    const notifications = await prisma.notification.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ notifications });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+};
+
+
+
+exports.markAllRead = async (req, res) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user.id, isRead: false },
+      data: { isRead: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark all as read' });
+  }
+};
+
+exports.clearAll = async (req, res) => {
+  try {
+    await prisma.notification.deleteMany({ where: { userId: req.user.id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear notifications' });
+  }
+};

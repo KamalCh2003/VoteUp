@@ -1,4 +1,3 @@
-// src/components/layout/Navbar.jsx
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Vote, LogOut, Menu, X, User, Bell, ChevronDown } from 'lucide-react';
@@ -43,7 +42,6 @@ export default function Navbar() {
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  // Desktop navigation links for authenticated users (voter)
   const voterNavLinks = [
     { to: '/voter/dashboard', label: 'Dashboard' },
     { to: '/voter/elections', label: 'Browse Elections' },
@@ -51,7 +49,6 @@ export default function Navbar() {
     { to: '/voter/results', label: 'Results' },
   ];
 
-  // Account dropdown items
   const accountItems = [
     { to: '/voter-profile', label: 'Profile' },
     { to: '/voter-payments', label: 'Payments' },
@@ -65,41 +62,38 @@ export default function Navbar() {
         : 'text-[#64748B] hover:text-purple-600 hover:bg-purple-50'
     }`;
 
-  // ─── PUBLIC NAVBAR (NOT LOGGED IN) ────────────────────────────────
   if (!user) {
     return (
       <>
         <header className="sticky top-0 z-50 border-b border-[#E2E8F0] bg-white/90 backdrop-blur-xl shadow-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
             <div className="flex items-center gap-16">
-            <NavLink
-              to="/"
-              className="flex items-center gap-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A]"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white text-sm font-bold">
-                V
-              </div>
-              <span>
-                Vote<span className="text-purple-600">Up</span>
-              </span>
-            </NavLink>
+              <NavLink
+                to="/"
+                className="flex items-center gap-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A]"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white text-sm font-bold">
+                  V
+                </div>
+                <span>
+                  Vote<span className="text-purple-600">Up</span>
+                </span>
+              </NavLink>
 
-            {/* ── PUBLIC LINKS ── */}
-            <nav className="hidden items-center gap-2 text-sm md:flex">
-              <NavLink to="/FeaturesSection" className={linkClass}>
-                Features
-              </NavLink>
-              <NavLink to="/ElectionList" className={linkClass}>
-                Elections
-              </NavLink>
-              <NavLink to="/FAQSection" className={linkClass}>
-                FAQ
-              </NavLink>
+              <nav className="hidden items-center gap-2 text-sm md:flex">
+                <NavLink to="/FeaturesSection" className={linkClass}>
+                  Features
+                </NavLink>
+                <NavLink to="/ElectionList" className={linkClass}>
+                  Elections
+                </NavLink>
+                <NavLink to="/FAQSection" className={linkClass}>
+                  FAQ
+                </NavLink>
                 <NavLink to="/about" className={linkClass}>
-                About
-              </NavLink>
-
-            </nav>
+                  About
+                </NavLink>
+              </nav>
             </div>
 
             <div className="hidden items-center gap-3 md:flex">
@@ -139,12 +133,10 @@ export default function Navbar() {
     );
   }
 
-  // AUTHENTICATED VOTER NAVBAR
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-[#E2E8F0] bg-white/90 backdrop-blur-xl shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          {/* Logo */}
           <NavLink
             to="/voter/dashboard"
             className="flex items-center gap-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A] flex-shrink-0"
@@ -157,7 +149,6 @@ export default function Navbar() {
             </span>
           </NavLink>
 
-          {/* Desktop Navigation – no icons */}
           <nav className="hidden items-center gap-6 md:flex">
             {voterNavLinks.map((link) => (
               <NavLink
@@ -177,9 +168,7 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Right Side – no theme toggle */}
           <div className="flex items-center gap-3">
-            {/* Notifications Bell */}
             <button
               onClick={() => navigate('/voter-notifications')}
               className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#64748B] hover:border-purple-600 hover:text-purple-600 transition"
@@ -192,8 +181,7 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* User Avatar Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div className="hidden md:flex relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-white px-3 py-1.5 hover:border-purple-600 transition"
@@ -246,7 +234,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="md:hidden rounded-lg p-2 text-[#64748B] hover:bg-gray-100 transition"
@@ -257,7 +244,6 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Drawer – no icons */}
       {isMobileMenuOpen && user && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
@@ -275,22 +261,6 @@ export default function Navbar() {
             </div>
 
             <div className="px-6 py-4">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white font-bold text-lg overflow-hidden">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.firstName} className="w-full h-full object-cover" />
-                  ) : (
-                    `${user.firstName?.[0]}${user.lastName?.[0]}`.toUpperCase()
-                  )}
-                </div>
-                <div>
-                  <div className="font-semibold text-[#0F172A]">
-                    {user.firstName} {user.lastName}
-                  </div>
-                  <div className="text-xs text-[#64748B]">{user.role || 'Voter'}</div>
-                </div>
-              </div>
-
               <nav className="flex flex-col gap-1">
                 {voterNavLinks.map((link) => (
                   <NavLink
@@ -313,7 +283,7 @@ export default function Navbar() {
 
               <hr className="border-[#E2E8F0] my-4" />
 
-              <div className="space-y-1">
+              <nav className="flex flex-col gap-1">
                 {accountItems.map((item) => (
                   <NavLink
                     key={item.to}
@@ -330,7 +300,7 @@ export default function Navbar() {
                     {item.label}
                   </NavLink>
                 ))}
-              </div>
+              </nav>
 
               <button
                 onClick={() => {
@@ -353,6 +323,7 @@ export default function Navbar() {
         onConfirm={() => {
           logout();
           setShowLogoutModal(false);
+          navigate('/login'); // 👈 redirect to login page after logout
         }}
       />
     </>

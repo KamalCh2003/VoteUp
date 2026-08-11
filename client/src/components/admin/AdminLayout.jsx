@@ -21,6 +21,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Shield,
+  PlusCircle, // 👈 added for Create Election
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import LogoutConfirmModal from "../common/LogoutConfirmModal";
@@ -83,10 +84,14 @@ export default function AdminLayout({ children }) {
   const getRoleLabel = () => {
     if (!user) return "Administrator";
     switch (user.role) {
-      case "ADMIN": return "Super Admin";
-      case "CONTESTANT": return "Contestant";
-      case "VOTER": return "Voter";
-      default: return "Administrator";
+      case "ADMIN":
+        return "Super Admin";
+      case "CONTESTANT":
+        return "Contestant";
+      case "VOTER":
+        return "Voter";
+      default:
+        return "Administrator";
     }
   };
 
@@ -102,8 +107,12 @@ export default function AdminLayout({ children }) {
   const fetchPendingCounts = async () => {
     try {
       const [candidatesRes, requestsRes] = await Promise.all([
-        api.get("/admin/candidates", { params: { status: "PENDING", limit: 1 } }),
-        api.get("/admin/election-requests", { params: { status: "PENDING", limit: 1 } }),
+        api.get("/admin/candidates", {
+          params: { status: "PENDING", limit: 1 },
+        }),
+        api.get("/admin/election-requests", {
+          params: { status: "PENDING", limit: 1 },
+        }),
       ]);
       setPendingCandidatesCount(candidatesRes.data.candidates?.length || 0);
       setPendingRequestsCount(requestsRes.data.requests?.length || 0);
@@ -145,7 +154,10 @@ export default function AdminLayout({ children }) {
     }
     setChangingPassword(true);
     try {
-      await api.post("/users/me/change-password", { currentPassword, newPassword });
+      await api.post("/users/me/change-password", {
+        currentPassword,
+        newPassword,
+      });
       alert("Password changed successfully");
       setPasswordModalOpen(false);
       setCurrentPassword("");
@@ -165,27 +177,53 @@ export default function AdminLayout({ children }) {
     {
       label: "Overview",
       items: [
-        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
-        { id: "analytics", label: "Analytics", icon: Trophy, path: "/admin/analytics" },
+        {
+          id: "dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+          path: "/admin/dashboard",
+        },
+        {
+          id: "analytics",
+          label: "Analytics",
+          icon: Trophy,
+          path: "/admin/analytics",
+        },
       ],
     },
     {
       label: "Manage",
       items: [
         { id: "users", label: "Users", icon: Users, path: "/admin/users" },
-        { 
-          id: "candidates", 
-          label: "Contestants", 
-          icon: UserCheck, 
+        {
+          id: "candidates",
+          label: "Contestants",
+          icon: UserCheck,
           path: "/admin/candidates",
           badge: pendingCandidatesCount > 0 ? pendingCandidatesCount : null,
         },
-        { id: "elections", label: "Elections", icon: Vote, path: "/admin/elections" },
-        { id: "finance", label: "Payments", icon: CreditCard, path: "/admin/finance" },
-        { 
-          id: "election-requests", 
-          label: "Requests", 
-          icon: FileText, 
+        {
+          id: "elections",
+          label: "Elections",
+          icon: Vote,
+          path: "/admin/elections",
+        },
+        {
+          id: "create-election",
+          label: "Create Election",
+          icon: PlusCircle,
+          path: "/admin/create-election",
+        },
+        {
+          id: "finance",
+          label: "Payments",
+          icon: CreditCard,
+          path: "/admin/finance",
+        },
+        {
+          id: "election-requests",
+          label: "Requests",
+          icon: FileText,
           path: "/admin/election-requests",
           badge: pendingRequestsCount > 0 ? pendingRequestsCount : null,
         },
@@ -194,22 +232,42 @@ export default function AdminLayout({ children }) {
     {
       label: "Insights",
       items: [
-        { id: "leaderboard", label: "Leaderboard", icon: Trophy, path: "/admin/leaderboard" },
-        { id: "vote-verifier", label: "Vote Verifier", icon: Eye, path: "/admin/vote-verifier" },
-        { id: "audit", label: "Audit Logs", icon: Shield, path: "/admin/audit-logs" },
+        {
+          id: "leaderboard",
+          label: "Leaderboard",
+          icon: Trophy,
+          path: "/admin/leaderboard",
+        },
+        {
+          id: "vote-verifier",
+          label: "Vote Verifier",
+          icon: Eye,
+          path: "/admin/vote-verifier",
+        },
+        {
+          id: "audit",
+          label: "Audit Logs",
+          icon: Shield,
+          path: "/admin/audit-logs",
+        },
       ],
     },
     {
       label: "System",
       items: [
-        { 
-          id: "notifications", 
-          label: "Notifications", 
-          icon: Bell, 
+        {
+          id: "notifications",
+          label: "Notifications",
+          icon: Bell,
           path: "/admin/notifications",
           badge: unreadCount > 0 ? unreadCount : null,
         },
-        { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
+        {
+          id: "settings",
+          label: "Settings",
+          icon: Settings,
+          path: "/admin/settings",
+        },
       ],
     },
   ];
@@ -218,7 +276,8 @@ export default function AdminLayout({ children }) {
     const currentPath = location.pathname;
     for (const group of menuGroups) {
       for (const item of group.items) {
-        if (currentPath.startsWith(item.path)) {
+        if (currentPath.startsWith(item.path.split("?")[0])) {
+          // ignore query params
           return item.id;
         }
       }
@@ -262,7 +321,11 @@ export default function AdminLayout({ children }) {
             className="p-2 rounded-xl hover:bg-[#F8FAFC] transition flex-shrink-0 text-[#64748B]"
             title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+            {sidebarOpen ? (
+              <PanelLeftClose size={18} />
+            ) : (
+              <PanelLeftOpen size={18} />
+            )}
           </button>
         </div>
 
@@ -289,7 +352,9 @@ export default function AdminLayout({ children }) {
                     title={!sidebarOpen ? item.label : ""}
                   >
                     <Icon size={18} className="flex-shrink-0" />
-                    {sidebarOpen && <span className="truncate text-sm">{item.label}</span>}
+                    {sidebarOpen && (
+                      <span className="truncate text-sm">{item.label}</span>
+                    )}
                     {sidebarOpen && item.badge && (
                       <span className="ml-auto bg-[#EF4444] text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                         {item.badge > 99 ? "99+" : item.badge}
@@ -322,7 +387,9 @@ export default function AdminLayout({ children }) {
             </div>
             {sidebarOpen && (
               <div className="overflow-hidden">
-                <h4 className="text-sm font-semibold text-[#0F172A]">{getFullName()}</h4>
+                <h4 className="text-sm font-semibold text-[#0F172A]">
+                  {getFullName()}
+                </h4>
                 <p className="text-xs text-[#64748B]">{getRoleLabel()}</p>
               </div>
             )}
@@ -351,7 +418,9 @@ export default function AdminLayout({ children }) {
                 type="text"
                 placeholder="Search users, elections, payments…"
                 className="bg-transparent outline-none w-full text-[#0F172A] placeholder:text-[#64748B]"
-                onKeyDown={(e) => e.key === "Enter" && alert("Searching for " + e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && alert("Searching for " + e.target.value)
+                }
               />
             </div>
 
@@ -376,7 +445,9 @@ export default function AdminLayout({ children }) {
                   {getInitials()}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <h4 className="text-sm font-semibold text-[#0F172A]">{getFullName()}</h4>
+                  <h4 className="text-sm font-semibold text-[#0F172A]">
+                    {getFullName()}
+                  </h4>
                   <p className="text-xs text-[#64748B]">{getRoleLabel()}</p>
                 </div>
                 <ChevronDown size={16} className="text-[#64748B]" />
@@ -421,6 +492,7 @@ export default function AdminLayout({ children }) {
         <div className="p-6 flex-1 overflow-auto">{children}</div>
       </main>
 
+      {/* Modals (unchanged) */}
       <LogoutConfirmModal
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
@@ -433,12 +505,14 @@ export default function AdminLayout({ children }) {
       {passwordModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md bg-white border border-[#E2E8F0] rounded-3xl shadow-2xl p-6">
-            <h2 className="text-xl font-bold text-[#0F172A] mb-4">Change Password</h2>
+            <h2 className="text-xl font-bold text-[#0F172A] mb-4">
+              Change Password
+            </h2>
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div className="relative">
                 <input
                   className="w-full p-3 pr-12 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-sm text-[#0F172A]"
-                  type={showCurrent ? 'text' : 'password'}
+                  type={showCurrent ? "text" : "password"}
                   placeholder="Current Password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -456,7 +530,7 @@ export default function AdminLayout({ children }) {
               <div className="relative">
                 <input
                   className="w-full p-3 pr-12 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-sm text-[#0F172A]"
-                  type={showNew ? 'text' : 'password'}
+                  type={showNew ? "text" : "password"}
                   placeholder="New Password (min. 8 chars)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -474,7 +548,7 @@ export default function AdminLayout({ children }) {
               <div className="relative">
                 <input
                   className="w-full p-3 pr-12 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-sm text-[#0F172A]"
-                  type={showConfirm ? 'text' : 'password'}
+                  type={showConfirm ? "text" : "password"}
                   placeholder="Confirm New Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
