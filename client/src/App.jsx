@@ -27,6 +27,9 @@ import CastVote from "./components/voter/CastVote";
 import ResultsView from "./components/voter/ResultsView";
 import VoteHistory from "./components/voter/VoteHistory";
 import VoterProfile from "./components/voter/VoterProfile";
+import VoterNotifications from "./components/voter/VoterNotifications";
+import VoterPayments from "./components/voter/VoterPayments";
+import VoterBookmarks from "./components/voter/VoterBookmarks";
 import VoterDashboard from "./components/voter/VoterDashboard";
 import AnalyticsView from "./components/contestant/AnalyticsView";
 import ApplyCandidacy from "./components/contestant/ApplyCandidacy";
@@ -58,6 +61,7 @@ import NotificationCenter from "./components/admin/NotificationCenter";
 import AuditLogs from "./components/admin/AuditLogs";
 import ElectionDetailView from "./components/admin/ElectionDetailView";
 import AdminAnalytics from "./components/admin/AdminAnalytics";
+import CreateElectionPage from "./components/admin/CreateElectionPage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -255,6 +259,17 @@ function AppContent() {
               </Protected>
             }
           />
+
+          <Route
+            path="/admin/create-election"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <CreateElectionPage />
+                </AdminLayout>
+              </Protected>
+            }
+          />
           <Route
             path="/admin/*"
             element={
@@ -301,8 +316,8 @@ function AppContent() {
                   <VoterDashboard />
                 </Protected>
               }
-              />
-              <Route
+            />
+            <Route
               path="/voter/elections"
               element={
                 <Protected roles={["VOTER"]}>
@@ -375,6 +390,32 @@ function AppContent() {
                 </Protected>
               }
             />
+
+            <Route
+              path="/voter-notifications"
+              element={
+                <Protected>
+                  <VoterNotifications />
+                </Protected>
+              }
+            />
+            <Route
+              path="/voter-payments"
+              element={
+                <Protected>
+                  <VoterPayments />
+                </Protected>
+              }
+            />
+            <Route
+              path="/voter-bookmarks"
+              element={
+                <Protected>
+                  <VoterBookmarks />
+                </Protected>
+              }
+            />
+
             <Route
               path="/contestant/analytics"
               element={
