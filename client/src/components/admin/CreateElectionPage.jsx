@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import AddCandidateModal from './AddCandidateModal'; // 👈 imported
+import AddCandidateModal from './AddCandidateModal'; 
 
 const steps = ['General', 'Voting', 'Candidates', 'Payment', 'Preview & Publish'];
 
@@ -20,7 +20,7 @@ export default function CreateElectionPage() {
   const toast = useToast();
   const today = new Date().toISOString().split('T')[0];
 
-  // 👇 State to control the candidate modal
+  // State to control the candidate modal
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -309,7 +309,7 @@ export default function CreateElectionPage() {
         </div>
       </form>
 
-      {/* 👇 AddCandidateModal */}
+      {/* AddCandidateModal */}
       <AddCandidateModal
         open={showAddCandidateModal}
         onClose={() => {
