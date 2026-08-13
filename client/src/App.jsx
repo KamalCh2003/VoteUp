@@ -28,7 +28,6 @@ import ResultsView from "./components/voter/ResultsView";
 import VoteHistory from "./components/voter/VoteHistory";
 import VoterProfile from "./components/voter/VoterProfile";
 import VoterNotifications from "./components/voter/VoterNotifications";
-import VoterPayments from "./components/voter/VoterPayments";
 import VoterBookmarks from "./components/voter/VoterBookmarks";
 import VoterDashboard from "./components/voter/VoterDashboard";
 import AnalyticsView from "./components/contestant/AnalyticsView";
@@ -73,8 +72,7 @@ function ScrollToTop() {
 
 function Protected({ children, roles }) {
   const { isAuthenticated, user, loading } = useAuth();
-  if (loading)
-    return <div className="flex justify-center p-10">Loading...</div>;
+  if (loading) return <div className="flex justify-center p-10">Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" />;
   return children;
@@ -97,8 +95,7 @@ function AppContent() {
     "/payment/callback",
     "/voter-profile",
   ];
-  const shouldHideNavbar =
-    hideNavbarPaths.includes(location.pathname) || isAdminRoute;
+  const shouldHideNavbar = hideNavbarPaths.includes(location.pathname) || isAdminRoute;
 
   const showContestantNavbar = isContestantRoute && !shouldHideNavbar;
   const showPublicNavbar = !shouldHideNavbar && !isContestantRoute;
@@ -199,6 +196,24 @@ function AppContent() {
             }
           />
 
+          {/* ─── Create Election route ─── */}
+          <Route
+            path="/admin/elections/create"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <CreateElectionPage />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+
+          {/* Redirect from old /admin/create-election to new path */}
+          <Route
+            path="/admin/create-election"
+            element={<Navigate to="/admin/elections/create" replace />}
+          />
+
           <Route
             path="/admin/vote-verifier"
             element={
@@ -260,16 +275,6 @@ function AppContent() {
             }
           />
 
-          <Route
-            path="/admin/create-election"
-            element={
-              <Protected roles={["ADMIN"]}>
-                <AdminLayout>
-                  <CreateElectionPage />
-                </AdminLayout>
-              </Protected>
-            }
-          />
           <Route
             path="/admin/*"
             element={
@@ -396,14 +401,6 @@ function AppContent() {
               element={
                 <Protected>
                   <VoterNotifications />
-                </Protected>
-              }
-            />
-            <Route
-              path="/voter-payments"
-              element={
-                <Protected>
-                  <VoterPayments />
                 </Protected>
               }
             />
