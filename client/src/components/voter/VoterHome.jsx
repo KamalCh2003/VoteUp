@@ -21,8 +21,6 @@ export default function Home() {
 
       <HeroSection />
 
-      <StatsSection />
-
       <LiveElectionSection />
 
       <WhoCanUse />

@@ -1,47 +1,75 @@
+// src/pages/VoterDashboard.jsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Vote, Bookmark, CreditCard, CheckCheck, Bell, Loader2 } from 'lucide-react';
+import {
+  Vote,
+  Bookmark,
+  CreditCard,
+  CheckCheck,
+  Bell,
+  Loader2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  User,
+  TrendingUp,
+  Calendar,
+  AlertCircle,
+} from 'lucide-react';
 import api from '../../services/api';
 
 export default function VoterDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ votesCast: 0, activeElections: 0, bookmarks: 0, totalPayments: 0 });
   const [liveElections, setLiveElections] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [visibleActivities, setVisibleActivities] = useState(5);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [paymentError, setPaymentError] = useState(false);
+
+  const loadMore = () => setVisibleActivities(prev => prev + 5);
+  const collapse = () => setVisibleActivities(5);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       setError(null);
+      setPaymentError(false);
+
       try {
-        // 1. Fetch vote history to get count and recent activity
+        // 1. Votes
         const votesRes = await api.get('/users/me/votes');
         const votes = votesRes.data.votes || [];
-        const votesCast = votes.length;
-
-        // 2. Fetch active elections (limit 3)
+const votesCast = votes.reduce((sum, v) => sum + (v.quantity || 1), 0);
+        // 2. Active elections
         const electionsRes = await api.get('/elections', {
           params: { status: 'ACTIVE', limit: 3 },
         });
         const activeElections = electionsRes.data.elections || [];
 
-        // 3. Fetch payment history to get total payments
+        // 3. Payments – with robust error handling
+        let payments = [];
         let totalPayments = 0;
         try {
           const paymentsRes = await api.get('/users/me/payments');
-          const payments = paymentsRes.data.payments || [];
+          // Handle different response structures: { payments: [] } or [] directly
+          payments = paymentsRes.data.payments || paymentsRes.data || [];
+          if (!Array.isArray(payments)) payments = [];
+
           totalPayments = payments
-            .filter(p => p.status === 'COMPLETED')
-            .reduce((sum, p) => sum + p.amount, 0);
+            .filter(p => p.status === 'COMPLETED' || p.status === 'SUCCESS')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
         } catch (err) {
-          // If payments endpoint doesn't exist, fallback to 0
-          console.warn('Payments endpoint not available:', err);
+          console.warn('Payments endpoint not available or error:', err);
+          setPaymentError(true);
+          // Fallback: try to get payments from vote history? Not reliable, but we can use 0.
+          totalPayments = 0;
+          payments = [];
         }
 
-        // 4. Bookmarks – if endpoint exists, fetch; else use 0
+        // 4. Bookmarks
         let bookmarks = 0;
         try {
           const bookmarksRes = await api.get('/users/me/bookmarks');
@@ -50,12 +78,47 @@ export default function VoterDashboard() {
           console.warn('Bookmarks endpoint not available:', err);
         }
 
-        // 5. Recent activity – map recent votes
-        const recent = votes.slice(0, 5).map(v => ({
-          id: v.id,
-          action: `Voted for ${v.candidate?.user?.firstName || 'candidate'} in ${v.election?.title || 'election'}`,
-          time: v.votedAt,
-        }));
+        // ─── Build activity timeline ────────────────────────────────
+        const activityList = [];
+
+        // Vote activities
+        votes.forEach(v => {
+          const candidateName = v.candidate?.user
+            ? `${v.candidate.user.firstName} ${v.candidate.user.lastName}`
+            : 'a candidate';
+          const electionTitle = v.election?.title || 'an election';
+          activityList.push({
+            id: `vote-${v.id}`,
+            type: 'vote',
+            action: `Voted for ${candidateName}`,
+            details: `in ${electionTitle}`,
+            timestamp: new Date(v.votedAt),
+            icon: <CheckCheck size={16} className="text-emerald-600" />,
+            bgColor: 'bg-emerald-100',
+            textColor: 'text-emerald-700',
+          });
+        });
+
+        // Payment activities
+        payments.forEach(p => {
+          if (p.status === 'COMPLETED' || p.status === 'SUCCESS') {
+            const quantity = p.quantity || 1;
+            const amount = p.amount || 0;
+            activityList.push({
+              id: `payment-${p.id}`,
+              type: 'payment',
+              action: `Purchased ${quantity} vote${quantity > 1 ? 's' : ''}`,
+              details: `रू ${amount.toLocaleString()}`,
+              timestamp: new Date(p.createdAt || p.paidAt || Date.now()),
+              icon: <CreditCard size={16} className="text-amber-600" />,
+              bgColor: 'bg-amber-100',
+              textColor: 'text-amber-700',
+            });
+          }
+        });
+
+        // Sort by timestamp descending (newest first)
+        activityList.sort((a, b) => b.timestamp - a.timestamp);
 
         setStats({
           votesCast,
@@ -64,14 +127,10 @@ export default function VoterDashboard() {
           totalPayments,
         });
         setLiveElections(activeElections);
-        setRecentActivity(recent);
+        setActivities(activityList);
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
         setError('Could not load dashboard. Please try again.');
-        // Fallback to static data for demo
-        setStats({ votesCast: 0, activeElections: 0, bookmarks: 0, totalPayments: 0 });
-        setLiveElections([]);
-        setRecentActivity([]);
       } finally {
         setLoading(false);
       }
@@ -102,8 +161,13 @@ export default function VoterDashboard() {
     );
   }
 
+  const displayedActivities = activities.slice(0, visibleActivities);
+  const hasMore = visibleActivities < activities.length;
+  const allShown = visibleActivities >= activities.length && activities.length > 0;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.firstName || 'User'} 👋</h1>
@@ -119,6 +183,7 @@ export default function VoterDashboard() {
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
@@ -157,7 +222,14 @@ export default function VoterDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">Total Payments</p>
-              <h3 className="text-2xl font-bold text-gray-900 mt-1">Rs {stats.totalPayments.toLocaleString()}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {stats.totalPayments > 0 ? `Rs ${stats.totalPayments.toLocaleString()}` : '—'}
+              </h3>
+              {paymentError && (
+                <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
+                  <AlertCircle size={12} /> Unable to fetch
+                </p>
+              )}
             </div>
             <div className="h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center">
               <CreditCard size={22} className="text-amber-600" />
@@ -166,7 +238,9 @@ export default function VoterDashboard() {
         </div>
       </div>
 
+      {/* Bottom Row: Live Elections + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Live Elections */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Live Elections</h3>
@@ -190,20 +264,81 @@ export default function VoterDashboard() {
           </div>
         </div>
 
+        {/* Recent Activity – Modern Timeline */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-          {recentActivity.length > 0 ? (
-            <div className="relative pl-4 border-l-2 border-gray-200 space-y-6">
-              {recentActivity.map((activity, idx) => (
-                <div key={idx} className="relative">
-                  <div className="absolute -left-2.5 top-1 w-3 h-3 rounded-full bg-purple-600 border-2 border-white"></div>
-                  <p className="text-sm text-gray-800 font-medium">{activity.action}</p>
-                  <p className="text-xs text-gray-500">{new Date(activity.time).toLocaleString()}</p>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+            {activities.length > 0 && (
+              <span className="text-xs text-gray-500">{activities.length} total</span>
+            )}
+          </div>
+
+          {activities.length > 0 ? (
+            <div className="space-y-4">
+              {displayedActivities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition"
+                >
+                  <div className={`p-2 rounded-full ${activity.bgColor} flex-shrink-0`}>
+                    {activity.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-gray-800">{activity.action}</p>
+                      <span className="text-xs text-gray-500">{activity.details}</span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Clock size={12} className="text-gray-400" />
+                      <span className="text-xs text-gray-400">
+                        {activity.timestamp.toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    {activity.type === 'vote' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
+                        <CheckCheck size={10} /> Vote
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
+                        <CreditCard size={10} /> Payment
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
+
+              {/* See more / See less buttons */}
+              {hasMore && (
+                <button
+                  onClick={loadMore}
+                  className="w-full mt-2 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 transition flex items-center justify-center gap-1"
+                >
+                  <ChevronDown size={16} /> See more activities ({activities.length - visibleActivities} remaining)
+                </button>
+              )}
+              {allShown && activities.length > 5 && (
+                <button
+                  onClick={collapse}
+                  className="w-full mt-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition flex items-center justify-center gap-1"
+                >
+                  <ChevronUp size={16} /> Show less
+                </button>
+              )}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No recent activity yet.</p>
+            <div className="text-center py-8 text-gray-500">
+              <Clock size={32} className="mx-auto mb-2 opacity-40" />
+              <p>No activity yet.</p>
+              <p className="text-xs">Start voting or make a payment to see activities here.</p>
+            </div>
           )}
         </div>
       </div>

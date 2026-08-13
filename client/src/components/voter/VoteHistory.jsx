@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Loader2, Calendar, User, Hash, DollarSign, TrendingUp } from 'lucide-react';
+import {
+  Loader2,
+  Calendar,
+  User,
+  Hash,
+  DollarSign,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 export default function VoteHistory() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedId, setExpandedId] = useState(null); // track which item is expanded
 
   useEffect(() => {
     fetchVoteHistory();
@@ -36,6 +46,10 @@ export default function VoteHistory() {
 
   const calculateSpend = (votePrice, quantity) =>
     votePrice === 0 ? '—' : `रू ${(votePrice * quantity).toLocaleString()}`;
+
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
 
   if (loading) {
     return (
@@ -72,18 +86,13 @@ export default function VoteHistory() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
-
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Voting History
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Track all your votes across elections
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900">Voting History</h1>
+        <p className="text-gray-500 mt-1">Track all your votes across elections</p>
       </div>
 
-      {/* TABLE (DESKTOP) */}
+      {/* DESKTOP TABLE */}
       <div className="hidden md:block bg-white border rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 border-b">
@@ -97,7 +106,6 @@ export default function VoteHistory() {
               <th className="text-left p-4">Status</th>
             </tr>
           </thead>
-
           <tbody>
             {history.map((vote) => {
               const votePrice = vote.election?.votePrice ?? 0;
@@ -110,10 +118,7 @@ export default function VoteHistory() {
 
               return (
                 <tr key={vote.id} className="border-t hover:bg-gray-50 transition">
-                  <td className="p-4 font-medium text-gray-900">
-                    {vote.election?.title}
-                  </td>
-
+                  <td className="p-4 font-medium text-gray-900">{vote.election?.title}</td>
                   <td className="p-4 flex items-center gap-2">
                     {vote.candidate?.avatarUrl ? (
                       <img
@@ -125,7 +130,6 @@ export default function VoteHistory() {
                     )}
                     <span className="text-gray-700">{name}</span>
                   </td>
-
                   <td className="p-4">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -137,11 +141,9 @@ export default function VoteHistory() {
                       {voteType}
                     </span>
                   </td>
-
                   <td className="p-4 text-gray-700">{vote.quantity || 1}</td>
                   <td className="p-4 font-mono text-gray-800">{spend}</td>
                   <td className="p-4 text-gray-500">{formatDate(vote.votedAt)}</td>
-
                   <td className="p-4">
                     <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
                       Counted
@@ -154,8 +156,8 @@ export default function VoteHistory() {
         </table>
       </div>
 
-      {/* MOBILE CARDS */}
-      <div className="md:hidden space-y-4">
+      {/* MOBILE DROPDOWN CARDS */}
+      <div className="md:hidden space-y-3">
         {history.map((vote) => {
           const votePrice = vote.election?.votePrice ?? 0;
           const spend = calculateSpend(votePrice, vote.quantity);
@@ -165,54 +167,73 @@ export default function VoteHistory() {
             `${vote.candidate?.user?.firstName || ''} ${vote.candidate?.user?.lastName || ''}`.trim() ||
             'Unknown';
 
+          const isExpanded = expandedId === vote.id;
+
           return (
             <div
               key={vote.id}
-              className="bg-white border rounded-xl p-4 shadow-sm"
+              className="bg-white border rounded-xl shadow-sm overflow-hidden"
             >
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-semibold text-gray-900">
-                  {vote.election?.title}
-                </h3>
-
-                <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
-                  Counted
-                </span>
-              </div>
-
-              <div className="space-y-2 text-sm">
-
-                <div className="flex items-center gap-2">
-                  <User size={14} className="text-gray-400" />
-                  <span className="text-gray-700">{name}</span>
+              {/* Header – always visible, click to toggle */}
+              <button
+                onClick={() => toggleExpand(vote.id)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="font-semibold text-gray-900 truncate">
+                    {vote.election?.title}
+                  </span>
+                  <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
+                    Counted
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={14} className="text-gray-400" />
-                  <span className="text-gray-600">{voteType} Vote</span>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      voteType === 'Free'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}
+                  >
+                    {voteType}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp size={18} className="text-gray-500" />
+                  ) : (
+                    <ChevronDown size={18} className="text-gray-500" />
+                  )}
                 </div>
+              </button>
 
-                <div className="flex items-center gap-2">
-                  <Hash size={14} className="text-gray-400" />
-                  <span className="text-gray-700">Qty: {vote.quantity || 1}</span>
+              {/* Expanded details */}
+              {isExpanded && (
+                <div className="px-4 pb-4 pt-1 space-y-2 text-sm border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <User size={14} className="text-gray-400" />
+                    <span className="text-gray-700">{name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={14} className="text-gray-400" />
+                    <span className="text-gray-600">{voteType} Vote</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Hash size={14} className="text-gray-400" />
+                    <span className="text-gray-700">Qty: {vote.quantity || 1}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign size={14} className="text-gray-400" />
+                    <span className="text-gray-700">Spend: {spend}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-gray-400" />
+                    <span className="text-gray-500">{formatDate(vote.votedAt)}</span>
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <DollarSign size={14} className="text-gray-400" />
-                  <span className="text-gray-700">Spend: {spend}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-gray-400" />
-                  <span className="text-gray-500">{formatDate(vote.votedAt)}</span>
-                </div>
-
-              </div>
+              )}
             </div>
           );
         })}
       </div>
-
     </div>
   );
 }
