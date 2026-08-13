@@ -1,40 +1,20 @@
 // src/pages/ResultsPage.jsx
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Clock, RefreshCw, Search, X } from 'lucide-react';
+import { Trophy, Calendar, Search, RefreshCw, Clock, Crown } from 'lucide-react';
 import api from '../../services/api';
 
 export default function ResultsPage() {
   const [activeElections, setActiveElections] = useState([]);
   const [endedElections, setEndedElections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedElection, setSelectedElection] = useState(null);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [timeLeft, setTimeLeft] = useState({});
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
   const hasInitialized = useRef(false);
 
-  const getTimeRemaining = useCallback((endDate) => {
-    const total = Date.parse(endDate) - Date.now();
-    if (total <= 0) return { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
-    const seconds = Math.floor((total / 1000) % 60);
-    const minutes = Math.floor((total / 1000 / 60) % 60);
-    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-    const days = Math.floor(total / (1000 * 60 * 60 * 24));
-    return { total, days, hours, minutes, seconds };
-  }, []);
-
-  const formatCountdown = useCallback((time) => {
-    if (time.total <= 0) return 'Ended';
-    const parts = [];
-    if (time.days > 0) parts.push(`${time.days}d`);
-    if (time.hours > 0) parts.push(`${time.hours}h`);
-    if (time.minutes > 0) parts.push(`${time.minutes}m`);
-    parts.push(`${time.seconds}s`);
-    return parts.join(' ');
-  }, []);
-
+  // ─── Fetch election list ──────────────────────────────────────────────
   const fetchAllElections = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,16 +33,15 @@ export default function ResultsPage() {
       setEndedElections(ended);
       setLastUpdated(new Date());
 
-      const currentId = selectedElection?.id;
-      const stillActive = active.some(e => e.id === currentId);
-      const stillEnded = ended.some(e => e.id === currentId);
-      const selectionValid = stillActive || stillEnded;
-
       if (!hasInitialized.current) {
         hasInitialized.current = true;
-        if (active.length > 0) {
-          const firstActive = active[0];
-          const { data } = await api.get(`/elections/${firstActive.id}`);
+        let electionToSelect = null;
+        // Prefer ended elections, else pick first active
+        if (ended.length > 0) electionToSelect = ended[0];
+        else if (active.length > 0) electionToSelect = active[0];
+
+        if (electionToSelect) {
+          const { data } = await api.get(`/elections/${electionToSelect.id}`);
           const election = data.election;
           const sorted = [...(election.candidates || [])].sort(
             (a, b) => b.votesReceived - a.votesReceived
@@ -73,56 +52,63 @@ export default function ResultsPage() {
           setSelectedElection(null);
           setSelectedCandidates([]);
         }
-      } else if (!selectionValid) {
-        setSelectedElection(null);
-        setSelectedCandidates([]);
-      } else if (stillActive) {
-        const { data } = await api.get(`/elections/${currentId}`);
-        const election = data.election;
-        const sorted = [...(election.candidates || [])].sort(
-          (a, b) => b.votesReceived - a.votesReceived
-        );
-        setSelectedElection(election);
-        setSelectedCandidates(sorted);
-      } else if (stillEnded) {
-        const { data } = await api.get(`/elections/${currentId}`);
-        const election = data.election;
-        const sorted = [...(election.candidates || [])].sort(
-          (a, b) => b.votesReceived - a.votesReceived
-        );
-        setSelectedElection(election);
-        setSelectedCandidates(sorted);
       }
-
-      const initialTime = {};
-      active.forEach((e) => {
-        initialTime[e.id] = getTimeRemaining(e.endDate);
-      });
-      setTimeLeft(initialTime);
     } catch (err) {
       console.error('Failed to fetch elections:', err);
     } finally {
       setLoading(false);
     }
-  }, [getTimeRemaining, selectedElection?.id]);
+  }, []);
+
+  // ─── Fetch a single election (only for ended ones) ──────────────────
+  const fetchSelectedElection = useCallback(async () => {
+    if (!selectedElection) return;
+    // Only fetch details if the election is ended
+    if (selectedElection.status !== 'ENDED') return;
+    try {
+      setRefreshing(true);
+      const { data } = await api.get(`/elections/${selectedElection.id}`);
+      const election = data.election;
+      const sorted = [...(election.candidates || [])].sort(
+        (a, b) => b.votesReceived - a.votesReceived
+      );
+      setSelectedElection(election);
+      setSelectedCandidates(sorted);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Failed to refresh election:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedElection?.id, selectedElection?.status]);
+
+  // ─── Effects ──────────────────────────────────────────────────────────
 
   useEffect(() => {
     fetchAllElections();
-    const interval = setInterval(fetchAllElections, 30000);
-    return () => clearInterval(interval);
+    const listInterval = setInterval(fetchAllElections, 30000);
+    return () => clearInterval(listInterval);
   }, [fetchAllElections]);
 
+  // Poll only if selected election is ENDED
   useEffect(() => {
-    if (!activeElections.length) return;
-    const interval = setInterval(() => {
-      const updated = {};
-      activeElections.forEach((e) => {
-        updated[e.id] = getTimeRemaining(e.endDate);
-      });
-      setTimeLeft(updated);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [activeElections, getTimeRemaining]);
+    if (!selectedElection) return;
+    // If active, we don't fetch details (no results to show)
+    if (selectedElection.status !== 'ENDED') {
+      // We still want to show the election info, but no leaderboard
+      // and no polling.
+      return;
+    }
+
+    // Initial fetch for ended election
+    fetchSelectedElection();
+
+    // Refresh every 30 seconds (though votes won't change, good for safety)
+    const pollInterval = setInterval(fetchSelectedElection, 30000);
+    return () => clearInterval(pollInterval);
+  }, [selectedElection?.id, selectedElection?.status, fetchSelectedElection]);
+
+  // ─── Handlers ────────────────────────────────────────────────────────
 
   const handleSelectElection = useCallback(
     async (electionId) => {
@@ -135,10 +121,6 @@ export default function ResultsPage() {
         );
         setSelectedElection(election);
         setSelectedCandidates(sorted);
-
-        if (window.innerWidth < 1024) {
-          setMobileModalOpen(true);
-        }
       } catch (err) {
         console.error(err);
       }
@@ -146,16 +128,25 @@ export default function ResultsPage() {
     [selectedElection]
   );
 
+  // ─── Filters ────────────────────────────────────────────────────────
+
   const filteredEnded = useMemo(() => {
     return endedElections.filter((e) =>
       e.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [endedElections, searchTerm]);
 
+  const filteredActive = useMemo(() => {
+    return activeElections.filter((e) =>
+      e.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [activeElections, searchTerm]);
+
+  // ─── Election Item ──────────────────────────────────────────────────
+
   const ElectionItem = ({ election, type }) => {
-    const remaining = timeLeft[election.id] || {};
-    const isActive = type === 'active';
     const isSelected = selectedElection?.id === election.id;
+    const isActive = type === 'active';
 
     return (
       <div
@@ -171,7 +162,6 @@ export default function ResultsPage() {
             <h3 className="font-semibold text-gray-900">{election.title}</h3>
             <p className="text-xs text-gray-500 mt-1">{election.category}</p>
           </div>
-
           {isActive ? (
             <div className="text-xs text-green-600 flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -186,93 +176,145 @@ export default function ResultsPage() {
             )
           )}
         </div>
-
-        {isActive && remaining.total > 0 && (
-          <div className="mt-2 flex items-center gap-1 text-xs text-blue-600">
-            <Clock size={12} />
-            <span className="font-mono">{formatCountdown(remaining)}</span>
-          </div>
-        )}
+        <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+          <Calendar size={12} />
+          <span>
+            {isActive
+              ? `Ends ${new Date(election.endDate).toLocaleDateString()}`
+              : `Ended ${new Date(election.endDate).toLocaleDateString()}`}
+          </span>
+        </div>
       </div>
     );
   };
 
-  const renderResultContent = () => (
-    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-      <div className={`p-5 border-b ${
-        selectedElection.status === 'ACTIVE' ? 'bg-green-50' : 'bg-red-50'
-      }`}>
-        <h2 className="text-xl font-bold">{selectedElection.title}</h2>
-        <p className="text-sm text-gray-500">{selectedElection.description}</p>
-        <div className="flex gap-4 text-xs text-gray-500 mt-2">
-          <span>
-            <Calendar size={12} className="inline mr-1" />
-            {new Date(selectedElection.startDate).toLocaleDateString()} -{' '}
-            {new Date(selectedElection.endDate).toLocaleDateString()}
-          </span>
-          <span>{selectedElection.status}</span>
-        </div>
-      </div>
+  // ─── Leaderboard Renderer ──────────────────────────────────────────
 
-      <table className="w-full text-sm">
-        <thead className="bg-gray-100 text-gray-600">
-          <tr>
-            {selectedElection.status === 'ENDED' && (
-              <th className="p-3 text-left">Rank</th>
-            )}
-            <th className="p-3 text-left">Candidate</th>
-            <th className="p-3 text-left">Party</th>
-            {selectedElection.status === 'ENDED' && (
-              <th className="p-3 text-right">Votes</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {selectedCandidates.map((c, i) => {
-            const avatarUrl = c.avatarUrl;
-            const initials = `${c.user?.firstName?.[0] || ''}${c.user?.lastName?.[0] || ''}`;
+  const renderLeaderboard = () => {
+    if (!selectedElection) {
+      return (
+        <div className="bg-white border rounded-xl p-10 text-center text-gray-500">
+          Select an election to view results.
+        </div>
+      );
+    }
+
+    // For active elections, show "coming soon" message
+    if (selectedElection.status === 'ACTIVE') {
+      return (
+        <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b bg-blue-50">
+            <h2 className="text-xl font-bold">{selectedElection.title}</h2>
+            <p className="text-sm text-gray-500">{selectedElection.description}</p>
+            <div className="flex gap-4 text-xs text-gray-500 mt-2">
+              <span>
+                <Calendar size={12} className="inline mr-1" />
+                Ends: {new Date(selectedElection.endDate).toLocaleDateString()}
+              </span>
+              <span className="text-blue-600 font-medium">LIVE</span>
+            </div>
+          </div>
+          <div className="p-10 text-center text-gray-500">
+            <Clock size={48} className="mx-auto mb-3 text-blue-400" />
+            <p className="text-lg font-medium">Results not yet available</p>
+            <p className="text-sm">Results will be published after the election ends.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // For ended elections, show full leaderboard
+    const totalVotes = selectedCandidates.reduce((sum, c) => sum + (c.votesReceived || 0), 0);
+    const maxVotes = selectedCandidates.length > 0 ? Math.max(...selectedCandidates.map(c => c.votesReceived || 0)) : 1;
+
+    return (
+      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+        <div className="p-5 border-b bg-gray-50">
+          <h2 className="text-xl font-bold">{selectedElection.title}</h2>
+          <p className="text-sm text-gray-500">{selectedElection.description}</p>
+          <div className="flex gap-4 text-xs text-gray-500 mt-2">
+            <span>
+              <Calendar size={12} className="inline mr-1" />
+              Ended: {new Date(selectedElection.endDate).toLocaleDateString()}
+            </span>
+            <span>Total votes: {totalVotes.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="divide-y divide-gray-100">
+          {selectedCandidates.map((candidate, index) => {
+            const rank = index + 1;
+            const voteCount = candidate.votesReceived || 0;
+            const widthPercent = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
+
+            let rankBadge;
+            if (rank === 1) {
+              rankBadge = (
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-white font-bold shadow-md">
+                  <Crown size={18} />
+                </div>
+              );
+            } else if (rank === 2) {
+              rankBadge = (
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-white font-bold shadow-md">
+                  2
+                </div>
+              );
+            } else if (rank === 3) {
+              rankBadge = (
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-amber-600 to-amber-700 text-white font-bold shadow-md">
+                  3
+                </div>
+              );
+            } else {
+              rankBadge = (
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 font-bold">
+                  {rank}
+                </div>
+              );
+            }
+
             return (
-              <tr key={c.id} className="border-t">
-                {selectedElection.status === 'ENDED' && (
-                  <td className="p-3 font-bold">#{i + 1}</td>
-                )}
-                <td className="p-3 flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt={initials} className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-white text-xs font-bold">{initials}</span>
-                    )}
+              <div key={candidate.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition">
+                <div className="flex-shrink-0">{rankBadge}</div>
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {candidate.avatarUrl ? (
+                    <img src={candidate.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-white text-sm font-bold">
+                      {candidate.user?.firstName?.[0] || ''}{candidate.user?.lastName?.[0] || ''}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">
+                    {candidate.user?.firstName} {candidate.user?.lastName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{candidate.party || 'Independent'}</p>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="hidden sm:block w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full transition-all duration-500"
+                      style={{ width: `${widthPercent}%` }}
+                    />
                   </div>
-                  <span>{c.user?.firstName} {c.user?.lastName}</span>
-                </td>
-                <td className="p-3 text-gray-600">{c.party || 'Independent'}</td>
-                {selectedElection.status === 'ENDED' && (
-                  <td className="p-3 text-right font-mono text-gray-700">
-                    {c.votesReceived?.toLocaleString() || 0}
-                  </td>
-                )}
-              </tr>
+                  <span className="text-sm font-mono font-medium text-gray-700 min-w-[60px] text-right">
+                    {voteCount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             );
           })}
           {selectedCandidates.length === 0 && (
-            <tr>
-              <td
-                colSpan={selectedElection.status === 'ENDED' ? 4 : 2}
-                className="text-center p-6 text-gray-400"
-              >
-                No candidates found
-              </td>
-            </tr>
+            <div className="p-10 text-center text-gray-400">No candidates found</div>
           )}
-        </tbody>
-      </table>
-
-      <div className="p-3 text-xs text-gray-500 text-right border-t">
-        Total candidates: {selectedCandidates.length}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  // ─── Loading state ──────────────────────────────────────────────────
 
   if (loading && !selectedElection) {
     return (
@@ -284,71 +326,70 @@ export default function ResultsPage() {
 
   return (
     <div className="min-h-screen text-gray-900">
-      <div className="mx-auto max-w-7xl px-6 py-8 flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-1/3 space-y-6">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Results</h1>
           <div className="text-xs text-gray-500 flex items-center gap-2">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-            Last updated: {lastUpdated?.toLocaleTimeString() || '--:--'}
-          </div>
-
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-            <input
-              className="w-full pl-9 pr-3 py-2 rounded-lg border bg-white text-sm focus:ring-2 focus:ring-blue-400 outline-none"
-              placeholder="Search past elections..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <h2 className="font-bold mb-3 flex items-center gap-2 text-gray-800">
-              <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></span>
-              Ongoing Elections
-            </h2>
-            <div className="space-y-3">
-              {activeElections.map((e) => (
-                <ElectionItem key={e.id} election={e} type="active" />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="font-bold mb-3 flex items-center gap-2 text-gray-800">
-              <Trophy size={16} /> Past Elections
-            </h2>
-            <div className="space-y-3">
-              {filteredEnded.map((e) => (
-                <ElectionItem key={e.id} election={e} type="ended" />
-              ))}
-            </div>
+            {lastUpdated?.toLocaleTimeString() || '--:--'}
           </div>
         </div>
 
-        <div className="hidden lg:block lg:w-2/3">
-          {!selectedElection ? (
-            <div className="bg-white border rounded-xl p-10 text-center text-gray-500">
-              Select an election to view results
+        {/* Main layout – stack on mobile, side-by-side on desktop */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar – election list */}
+          <div className="lg:w-1/3 space-y-4">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+              <input
+                className="w-full pl-9 pr-3 py-2 rounded-lg border bg-white text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+                placeholder="Search elections..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          ) : (
-            renderResultContent()
-          )}
+
+            {filteredActive.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 mb-2 flex items-center gap-2">
+                  <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Ongoing
+                </h3>
+                <div className="space-y-3">
+                  {filteredActive.map((e) => (
+                    <ElectionItem key={e.id} election={e} type="active" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {filteredEnded.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 mb-2 flex items-center gap-2">
+                  <Trophy size={14} /> Past
+                </h3>
+                <div className="space-y-3">
+                  {filteredEnded.map((e) => (
+                    <ElectionItem key={e.id} election={e} type="ended" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {filteredActive.length === 0 && filteredEnded.length === 0 && (
+              <div className="text-center text-gray-500 py-8">
+                {searchTerm ? 'No matching elections' : 'No elections found.'}
+              </div>
+            )}
+          </div>
+
+          {/* Leaderboard – only shows ranking for ended elections */}
+          <div className="flex-1">
+            {renderLeaderboard()}
+          </div>
         </div>
       </div>
-
-      {mobileModalOpen && selectedElection && (
-        <div className="fixed inset-0 z-50 lg:hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setMobileModalOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl bg-white/90 hover:bg-gray-100 transition text-gray-500 z-10"
-            >
-              <X size={20} />
-            </button>
-            {renderResultContent()}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

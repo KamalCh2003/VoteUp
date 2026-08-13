@@ -31,6 +31,9 @@ export default function ElectionList() {
   const [categories, setCategories] = useState([]);
   const [bookmarks, setBookmarks] = useState(new Set());
   const [votedElections, setVotedElections] = useState(new Set());
+  
+  // Candidate counts per election (keyed by election id)
+  const [candidateCounts, setCandidateCounts] = useState({});
 
   const getTimeRemaining = (endDate) => {
     const total = Date.parse(endDate) - Date.now();
@@ -61,16 +64,32 @@ export default function ElectionList() {
       const all = res.data.elections || [];
       setElections(all);
 
+      // Extract unique categories
       const cats = new Set();
       all.forEach(e => { if (e.category) cats.add(e.category); });
       setCategories(Array.from(cats));
 
+      // Initial countdown for active elections
       const initial = {};
       all.filter(e => e.status === 'ACTIVE').forEach(e => {
         initial[e.id] = getTimeRemaining(e.endDate);
       });
       setTimeLeft(initial);
 
+      // --- Fetch candidate counts for each election ---
+      // (if the list endpoint doesn't include candidates)
+      // We'll fetch each election's details to get the candidate array length.
+      const countPromises = all.map(election =>
+        api.get(`/elections/${election.id}`)
+          .then(res => ({ id: election.id, count: res.data.election.candidates?.length || 0 }))
+          .catch(() => ({ id: election.id, count: 0 }))
+      );
+      const countResults = await Promise.all(countPromises);
+      const counts = {};
+      countResults.forEach(r => counts[r.id] = r.count);
+      setCandidateCounts(counts);
+
+      // Get voted elections if user logged in
       if (user) {
         try {
           const votesRes = await api.get('/users/me/votes');
@@ -94,6 +113,7 @@ export default function ElectionList() {
     fetchElections();
   }, []);
 
+  // Countdown timer
   useEffect(() => {
     if (!elections.length) return;
     const active = elections.filter(e => e.status === 'ACTIVE');
@@ -154,7 +174,9 @@ export default function ElectionList() {
     const isEnded = election.status === 'ENDED';
     const hasVoted = votedElections.has(election.id);
     const isBookmarked = bookmarks.has(election.id);
-    const candidateCount = election.candidates?.length || 0;
+    
+    // Use fetched candidate count, fallback to election.candidates?.length if available
+    const candidateCount = candidateCounts[election.id] ?? election.candidates?.length ?? 0;
 
     return (
       <div className="group relative rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 overflow-hidden">
