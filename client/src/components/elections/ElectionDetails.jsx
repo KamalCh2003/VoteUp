@@ -118,7 +118,6 @@ export default function ElectionDetails() {
       toast.success("Vote cast successfully!");
       const electionRes = await api.get(`/elections/${id}`);
       setElection(electionRes.data.election);
-      // For free elections, update hasVoted to true so it shows "Voted"
       if (isFree) {
         setHasVoted(true);
       }
@@ -144,14 +143,12 @@ export default function ElectionDetails() {
     }
     const candidate = election.candidates.find((c) => c.id === candidateId);
     if (isFree) {
-      // Free election: only one vote per user
       if (hasVoted) {
         toast.error("You have already voted in this free election");
         return;
       }
       openConfirmModal(candidateId);
     } else {
-      // Paid election: allow multiple votes
       setSelectedCandidate(candidate);
       setQuantity(1);
       setShowPaymentModal(true);
@@ -207,6 +204,85 @@ export default function ElectionDetails() {
     { id: 'faq', label: 'FAQ', icon: FileText },
   ];
 
+  // Shared candidate card renderer – rectangular image (80%) + text/buttons (20%)
+  const renderCandidateCards = () => {
+    if (!election.candidates || election.candidates.length === 0) {
+      return <p className="text-gray-500 text-center py-8 col-span-full">No candidates yet.</p>;
+    }
+
+    return election.candidates.map((candidate) => {
+      const isCopied = copiedCandidateId === candidate.id;
+      let buttonDisabled = false;
+      let buttonText = 'Vote';
+      if (!isActive) {
+        buttonDisabled = true;
+        buttonText = election.status === 'ENDED' ? 'Ended' : 'Not Active';
+      } else if (user && user.role !== 'VOTER') {
+        buttonDisabled = true;
+        buttonText = 'Not allowed';
+      } else if (isFree && hasVoted) {
+        buttonDisabled = true;
+        buttonText = 'Voted';
+      }
+
+      return (
+        <div
+          key={candidate.id}
+          className="flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+        >
+          {/* Image section – 80% of card height (aspect ratio ~4:3) */}
+          <div className="relative w-full pt-[75%] bg-gradient-to-br from-violet-500 to-indigo-500">
+            {candidate.avatarUrl ? (
+              <img
+                src={candidate.avatarUrl}
+                alt={`${candidate.user?.firstName} ${candidate.user?.lastName}`}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-white text-4xl font-bold">
+                {candidate.user?.firstName?.[0]}{candidate.user?.lastName?.[0]}
+              </div>
+            )}
+          </div>
+
+          {/* Text + buttons section – 20% of card */}
+          <div className="p-3 flex flex-col items-center justify-between flex-1">
+            <div className="text-center">
+              <p className="font-semibold text-gray-900 text-sm truncate w-full">
+                {candidate.user?.firstName} {candidate.user?.lastName}
+              </p>
+              <p className="text-xs text-gray-500">{candidate.party || 'Independent'}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={() => handleVote(candidate.id)}
+                disabled={buttonDisabled || votingCandidateId === candidate.id}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  !buttonDisabled && !(votingCandidateId === candidate.id)
+                    ? 'bg-violet-600 text-white hover:bg-violet-700'
+                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {votingCandidateId === candidate.id ? '...' : buttonText}
+              </button>
+              <button
+                onClick={() => handleShare(candidate)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition"
+                title="Share candidate profile"
+              >
+                {isCopied ? (
+                  <CheckCircle size={16} className="text-emerald-500" />
+                ) : (
+                  <Share2 size={16} />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    });
+  };
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -243,159 +319,133 @@ export default function ElectionDetails() {
           </div>
         </div>
 
-        {/* Main Content: Tabs + Sidebar */}
+        {/* Main Content: Desktop Tabs + Sidebar, Mobile simplified */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main area (left column on desktop) */}
           <div className="lg:col-span-2">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition ${
-                      activeTab === tab.id
-                        ? 'border-violet-600 text-violet-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Icon size={16} /> {tab.label}
-                  </button>
-                );
-              })}
+            {/* --- MOBILE VIEW (hidden on desktop) --- */}
+            <div className="block lg:hidden space-y-6">
+              {/* Election description */}
+              <div className="hidden bg-white rounded-xl border border-gray-200 p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">About this election</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  {election.description || 'No description provided.'}
+                </p>
+              </div>
+
+              {/* Candidate cards – mobile */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Candidates ({election.candidates?.length || 0})
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderCandidateCards()}
+                </div>
+              </div>
             </div>
 
-            {/* Tab Content */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              {activeTab === 'overview' && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">About this election</h3>
-                  <p className="text-gray-700 leading-relaxed">{election.description || 'No description provided.'}</p>
-                  <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Start Date</span><br /><span className="font-medium">{new Date(election.startDate).toLocaleString()}</span></div>
-                    <div><span className="text-gray-500">End Date</span><br /><span className="font-medium">{new Date(election.endDate).toLocaleString()}</span></div>
-                    <div><span className="text-gray-500">Category</span><br /><span className="font-medium">{election.category}</span></div>
-                    <div><span className="text-gray-500">Candidates</span><br /><span className="font-medium">{election.candidates?.length || 0}</span></div>
-                    <div className="col-span-2"><span className="text-gray-500">Vote Price</span><br /><span className="font-medium">{election.votePrice === 0 ? 'Free' : `रू ${election.votePrice}`}</span></div>
-                  </div>
-                </div>
-              )}
+            {/* --- DESKTOP VIEW (hidden on mobile) --- */}
+            <div className="hidden lg:block">
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition ${
+                        activeTab === tab.id
+                          ? 'border-violet-600 text-violet-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <Icon size={16} /> {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-              {activeTab === 'candidates' && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Candidates ({election.candidates?.length || 0})</h3>
-                  <div className="space-y-3">
-                    {election.candidates?.map((candidate) => {
-                      const isCopied = copiedCandidateId === candidate.id;
-                      // Determine button state
-                      let buttonDisabled = false;
-                      let buttonText = 'Vote';
-                      if (!isActive) {
-                        buttonDisabled = true;
-                        buttonText = election.status === 'ENDED' ? 'Ended' : 'Not Active';
-                      } else if (user && user.role !== 'VOTER') {
-                        buttonDisabled = true;
-                        buttonText = 'Not allowed';
-                      } else if (isFree && hasVoted) {
-                        buttonDisabled = true;
-                        buttonText = 'Voted';
-                      }
-                      // For paid elections, button is always enabled (if active and user is voter)
-                      // We don't disable based on hasVoted for paid.
-                      return (
-                        <div key={candidate.id} className="flex items-center gap-4 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden flex-shrink-0">
-                            {candidate.avatarUrl ? <img src={candidate.avatarUrl} alt="avatar" className="w-full h-full object-cover" /> : `${candidate.user?.firstName?.[0]}${candidate.user?.lastName?.[0]}`}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 truncate">{candidate.user?.firstName} {candidate.user?.lastName}</p>
-                            <p className="text-xs text-gray-500">{candidate.party || 'Independent'}</p>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                              onClick={() => handleVote(candidate.id)}
-                              disabled={buttonDisabled || votingCandidateId === candidate.id}
-                              className={`px-4 py-1.5 rounded-lg text-sm font-medium ${
-                                !buttonDisabled && !(votingCandidateId === candidate.id)
-                                  ? 'bg-violet-600 text-white hover:bg-violet-700'
-                                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              }`}
-                            >
-                              {votingCandidateId === candidate.id ? '...' : buttonText}
-                            </button>
-                            <button
-                              onClick={() => handleShare(candidate)}
-                              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition"
-                              title="Share candidate profile"
-                            >
-                              {isCopied ? <CheckCircle size={16} className="text-emerald-500" /> : <Share2 size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {(!election.candidates || election.candidates.length === 0) && (
-                      <p className="text-gray-500 text-center py-8">No candidates yet.</p>
+              {/* Tab Content */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                {activeTab === 'overview' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">About this election</h3>
+                    <p className="text-gray-700 leading-relaxed">{election.description || 'No description provided.'}</p>
+                    <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
+                      <div><span className="text-gray-500">Start Date</span><br /><span className="font-medium">{new Date(election.startDate).toLocaleString()}</span></div>
+                      <div><span className="text-gray-500">End Date</span><br /><span className="font-medium">{new Date(election.endDate).toLocaleString()}</span></div>
+                      <div><span className="text-gray-500">Category</span><br /><span className="font-medium">{election.category}</span></div>
+                      <div><span className="text-gray-500">Candidates</span><br /><span className="font-medium">{election.candidates?.length || 0}</span></div>
+                      <div className="col-span-2"><span className="text-gray-500">Vote Price</span><br /><span className="font-medium">{election.votePrice === 0 ? 'Free' : `रू ${election.votePrice}`}</span></div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'candidates' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Candidates ({election.candidates?.length || 0})</h3>
+                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+                      {renderCandidateCards()}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'rules' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Rules & Eligibility</h3>
+                    {election.rules ? (
+                      <div className="whitespace-pre-wrap text-gray-700">{election.rules}</div>
+                    ) : (
+                      <p className="text-gray-500">No specific rules provided.</p>
                     )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {activeTab === 'rules' && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Rules & Eligibility</h3>
-                  {election.rules ? (
-                    <div className="whitespace-pre-wrap text-gray-700">{election.rules}</div>
-                  ) : (
-                    <p className="text-gray-500">No specific rules provided.</p>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'timeline' && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
-                  <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
-                    <div className="relative">
-                      <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
-                      <p className="font-medium text-gray-800">Registration opened</p>
-                      <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
-                      <p className="font-medium text-gray-800">Voting begins</p>
-                      <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
-                      <p className="font-medium text-gray-800">Voting ends</p>
-                      <p className="text-sm text-gray-500">{new Date(election.endDate).toLocaleString()}</p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
-                      <p className="font-medium text-gray-800">Results announced</p>
-                      <p className="text-sm text-gray-500">Within 24 hours of close</p>
+                {activeTab === 'timeline' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
+                    <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
+                      <div className="relative">
+                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <p className="font-medium text-gray-800">Registration opened</p>
+                        <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <p className="font-medium text-gray-800">Voting begins</p>
+                        <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <p className="font-medium text-gray-800">Voting ends</p>
+                        <p className="text-sm text-gray-500">{new Date(election.endDate).toLocaleString()}</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <p className="font-medium text-gray-800">Results announced</p>
+                        <p className="text-sm text-gray-500">Within 24 hours of close</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {activeTab === 'faq' && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
-                  <div className="space-y-4">
-                    <div><p className="font-medium text-gray-800">Can I change my vote after submitting?</p><p className="text-sm text-gray-600">No – once your vote is confirmed with OTP, it is final and cannot be changed.</p></div>
-                    <div><p className="font-medium text-gray-800">Who can vote in this election?</p><p className="text-sm text-gray-600">Any verified voter meeting this election's eligibility criteria.</p></div>
-                    <div><p className="font-medium text-gray-800">When will results be published?</p><p className="text-sm text-gray-600">Live results are visible throughout voting, with certified final results within 24 hours of close.</p></div>
+                {activeTab === 'faq' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
+                    <div className="space-y-4">
+                      <div><p className="font-medium text-gray-800">Can I change my vote after submitting?</p><p className="text-sm text-gray-600">No – once your vote is confirmed with OTP, it is final and cannot be changed.</p></div>
+                      <div><p className="font-medium text-gray-800">Who can vote in this election?</p><p className="text-sm text-gray-600">Any verified voter meeting this election's eligibility criteria.</p></div>
+                      <div><p className="font-medium text-gray-800">When will results be published?</p><p className="text-sm text-gray-600">Live results are visible throughout voting, with certified final results within 24 hours of close.</p></div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right Sidebar */}
-          <div className="space-y-6">
+          {/* Right Sidebar – hidden on mobile */}
+          <div className="hidden lg:block space-y-6">
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-800 mb-4">Election Info</h3>
               <div className="space-y-3 text-sm">
@@ -404,7 +454,6 @@ export default function ElectionDetails() {
                 <div className="flex justify-between"><span className="text-gray-500">Price per vote</span><span className="font-medium">{election.votePrice === 0 ? 'Free' : `रू ${election.votePrice}`}</span></div>
               </div>
               {isActive && user?.role === 'VOTER' && (
-                // Show "Vote Now" only if free and not voted, or always for paid
                 (isFree && !hasVoted) || (!isFree) ? (
                   <button
                     onClick={() => setActiveTab('candidates')}
