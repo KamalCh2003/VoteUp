@@ -1,4 +1,3 @@
-// src/components/voter/VoterProfile.jsx
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -132,8 +131,19 @@ export default function VoterProfile() {
     }
   };
 
-  const backLink = user?.role === "CONTESTANT" ? "/contestant/dashboard" : "/";
-  const backLabel = user?.role === "CONTESTANT" ? "Back to Dashboard" : "Back to Home";
+  let backLink = "/";
+  let backLabel = "Back to Home";
+
+  if (user?.role === "VOTER") {
+    backLink = "/voter/dashboard";
+    backLabel = "Back";
+  } else if (user?.role === "CONTESTANT") {
+    backLink = "/contestant/dashboard";
+    backLabel = "Back";
+  } else if (user?.role === "ADMIN") {
+    backLink = "/admin/dashboard";
+    backLabel = "Back";
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -156,7 +166,7 @@ export default function VoterProfile() {
         </Link>
       </div>
 
-      {/* Profile content – bottom padding removed */}
+      {/* Profile content */}
       <div className="mt-4 max-w-lg mx-auto space-y-6 pb-0 px-4">
         {/* Personal Info Card */}
         <GlassCard>
@@ -217,10 +227,31 @@ export default function VoterProfile() {
 
           {/* Edit form */}
           <form onSubmit={handleUpdate} className="space-y-3">
-            <input className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" placeholder="First Name" value={profile.firstName} onChange={(e) => setProfile({ ...profile, firstName: e.target.value })} />
-            <input className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" placeholder="Last Name" value={profile.lastName} onChange={(e) => setProfile({ ...profile, lastName: e.target.value })} />
-            <input className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" type="email" placeholder="Email" value={profile.email} disabled />
-            <input className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" placeholder="Phone" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} />
+            <input
+              className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+              placeholder="First Name"
+              value={profile.firstName}
+              onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+            />
+            <input
+              className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+              placeholder="Last Name"
+              value={profile.lastName}
+              onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+            />
+            <input
+              className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+              type="email"
+              placeholder="Email"
+              value={profile.email}
+              disabled
+            />
+            <input
+              className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+              placeholder="Phone"
+              value={profile.phone}
+              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+            />
             <Button type="submit" variant="primary" className="w-full" disabled={saving}>
               {saving ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Save Changes"}
             </Button>
@@ -235,20 +266,56 @@ export default function VoterProfile() {
           </h2>
           <form onSubmit={handleChangePassword} className="space-y-3">
             <div className="relative">
-              <input className="w-full p-3 pr-12 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" type={showCurrent ? "text" : "password"} placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition" tabIndex={-1}>
+              <input
+                className="w-full p-3 pr-12 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+                type={showCurrent ? "text" : "password"}
+                placeholder="Current Password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                tabIndex={-1}
+              >
                 {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             <div className="relative">
-              <input className="w-full p-3 pr-12 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" type={showNew ? "text" : "password"} placeholder="New Password (min. 8 chars)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition" tabIndex={-1}>
+              <input
+                className="w-full p-3 pr-12 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+                type={showNew ? "text" : "password"}
+                placeholder="New Password (min. 8 chars)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                tabIndex={-1}
+              >
                 {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             <div className="relative">
-              <input className="w-full p-3 pr-12 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm" type={showConfirm ? "text" : "password"} placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition" tabIndex={-1}>
+              <input
+                className="w-full p-3 pr-12 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
+                type={showConfirm ? "text" : "password"}
+                placeholder="Confirm New Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                tabIndex={-1}
+              >
                 {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
