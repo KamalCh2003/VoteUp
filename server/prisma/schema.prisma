@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 
 }
 
@@ -67,6 +68,7 @@ model User {
   anonymousMode      Boolean             @default(true)
   votes              Vote[]
   notifications      Notification[]
+  bookmarks          Bookmark[]
   payments           Payment[]
   auditLogs          AuditLog[]
   candidates         Candidate[]
@@ -122,6 +124,8 @@ model Election {
   votes           Vote[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+
+  bookmarks       Bookmark[]
 }
 
 model Vote {
@@ -229,3 +233,15 @@ model ElectionRequest {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model Bookmark {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  electionId String
+  election   Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, electionId])
+}
+
