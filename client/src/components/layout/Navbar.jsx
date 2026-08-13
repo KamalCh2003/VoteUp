@@ -1,6 +1,7 @@
+// src/components/Navbar.jsx
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Vote, LogOut, Menu, X, User, Bell, ChevronDown } from 'lucide-react';
+import { LogOut, Menu, X, Bell, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import LogoutConfirmModal from '../common/LogoutConfirmModal';
 import api from '../../services/api';
@@ -15,19 +16,21 @@ export default function Navbar() {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    if (user) {
-      const fetchUnreadCount = async () => {
-        try {
-          const res = await api.get('/notifications/unread-count');
-          setUnreadCount(res.data.count || 0);
-        } catch (err) {
-          console.error('Failed to fetch unread count:', err);
-        }
-      };
-      fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }
+    if (!user) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await api.get('/users/me/notifications/unread-count');
+        setUnreadCount(res.data.count || 0);
+      } catch (err) {
+        console.error('Failed to fetch unread count:', err);
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
@@ -261,6 +264,23 @@ export default function Navbar() {
             </div>
 
             <div className="px-6 py-4">
+              {/* Mobile menu user info */}
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[#E2E8F0]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white font-bold text-sm overflow-hidden flex-shrink-0">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.firstName} className="w-full h-full object-cover" />
+                  ) : (
+                    `${user.firstName?.[0]}${user.lastName?.[0]}`.toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[#0F172A] truncate">
+                    {user.firstName} {user.lastName}
+                  </div>
+                  <div className="text-xs text-[#64748B]">{user.role || 'Voter'}</div>
+                </div>
+              </div>
+
               <nav className="flex flex-col gap-1">
                 {voterNavLinks.map((link) => (
                   <NavLink
@@ -323,7 +343,7 @@ export default function Navbar() {
         onConfirm={() => {
           logout();
           setShowLogoutModal(false);
-          navigate('/login'); // 👈 redirect to login page after logout
+          navigate('/login');
         }}
       />
     </>
