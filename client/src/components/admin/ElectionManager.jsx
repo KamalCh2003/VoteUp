@@ -1,4 +1,3 @@
-// src/components/admin/ElectionManager.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
@@ -88,14 +87,11 @@ export default function ElectionManager() {
     loading: false,
   });
 
-  // Auto-open create modal if URL contains openCreate=true
+  // Auto-open create modal if URL contains openCreate=true (now redirects to create page)
   useEffect(() => {
     fetchElections();
     if (searchParams.get('openCreate') === 'true') {
-      setEditingElection(null);
-      setShowAddModal(true);
-      // Remove query param after opening
-      navigate('/admin/elections', { replace: true });
+      navigate('/admin/elections/create', { replace: true });
     }
   }, []);
 
@@ -355,12 +351,10 @@ export default function ElectionManager() {
             </select>
           </div>
 
+          {/* ─── Create Election Button – now navigates to dedicated page ─── */}
           <Button
             variant="primary"
-            onClick={() => {
-              setEditingElection(null);
-              setShowAddModal(true);
-            }}
+            onClick={() => navigate('/admin/elections/create')}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white"
           >
             <Plus size={16} />
