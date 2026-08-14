@@ -87,7 +87,7 @@ export default function Navbar() {
                 <NavLink to="/FeaturesSection" className={linkClass}>
                   Features
                 </NavLink>
-                <NavLink to="/ElectionList" className={linkClass}>
+                <NavLink to="/Elections" className={linkClass}>
                   Elections
                 </NavLink>
                 <NavLink to="/FAQSection" className={linkClass}>
