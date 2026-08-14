@@ -114,11 +114,13 @@ model Election {
   maxCandidates   Int            @default(10)
   totalVotes      Int            @default(0)
   maxVoters       Int?
+  maxVotesPerUser  Int            @default(1)
   votePrice       Int            @default(100)
   rules           String?
   organizerName   String?
   organizerEmail  String?
   organizerPhone  String?
+  bannerUrl       String? 
   createdBy       String
   candidates      Candidate[]
   votes           Vote[]
