@@ -1,10 +1,8 @@
-// controllers/election.controller.js
 const prisma = require('../config/database');
 const { createAuditLog } = require('../utils/audit');
 
 exports.getAll = async (req, res) => {
   try {
-    // Move expired active elections to ENDED
     await prisma.election.updateMany({
       where: { status: 'ACTIVE', endDate: { lte: new Date() } },
       data: { status: 'ENDED' },
@@ -75,26 +73,51 @@ exports.create = async (req, res) => {
       organizerName,
       organizerEmail,
       organizerPhone,
+      maxVotesPerUser,
     } = req.body;
 
     const parsedMaxCandidates = parseInt(maxCandidates, 10) || 10;
-    const parsedMaxVoters = maxVoters ? parseInt(maxVoters, 10) : null;
-    const parsedVotePrice = parseInt(votePrice, 10) || 100;
+
+    let parsedMaxVoters = null;
+    if (maxVoters !== undefined && maxVoters !== null && maxVoters !== '') {
+      parsedMaxVoters = parseInt(maxVoters, 10);
+      if (isNaN(parsedMaxVoters) || parsedMaxVoters < 0) {
+        return res.status(400).json({ error: 'Max voters must be a non-negative integer' });
+      }
+    }
+
+    let parsedVotePrice = 100;
+    if (votePrice !== undefined && votePrice !== null && votePrice !== '') {
+      parsedVotePrice = parseInt(votePrice, 10);
+      if (isNaN(parsedVotePrice) || parsedVotePrice < 0) {
+        return res.status(400).json({ error: 'Vote price must be a non-negative integer' });
+      }
+    }
+
+    let parsedMaxVotesPerUser = 1;
+    if (maxVotesPerUser !== undefined && maxVotesPerUser !== null && maxVotesPerUser !== '') {
+      parsedMaxVotesPerUser = parseInt(maxVotesPerUser, 10);
+      if (isNaN(parsedMaxVotesPerUser) || parsedMaxVotesPerUser < 1) {
+        return res.status(400).json({ error: 'Max votes per user must be at least 1' });
+      }
+    }
 
     if (parsedMaxCandidates < 1) {
       return res.status(400).json({ error: 'Max candidates must be at least 1' });
     }
-    if (parsedMaxVoters !== null && parsedMaxVoters < 0) {
-      return res.status(400).json({ error: 'Max voters cannot be negative' });
-    }
-    if (parsedVotePrice < 0) {
-      return res.status(400).json({ error: 'Vote price cannot be negative' });
+    if (parsedMaxVotesPerUser > parsedMaxCandidates) {
+      return res.status(400).json({ error: 'Max votes per user cannot exceed max candidates' });
     }
 
     const parsedStartDate = new Date(startDate);
     const parsedEndDate = new Date(endDate);
     if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
       return res.status(400).json({ error: 'Invalid start or end date' });
+    }
+
+    let bannerUrl = null;
+    if (req.file) {
+      bannerUrl = req.file.path;
     }
 
     const election = await prisma.election.create({
@@ -111,11 +134,12 @@ exports.create = async (req, res) => {
         organizerName,
         organizerEmail,
         organizerPhone,
+        bannerUrl,
+        maxVotesPerUser: parsedMaxVotesPerUser,
         createdBy: req.user.id,
       },
     });
 
-    // 🔐 Audit log
     await createAuditLog({
       userId: req.user.id,
       event: 'ELECTION_CREATED',
@@ -148,12 +172,12 @@ exports.update = async (req, res) => {
       organizerEmail,
       organizerPhone,
       status,
+      maxVotesPerUser,
     } = req.body;
 
     const current = await prisma.election.findUnique({ where: { id } });
     if (!current) return res.status(404).json({ error: 'Election not found' });
 
-    // 1. Prevent ending the election before its end date
     if (status === 'ENDED' && current.status !== 'ENDED') {
       const now = new Date();
       if (now < new Date(current.endDate)) {
@@ -163,7 +187,6 @@ exports.update = async (req, res) => {
       }
     }
 
-    // 2. Prevent activating the election if not enough approved candidates
     if (status === 'ACTIVE' && current.status !== 'ACTIVE') {
       const approvedCandidateCount = await prisma.candidate.count({
         where: { electionId: id, status: 'APPROVED' },
@@ -175,7 +198,14 @@ exports.update = async (req, res) => {
       }
     }
 
-    // 3. Validate other limit updates (cannot reduce below current usage)
+    const updateData = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (category !== undefined) updateData.category = category;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (endDate !== undefined) updateData.endDate = new Date(endDate);
+
     if (maxCandidates !== undefined) {
       const newMax = parseInt(maxCandidates, 10);
       if (newMax < 1) return res.status(400).json({ error: 'Max candidates must be at least 1' });
@@ -183,40 +213,60 @@ exports.update = async (req, res) => {
       if (newMax < currentCandidateCount) {
         return res.status(400).json({ error: `Cannot reduce max candidates below current candidate count (${currentCandidateCount})` });
       }
-    }
-    if (maxVoters !== undefined) {
-      const newMax = maxVoters ? parseInt(maxVoters, 10) : null;
-      if (newMax !== null && newMax < 0) return res.status(400).json({ error: 'Max voters cannot be negative' });
-      if (newMax !== null && newMax < current.totalVotes) {
-        return res.status(400).json({ error: `Cannot reduce max voters below current total votes (${current.totalVotes})` });
-      }
-    }
-    if (votePrice !== undefined) {
-      const newPrice = parseInt(votePrice, 10);
-      if (newPrice < 0) return res.status(400).json({ error: 'Vote price cannot be negative' });
+      updateData.maxCandidates = newMax;
     }
 
-    const updateData = {};
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
-    if (category !== undefined) updateData.category = category;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
-    if (endDate !== undefined) updateData.endDate = new Date(endDate);
-    if (maxCandidates !== undefined) updateData.maxCandidates = parseInt(maxCandidates, 10);
-    if (maxVoters !== undefined) updateData.maxVoters = maxVoters ? parseInt(maxVoters, 10) : null;
-    if (votePrice !== undefined) updateData.votePrice = parseInt(votePrice, 10);
+    if (maxVoters !== undefined) {
+      let newMax = null;
+      if (maxVoters !== null && maxVoters !== '') {
+        newMax = parseInt(maxVoters, 10);
+        if (isNaN(newMax) || newMax < 0) {
+          return res.status(400).json({ error: 'Max voters must be a non-negative integer' });
+        }
+        if (newMax < current.totalVotes) {
+          return res.status(400).json({ error: `Cannot reduce max voters below current total votes (${current.totalVotes})` });
+        }
+      }
+      updateData.maxVoters = newMax;
+    }
+
+    if (votePrice !== undefined) {
+      if (votePrice === null || votePrice === '') {
+        return res.status(400).json({ error: 'Vote price cannot be empty' });
+      }
+      const newPrice = parseInt(votePrice, 10);
+      if (isNaN(newPrice) || newPrice < 0) {
+        return res.status(400).json({ error: 'Vote price must be a non-negative integer' });
+      }
+      updateData.votePrice = newPrice;
+    }
+
+    if (maxVotesPerUser !== undefined) {
+      if (maxVotesPerUser === null || maxVotesPerUser === '') {
+        return res.status(400).json({ error: 'Max votes per user cannot be empty' });
+      }
+      const newMaxVotes = parseInt(maxVotesPerUser, 10);
+      if (isNaN(newMaxVotes) || newMaxVotes < 1) {
+        return res.status(400).json({ error: 'Max votes per user must be at least 1' });
+      }
+      if (newMaxVotes > (maxCandidates || current.maxCandidates)) {
+        return res.status(400).json({ error: 'Max votes per user cannot exceed max candidates' });
+      }
+      updateData.maxVotesPerUser = newMaxVotes;
+    }
+
     if (rules !== undefined) updateData.rules = rules;
     if (organizerName !== undefined) updateData.organizerName = organizerName;
     if (organizerEmail !== undefined) updateData.organizerEmail = organizerEmail;
     if (organizerPhone !== undefined) updateData.organizerPhone = organizerPhone;
     if (status !== undefined) updateData.status = status;
+    if (req.file) updateData.bannerUrl = req.file.path;
 
     const election = await prisma.election.update({
       where: { id },
       data: updateData,
     });
 
-    // 🔐 Audit log
     await createAuditLog({
       userId: req.user.id,
       event: 'ELECTION_UPDATED',
@@ -240,7 +290,6 @@ exports.delete = async (req, res) => {
 
     await prisma.election.delete({ where: { id } });
 
-    // 🔐 Audit log
     await createAuditLog({
       userId: req.user.id,
       event: 'ELECTION_DELETED',
