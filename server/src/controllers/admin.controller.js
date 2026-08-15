@@ -209,8 +209,6 @@ exports.deleteUser = async (req, res) => {
     if (user.id === req.user.id) {
       return res.status(403).json({ error: 'You cannot delete your own account' });
     }
-
-    // Delete related records...
     await prisma.user.delete({ where: { id } });
 
     await createAuditLog({
@@ -232,7 +230,7 @@ exports.updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    const validRoles = ['VOTER', 'CONTESTANT', 'ADMIN'];
+    const validRoles = ['VOTER', 'CONTESTANT'];
     if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -270,6 +268,8 @@ exports.getAllCandidates = async (req, res) => {
         election: {
           select: { id: true, title: true, status: true, category: true },
         },
+        createdByAdmin: { select: { id: true, firstName: true, lastName: true } },
+
       },
       orderBy: { createdAt: "desc" },
     });
@@ -305,6 +305,7 @@ exports.updateCandidate = async (req, res) => {
           select: { id: true, email: true, firstName: true, lastName: true },
         },
         election: { select: { id: true, title: true } },
+        createdByAdmin: { select: { id: true, firstName: true, lastName: true } },
       },
     });
 
@@ -328,7 +329,7 @@ exports.deleteCandidate = async (req, res) => {
     const { id } = req.params;
     const candidate = await prisma.candidate.findUnique({
       where: { id },
-      include: { user: true, election: true },
+      include: { user: true, election: true, createdByAdmin: true },
     });
     if (!candidate)
       return res.status(404).json({ error: "Candidate not found" });
@@ -353,10 +354,39 @@ exports.approveCandidate = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const candidate = await prisma.candidate.update({
+
+    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const candidate = await prisma.candidate.findUnique({
+      where: { id },
+      include: { election: true, user: true },
+    });
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
+    if (status === 'APPROVED') {
+      const approvedCount = await prisma.candidate.count({
+        where: {
+          electionId: candidate.electionId,
+          status: 'APPROVED',
+          id: { not: candidate.id },
+        },
+      });
+      const maxAllowed = candidate.election.maxCandidates || 10;
+      if (approvedCount >= maxAllowed) {
+        return res.status(400).json({
+          error: `Cannot approve more than ${maxAllowed} candidates for this election.`,
+        });
+      }
+    }
+
+    const updated = await prisma.candidate.update({
       where: { id },
       data: { status },
-      include: { user: true, election: true },
+      include: { user: true, election: true, createdByAdmin: true },
     });
 
     await prisma.notification.create({
@@ -381,7 +411,7 @@ exports.approveCandidate = async (req, res) => {
       result: "OK",
     });
 
-    res.json({ candidate });
+    res.json({ candidate: updated });
   } catch (err) {
     console.error("Approve candidate error:", err);
     res.status(500).json({ error: "Approval failed" });
@@ -399,6 +429,7 @@ exports.createCandidateFromAdmin = async (req, res) => {
       slogan,
       bio,
       candidateNumber,
+      
     } = req.body;
     const avatarUrl = req.file ? req.file.path : null;
 
@@ -465,10 +496,11 @@ exports.createCandidateFromAdmin = async (req, res) => {
         slogan,
         bio,
         avatarUrl,
+        createdByAdminId: req.user.id,
       },
+      include: { user: true, election: true, createdByAdmin: true },
     });
 
-    // Send emails (non‑blocking)
     if (isNewUser && tempPassword) {
       try {
         await emailService.sendWelcomePassword(
@@ -952,7 +984,6 @@ exports.submitElectionRequest = async (req, res) => {
   }
 };
 
-
 exports.getElectionRequests = async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
@@ -1073,14 +1104,12 @@ exports.replyToElectionRequest = async (req, res) => {
 
 exports.getAnalytics = async (req, res) => {
   try {
-    // 1. Total votes by category
     const votesByCategory = await prisma.election.groupBy({
       by: ['category'],
       _sum: { totalVotes: true },
       orderBy: { _sum: { totalVotes: 'desc' } },
     });
 
-    // 2. Total revenue by category – raw query returns BigInt
     const revenueByCategory = await prisma.$queryRaw`
       SELECT e.category, SUM(p.amount) as revenue
       FROM "Payment" p
@@ -1091,13 +1120,11 @@ exports.getAnalytics = async (req, res) => {
       ORDER BY revenue DESC
     `;
 
-    // Convert BigInt to Number
     const revenueByCategoryFormatted = revenueByCategory.map(item => ({
       ...item,
       revenue: Number(item.revenue) || 0,
     }));
 
-    // 3. Top 5 elections by vote count
     const topElections = await prisma.election.findMany({
       select: {
         id: true,
@@ -1110,7 +1137,6 @@ exports.getAnalytics = async (req, res) => {
       take: 5,
     });
 
-    // 4. Monthly vote trend (last 6 months)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     const monthlyVotes = await prisma.$queryRaw`
@@ -1121,20 +1147,17 @@ exports.getAnalytics = async (req, res) => {
       ORDER BY month ASC
     `;
 
-    // Convert BigInt to Number
     const monthlyVotesFormatted = monthlyVotes.map(item => ({
       month: item.month,
       votes: Number(item.votes) || 0,
     }));
 
-    // 5. Payment method breakdown
     const paymentsByMethod = await prisma.payment.groupBy({
       by: ['type'],
       _count: { id: true },
       _sum: { amount: true },
     });
 
-    // 6. Overall stats
     const [totalVotes, totalRevenue, activeElections, totalUsers] = await Promise.all([
       prisma.vote.count(),
       prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED' } }),
