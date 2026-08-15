@@ -13,6 +13,10 @@ function timeAgo(date) {
   return `${days} day ago`;
 }
 
+function getClientIp(req) {
+  return req.ip || req.headers['x-forwarded-for'] || 'unknown';
+}
+
 exports.apply = async (req, res) => {
   try {
     const { electionId, party, slogan, bio } = req.body;
@@ -55,6 +59,7 @@ exports.apply = async (req, res) => {
         avatarUrl,
         status: 'PENDING',
       },
+      include: { user: true },
     });
 
     // Notify admins
@@ -74,7 +79,6 @@ exports.apply = async (req, res) => {
       });
     }
 
-    // Audit log
     await createAuditLog({
       userId: req.user.id,
       event: 'CANDIDACY_APPLIED',
@@ -95,7 +99,7 @@ exports.getMyCandidacy = async (req, res) => {
     const candidate = await prisma.candidate.findFirst({
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
-      include: { election: true },
+      include: { election: true, user: true },
     });
     res.json({ candidate });
   } catch (err) {
@@ -132,9 +136,9 @@ exports.updateProfile = async (req, res) => {
         ...(instagramHandle !== undefined && { instagramHandle }),
         ...(req.file && { avatarUrl }),
       },
+      include: { user: true, election: true },
     });
 
-    // 🔐 Audit log
     await createAuditLog({
       userId: req.user.id,
       event: 'CANDIDATE_PROFILE_UPDATED',
