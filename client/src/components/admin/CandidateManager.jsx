@@ -18,14 +18,14 @@ export default function ContestantManagement() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [electionFilter, setElectionFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [timeFilter, setTimeFilter] = useState('ALL');
+  const [filterDate, setFilterDate] = useState('');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [candidateToEdit, setCandidateToEdit] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(9); // 3 columns × 3 rows
+  const [itemsPerPage] = useState(9);
   const toast = useToast();
 
   const [selectedIds, setSelectedIds] = useState([]);
@@ -74,27 +74,6 @@ export default function ContestantManagement() {
     return Array.from(cats).sort();
   }, [elections]);
 
-  const getTimeFilterCutoff = () => {
-    if (timeFilter === 'ALL') return null;
-    const now = new Date();
-    switch (timeFilter) {
-      case 'TODAY': {
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        return today;
-      }
-      case 'LAST_7_DAYS':
-        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      case 'LAST_30_DAYS':
-        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      case 'THIS_YEAR':
-        return new Date(now.getFullYear(), 0, 1);
-      default:
-        return null;
-    }
-  };
-
-  const timeCutoff = getTimeFilterCutoff();
-
   const filtered = candidatesWithRank.filter(c => {
     const searchMatch = 
       `${c.user?.firstName} ${c.user?.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -104,11 +83,17 @@ export default function ContestantManagement() {
     const statusMatch = statusFilter === 'ALL' ? true : c.status === statusFilter;
     const electionMatch = electionFilter === 'ALL' ? true : c.election?.id === electionFilter;
     const categoryMatch = categoryFilter === 'ALL' ? true : c.election?.category === categoryFilter;
-    const timeMatch = !timeCutoff ? true : new Date(c.createdAt) >= timeCutoff;
-    return searchMatch && statusMatch && electionMatch && categoryMatch && timeMatch;
+    let dateMatch = true;
+    if (filterDate) {
+      const d = new Date(c.createdAt);
+      const filter = new Date(filterDate);
+      dateMatch = d.getFullYear() === filter.getFullYear() &&
+                  d.getMonth() === filter.getMonth() &&
+                  d.getDate() === filter.getDate();
+    }
+    return searchMatch && statusMatch && electionMatch && categoryMatch && dateMatch;
   });
 
-  // 📌 PAGINATION
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedCandidates = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
@@ -119,7 +104,9 @@ export default function ContestantManagement() {
       toast.success('Contestant approved');
       fetchCandidates();
       if (selectedCandidate?.id === id) setSelectedCandidate(prev => ({ ...prev, status: 'APPROVED' }));
-    } catch { toast.error('Approval failed'); }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Approval failed');
+    }
   };
 
   const handleReject = async (id) => {
@@ -171,9 +158,10 @@ export default function ContestantManagement() {
     { label: 'Rejected', value: 'REJECTED', count: rejected },
   ];
 
+  const clearDateFilter = () => setFilterDate('');
+
   return (
     <div className="p-6 bg-gray-50 text-gray-800 min-h-screen">
-      {/* Header: Title + Filters in a single row */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">List of Contestants</h2>
@@ -194,19 +182,21 @@ export default function ContestantManagement() {
             <option value="ALL">All Categories</option>
             {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <Clock size={16} className="text-violet-500" />
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value)}
-              className="bg-white text-gray-800 outline-none cursor-pointer"
-            >
-              <option value="ALL">All Time</option>
-              <option value="TODAY">Today</option>
-              <option value="LAST_7_DAYS">Last 7 days</option>
-              <option value="LAST_30_DAYS">Last 30 days</option>
-              <option value="THIS_YEAR">This year</option>
-            </select>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+            />
+            {filterDate && (
+              <button
+                onClick={clearDateFilter}
+                className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
+              >
+                Clear date
+              </button>
+            )}
           </div>
           <Button variant="primary" onClick={() => setAddModalOpen(true)} className="bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-xl">
             <UserPlus size={16} className="mr-1.5" /> Add Contestant
@@ -214,7 +204,6 @@ export default function ContestantManagement() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-6 border-b border-gray-200 mb-6">
         {tabs.map(tab => (
           <button
@@ -227,10 +216,12 @@ export default function ContestantManagement() {
         ))}
       </div>
 
-      {/* Candidate Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {paginatedCandidates.map(c => {
           const avatarInitials = c.user?.firstName?.[0] + c.user?.lastName?.[0] || '?';
+          const addedBy = c.createdByAdmin
+            ? `${c.createdByAdmin.firstName} ${c.createdByAdmin.lastName}`
+            : 'System';
           return (
             <div key={c.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition p-5 flex flex-col">
               <div className="flex items-center gap-4 mb-3">
@@ -264,6 +255,11 @@ export default function ContestantManagement() {
               <div className="flex justify-between text-xs text-gray-500 mb-4">
                 <span>Party: {c.party || 'Independent'}</span>
                 <span>#{c.candidateNumber || '—'}</span>
+              </div>
+
+              {/* 👇 New: Show who added this candidate */}
+              <div className="text-xs text-gray-400 mb-2">
+                Added by: {addedBy}
               </div>
 
               <div className="flex gap-2 mt-auto">
@@ -317,7 +313,6 @@ export default function ContestantManagement() {
         <div className="text-center py-12 text-gray-500">No contestants found.</div>
       )}
 
-      {/* 📌 PAGINATION CONTROLS */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-8 text-sm">
           <button
@@ -338,7 +333,6 @@ export default function ContestantManagement() {
         </div>
       )}
 
-      {/* Detail Modal */}
       {showDetailModal && selectedCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -369,7 +363,7 @@ export default function ContestantManagement() {
                 <div><p className="text-gray-500 text-xs uppercase tracking-wide">Category</p><p className="text-gray-900">{selectedCandidate.election?.category || 'N/A'}</p></div>
                 <div><p className="text-gray-500 text-xs uppercase tracking-wide">Party / Organization</p><p className="text-gray-900">{selectedCandidate.party || 'Independent'}</p></div>
                 <div><p className="text-gray-500 text-xs uppercase tracking-wide">Slogan</p><p className="text-gray-900 italic">{selectedCandidate.slogan || '—'}</p></div>
-                <div className="md:col-span-2"><p className="text-gray-500 text-xs uppercase tracking-wide">Bio</p><p className="text-gray-700 text-sm">{selectedCandidate.bio || 'No bio provided'}</p></div>
+                <div><p className="text-gray-500 text-xs uppercase tracking-wide">Bio</p><p className="text-gray-700 text-sm">{selectedCandidate.bio || 'No bio provided'}</p></div>
               </div>
 
               <div className="border-t border-gray-200 pt-4 mb-4">
@@ -378,6 +372,13 @@ export default function ContestantManagement() {
                   <span className="text-gray-500">Rank:</span><span className="text-gray-900">#{selectedCandidate.rank || '—'}</span>
                   <span className="text-gray-500">Total Votes:</span><span className="text-gray-900">{selectedCandidate.votesReceived?.toLocaleString()}</span>
                   <span className="text-gray-500">Joined:</span><span className="text-gray-900">{new Date(selectedCandidate.createdAt).toLocaleDateString()}</span>
+                  {/* 👇 New: Added By */}
+                  <span className="text-gray-500">Added By:</span>
+                  <span className="text-gray-900">
+                    {selectedCandidate.createdByAdmin
+                      ? `${selectedCandidate.createdByAdmin.firstName} ${selectedCandidate.createdByAdmin.lastName}`
+                      : 'System'}
+                  </span>
                 </div>
               </div>
 
@@ -410,10 +411,8 @@ export default function ContestantManagement() {
         </div>
       )}
 
-      {/* Add Modal */}
       <AddCandidateModal open={addModalOpen} onClose={() => setAddModalOpen(false)} onSuccess={fetchCandidates} />
 
-      {/* Edit Modal */}
       <EditCandidateModal
         open={editModalOpen}
         onClose={() => { setEditModalOpen(false); setCandidateToEdit(null); }}

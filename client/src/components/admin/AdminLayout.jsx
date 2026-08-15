@@ -21,7 +21,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Shield,
-  PlusCircle, // 👈 added for Create Election
+  PlusCircle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import LogoutConfirmModal from "../common/LogoutConfirmModal";
@@ -107,14 +107,14 @@ export default function AdminLayout({ children }) {
   const fetchPendingCounts = async () => {
     try {
       const [candidatesRes, requestsRes] = await Promise.all([
-        api.get("/admin/candidates", {
-          params: { status: "PENDING", limit: 1 },
-        }),
+        api.get("/admin/candidates"),
         api.get("/admin/election-requests", {
           params: { status: "PENDING", limit: 1 },
         }),
       ]);
-      setPendingCandidatesCount(candidatesRes.data.candidates?.length || 0);
+      const allCandidates = candidatesRes.data.candidates || [];
+      const pendingCandidates = allCandidates.filter((c) => c.status === "PENDING");
+      setPendingCandidatesCount(pendingCandidates.length);
       setPendingRequestsCount(requestsRes.data.requests?.length || 0);
     } catch (err) {
       console.error("Failed to fetch pending counts:", err);
@@ -277,7 +277,6 @@ export default function AdminLayout({ children }) {
     for (const group of menuGroups) {
       for (const item of group.items) {
         if (currentPath.startsWith(item.path.split("?")[0])) {
-          // ignore query params
           return item.id;
         }
       }
@@ -304,7 +303,7 @@ export default function AdminLayout({ children }) {
       >
         <div className="flex items-center justify-between px-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] flex items-center justify-center shadow-sm flex-shrink-0">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] flex items-center justify-center shadow-sm flex-shrink-0">
               <Vote size={18} className="text-white" />
             </div>
             {sidebarOpen && (
@@ -492,7 +491,6 @@ export default function AdminLayout({ children }) {
         <div className="p-6 flex-1 overflow-auto">{children}</div>
       </main>
 
-      {/* Modals (unchanged) */}
       <LogoutConfirmModal
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
