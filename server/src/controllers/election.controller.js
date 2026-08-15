@@ -94,6 +94,7 @@ exports.create = async (req, res) => {
       }
     }
 
+    // Parse and validate max votes per user (single/multiple choice)
     let parsedMaxVotesPerUser = 1;
     if (maxVotesPerUser !== undefined && maxVotesPerUser !== null && maxVotesPerUser !== '') {
       parsedMaxVotesPerUser = parseInt(maxVotesPerUser, 10);
@@ -241,6 +242,7 @@ exports.update = async (req, res) => {
       updateData.votePrice = newPrice;
     }
 
+    // Update max votes per user with validation against current or new maxCandidates
     if (maxVotesPerUser !== undefined) {
       if (maxVotesPerUser === null || maxVotesPerUser === '') {
         return res.status(400).json({ error: 'Max votes per user cannot be empty' });
@@ -249,7 +251,9 @@ exports.update = async (req, res) => {
       if (isNaN(newMaxVotes) || newMaxVotes < 1) {
         return res.status(400).json({ error: 'Max votes per user must be at least 1' });
       }
-      if (newMaxVotes > (maxCandidates || current.maxCandidates)) {
+      // Use the new maxCandidates if provided, otherwise current
+      const maxCand = maxCandidates !== undefined ? parseInt(maxCandidates, 10) : current.maxCandidates;
+      if (newMaxVotes > maxCand) {
         return res.status(400).json({ error: 'Max votes per user cannot exceed max candidates' });
       }
       updateData.maxVotesPerUser = newMaxVotes;
