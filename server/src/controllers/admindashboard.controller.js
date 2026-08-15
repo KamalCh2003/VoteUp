@@ -163,6 +163,8 @@ const deleteCandidate = catchAsync(async (req, res) => {
   res.json({ success: true, message: 'Candidate deleted' });
 });
 
+
+
 module.exports = {
   getAllUsers,
   getUserById,
