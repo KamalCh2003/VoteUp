@@ -72,6 +72,7 @@ model User {
   payments           Payment[]
   auditLogs          AuditLog[]
   candidates         Candidate[]
+  createdCandidates Candidate[] @relation("AdminAddedCandidates")
   paymentIntents     PaymentIntent[]     
   verificationTokens VerificationToken[]
   createdAt          DateTime            @default(now())
@@ -82,6 +83,8 @@ model Candidate {
   id              String          @id @default(uuid())
   userId          String          
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdByAdminId String?         
+  createdByAdmin   User?           @relation("AdminAddedCandidates", fields: [createdByAdminId], references: [id])
   avatarUrl       String?
   electionId      String
   election        Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
