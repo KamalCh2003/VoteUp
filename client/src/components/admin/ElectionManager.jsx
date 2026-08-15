@@ -225,10 +225,15 @@ export default function ElectionManager() {
     }
   };
 
-  const handleEdit = (election) => {
-    setEditingElection(election);
+  const handleEdit = async (election) => {
+  try {
+    const { data } = await api.get(`/elections/${election.id}`);
+    setEditingElection(data.election);
     setShowAddModal(true);
-  };
+  } catch {
+    toast.error('Failed to load election details for editing');
+  }
+};
 
   const getStatusBadge = (status) => {
     switch (status) {

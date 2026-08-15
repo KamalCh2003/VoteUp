@@ -4,11 +4,13 @@ import {
   X, Calendar, Clock, Users, Image as ImageIcon, Type, AlignLeft,
   Tag, Shield, Loader2, Vote, Phone, Mail, User, DollarSign,
   CreditCard, Gift, FileText, Check, ChevronRight, ChevronLeft,
+  Plus, Trash2, UserPlus,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import AddCandidateModal from './AddCandidateModal';
 
-const steps = ['General', 'Voting', 'Candidates', 'Payment', 'Preview & Publish'];
+const steps = ['General', 'Voting & Payment', 'Candidates', 'Preview & Publish'];
 
 export default function AddElectionModal({ open, onClose, onSuccess, election }) {
   const isEdit = !!election;
@@ -33,15 +35,21 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
     organizerEmail: '',
     organizerPhone: '',
     banner: null,
+    maxVotesPerUser: 1,
   });
 
   const [votingType, setVotingType] = useState('paid');
+  const [votingMethod, setVotingMethod] = useState('single');
+  const [candidates, setCandidates] = useState([]);
+  const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
 
+  // Load election data when editing
   useEffect(() => {
     if (open && isEdit && election) {
       const start = election.startDate ? new Date(election.startDate) : null;
       const end = election.endDate ? new Date(election.endDate) : null;
       const price = election.votePrice ?? 100;
+      const maxVotes = election.maxVotesPerUser ?? 1;
       setForm({
         title: election.title || '',
         description: election.description || '',
@@ -58,8 +66,12 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
         organizerEmail: election.organizerEmail || '',
         organizerPhone: election.organizerPhone || '',
         banner: null,
+        maxVotesPerUser: maxVotes,
       });
       setVotingType(price > 0 ? 'paid' : 'free');
+      setVotingMethod(maxVotes > 1 ? 'multiple' : 'single');
+      // Load candidates (approved only, from election object)
+      setCandidates(election.candidates || []);
     } else if (open && !isEdit) {
       setForm({
         title: '', description: '', category: 'Academic',
@@ -67,8 +79,11 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
         maxCandidates: 10, maxVoters: 0, votePrice: 100,
         rules: '', organizerName: '', organizerEmail: '', organizerPhone: '',
         banner: null,
+        maxVotesPerUser: 1,
       });
       setVotingType('paid');
+      setVotingMethod('single');
+      setCandidates([]);
     }
   }, [open, isEdit, election]);
 
@@ -76,6 +91,11 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
     const { name, value, files } = e.target;
     if (name === 'banner') {
       setForm((prev) => ({ ...prev, banner: files[0] || null }));
+    } else if (name === 'maxVotesPerUser') {
+      const num = parseInt(value, 10);
+      if (!isNaN(num) && num >= 1) {
+        setForm((prev) => ({ ...prev, maxVotesPerUser: num }));
+      }
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
@@ -83,28 +103,104 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
 
   const handleVotingTypeChange = (type) => {
     setVotingType(type);
-    if (type === 'free') setForm((prev) => ({ ...prev, votePrice: 0 }));
-    else if (type === 'paid' && form.votePrice === 0) setForm((prev) => ({ ...prev, votePrice: 100 }));
+    if (type === 'free') {
+      setForm((prev) => ({ ...prev, votePrice: 0, maxVotesPerUser: 1 }));
+      setVotingMethod('single');
+    } else if (type === 'paid') {
+      if (form.votePrice === 0) setForm((prev) => ({ ...prev, votePrice: 100 }));
+      if (form.maxVotesPerUser < 2) setForm((prev) => ({ ...prev, maxVotesPerUser: 3 }));
+      setVotingMethod('multiple');
+    }
+  };
+
+  const handleVotingMethodChange = (method) => {
+    if (votingType === 'free' && method === 'multiple') {
+      toast.error('Free elections can only be Single Choice.');
+      return;
+    }
+    setVotingMethod(method);
+    if (method === 'single') {
+      setForm((prev) => ({ ...prev, maxVotesPerUser: 1 }));
+    } else {
+      if (form.maxVotesPerUser < 2) setForm((prev) => ({ ...prev, maxVotesPerUser: 3 }));
+    }
+  };
+
+  // Candidate management
+  const handleCandidateAdded = async (candidateData) => {
+    try {
+      const payload = new FormData();
+      payload.append('firstName', candidateData.firstName);
+      payload.append('lastName', candidateData.lastName);
+      payload.append('email', candidateData.email);
+      payload.append('party', candidateData.party || '');
+      payload.append('electionId', election.id);
+      payload.append('slogan', candidateData.slogan || '');
+      payload.append('bio', candidateData.bio || '');
+      if (candidateData.avatarFile) {
+        payload.append('avatar', candidateData.avatarFile);
+      }
+      const { data } = await api.post('/admin/create-candidate', payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      // Add the new candidate to the local list
+      setCandidates(prev => [...prev, data.candidate]);
+      toast.success('Candidate added successfully!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to add candidate');
+    }
+  };
+
+  const removeCandidate = async (candidateId) => {
+    if (!window.confirm('Remove this candidate?')) return;
+    try {
+      await api.delete(`/admin/candidates/${candidateId}`);
+      setCandidates(prev => prev.filter(c => c.id !== candidateId));
+      toast.success('Candidate removed');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to remove candidate');
+    }
+  };
+
+  const validateStep = (step) => {
+    if (step === 0) {
+      if (!form.title || !form.category || !form.description || !form.startDate || !form.endDate) {
+        toast.error('Please fill all required fields in General');
+        return false;
+      }
+      if (!form.organizerName || !form.organizerEmail || !form.organizerPhone) {
+        toast.error('Please fill all organizer details (Name, Email, Phone)');
+        return false;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.organizerEmail)) {
+        toast.error('Please enter a valid organizer email address');
+        return false;
+      }
+      return true;
+    }
+    if (step === 1) {
+      if (!form.maxCandidates || form.maxCandidates < 1) {
+        toast.error('Max candidates must be at least 1');
+        return false;
+      }
+      if (votingMethod === 'multiple' && (form.maxVotesPerUser < 2 || form.maxVotesPerUser > form.maxCandidates)) {
+        toast.error(`Max votes per user must be between 2 and ${form.maxCandidates} for multiple choice.`);
+        return false;
+      }
+      if (votingType === 'paid' && form.votePrice <= 0) {
+        toast.error('Vote price must be greater than zero for paid elections');
+        return false;
+      }
+      return true;
+    }
+    return true;
   };
 
   const nextStep = () => {
-    // Validate current step before proceeding
-    if (currentStep === 0) {
-      if (!form.title || !form.category || !form.description || !form.startDate || !form.endDate) {
-        return toast.error('Please fill all required fields in General');
-      }
+    if (validateStep(currentStep)) {
+      setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
     }
-    if (currentStep === 1) {
-      if (!form.maxCandidates || form.maxCandidates < 1) {
-        return toast.error('Max candidates must be at least 1');
-      }
-    }
-    if (currentStep === 3) {
-      if (votingType === 'paid' && form.votePrice <= 0) {
-        return toast.error('Vote price must be greater than zero for paid elections');
-      }
-    }
-    setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 0));
@@ -128,7 +224,9 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
         organizerName: form.organizerName.trim() || null,
         organizerEmail: form.organizerEmail.trim() || null,
         organizerPhone: form.organizerPhone.trim() || null,
+        maxVotesPerUser: Number(form.maxVotesPerUser),
       };
+
       let request;
       if (form.banner) {
         const formData = new FormData();
@@ -155,113 +253,439 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
 
   const renderStep = () => {
     switch (currentStep) {
-      case 0: return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Election Title *</label>
-              <input type="text" name="title" value={form.title} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none" placeholder="e.g. Miss Nepal 2026" />
+      case 0:
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Election Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none"
+                  placeholder="e.g. Miss Nepal 2026"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Category *</label>
+                <select
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none"
+                >
+                  <option>Singing</option>
+                  <option>Dance</option>
+                  <option>Cooking</option>
+                  <option>Art</option>
+                  <option>Debate</option>
+                  <option>Academic</option>
+                  <option>Sports</option>
+                  <option>Lifestyle</option>
+                  <option>Culture</option>
+                  <option>Technology</option>
+                  <option>Other</option>
+                </select>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Category *</label>
-              <select name="category" value={form.category} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none">
-                <option>Singing</option><option>Dance</option><option>Cooking</option><option>Art</option>
-                <option>Debate</option><option>Academic</option><option>Sports</option><option>Lifestyle</option>
-                <option>Culture</option><option>Technology</option><option>Other</option>
-              </select>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
+              <textarea
+                name="description"
+                rows="3"
+                value={form.description}
+                onChange={handleChange}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:border-violet-500 outline-none"
+                placeholder="Describe the election"
+              />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
-            <textarea name="description" rows="3" value={form.description} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:border-violet-500 outline-none" placeholder="Describe the election" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Start Date *</label><input type="date" name="startDate" value={form.startDate} onChange={handleChange} min={isEdit ? undefined : today} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Start Time *</label><input type="time" name="startTime" value={form.startTime} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">End Date *</label><input type="date" name="endDate" value={form.endDate} onChange={handleChange} min={isEdit ? undefined : form.startDate || today} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">End Time *</label><input type="time" name="endTime" value={form.endTime} onChange={handleChange} className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Banner Image (optional)</label>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition">
-                <ImageIcon size={16} className="text-gray-500" />
-                <span className="text-sm text-gray-600">{form.banner ? form.banner.name : 'Choose file'}</span>
-                <input type="file" name="banner" accept="image/*" onChange={handleChange} className="hidden" />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Rules & Guidelines <span className="text-gray-400 font-normal">(optional)</span>
               </label>
-              {form.banner && <button type="button" onClick={() => setForm({ ...form, banner: null })} className="text-red-600 text-sm hover:underline">Remove</button>}
+              <textarea
+                name="rules"
+                rows="4"
+                value={form.rules}
+                onChange={handleChange}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:border-violet-500 outline-none"
+                placeholder="e.g. Each voter can vote once, candidates must be verified, etc."
+              />
+              <p className="text-xs text-gray-500 mt-1">These rules will be displayed to voters before they cast their vote.</p>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Recommended: 1200×600px. JPG, PNG, or WebP.</p>
-          </div>
-        </div>
-      );
-      case 1: return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Voting Method</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>Single choice</option><option>Ranked choice</option><option>Multiple picks</option></select></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Vote limit per user</label><input type="number" value="1" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Eligibility</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>All verified users</option><option>Invited only</option></select></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Results visibility</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>Live</option><option>After close</option><option>Admin only</option></select></div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Max Candidates *</label><input type="number" name="maxCandidates" value={form.maxCandidates} onChange={handleChange} min="1" max="50" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Max Voters (0 = unlimited)</label><input type="number" name="maxVoters" value={form.maxVoters} onChange={handleChange} min="0" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-          </div>
-        </div>
-      );
-      case 2: return (
-        <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-            <p>Add candidates manually or upload a CSV. You can also add them later.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Candidate Name</label><input placeholder="Full name" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Party / Organization</label><input placeholder="Optional" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-          </div>
-          <button type="button" className="text-sm text-violet-600 hover:text-violet-700 flex items-center gap-1">
-            <Plus size={16} /> Add another candidate
-          </button>
-        </div>
-      );
-      case 3: return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Entry Fee (Rs)</label><input type="number" name="votePrice" value={form.votePrice} onChange={handleChange} min="0" className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1">Accepted Gateways</label><select className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"><option>Khalti + eSewa + Stripe</option><option>Khalti only</option><option>eSewa only</option><option>Stripe only</option><option>Free election</option></select></div>
-          </div>
-          <div className="flex items-center justify-between py-2 border-b border-gray-100">
-            <div><div className="font-medium text-gray-800">Premium voting</div><div className="text-sm text-gray-500">Allow users to buy extra votes</div></div>
-            <div className="relative inline-block w-12 h-6 rounded-full bg-gray-300 cursor-pointer"><span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform" /></div>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h4 className="text-sm font-semibold mb-2">Gateway settings</h4>
-            {['eSewa', 'Khalti', 'Stripe'].map(g => (
-              <div key={g} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                <span className="text-sm">{g}</span>
-                <div className="relative inline-block w-10 h-5 rounded-full bg-violet-600 cursor-pointer"><span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform translate-x-5" /></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Organizer Name *</label>
+                <input
+                  type="text"
+                  name="organizerName"
+                  value={form.organizerName}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none"
+                  placeholder="e.g. National Election Committee"
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      );
-      case 4: return (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="h-24 bg-gradient-to-r from-violet-600 to-blue-600 relative flex items-end p-4">
-              <span className="absolute top-3 left-3 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Draft</span>
-              <div className="text-white"><h3 className="text-lg font-bold">{form.title || 'Untitled Election'}</h3><span className="text-xs opacity-80">{form.category}</span></div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Organizer Email *</label>
+                <input
+                  type="email"
+                  name="organizerEmail"
+                  value={form.organizerEmail}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none"
+                  placeholder="organizer@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Organizer Phone *</label>
+                <input
+                  type="text"
+                  name="organizerPhone"
+                  value={form.organizerPhone}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm focus:border-violet-500 outline-none"
+                  placeholder="+977 98XXXXXXXX"
+                />
+              </div>
             </div>
-            <div className="p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-gray-500">Start</span><span>{form.startDate || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">End</span><span>{form.endDate || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Candidates</span><span>{form.maxCandidates}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Price</span><span>{form.votePrice === 0 ? 'Free' : `रू ${form.votePrice}`}</span></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date *</label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={form.startDate}
+                  onChange={handleChange}
+                  min={isEdit ? undefined : today}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Start Time *</label>
+                <input
+                  type="time"
+                  name="startTime"
+                  value={form.startTime}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">End Date *</label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={form.endDate}
+                  onChange={handleChange}
+                  min={isEdit ? undefined : form.startDate || today}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">End Time *</label>
+                <input
+                  type="time"
+                  name="endTime"
+                  value={form.endTime}
+                  onChange={handleChange}
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Banner Image (optional)</label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition">
+                  <ImageIcon size={16} className="text-gray-500" />
+                  <span className="text-sm text-gray-600">{form.banner ? form.banner.name : 'Choose file'}</span>
+                  <input
+                    type="file"
+                    name="banner"
+                    accept="image/*"
+                    onChange={handleChange}
+                    className="hidden"
+                  />
+                </label>
+                {form.banner && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, banner: null })}
+                    className="text-red-600 text-sm hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Recommended: 1200×600px. JPG, PNG, or WebP.</p>
             </div>
           </div>
-          <p className="text-xs text-gray-500">Review the summary above. Once published, the election becomes visible to voters immediately and moves to <strong>Live</strong> status on its start date.</p>
-        </div>
-      );
-      default: return null;
+        );
+      case 1:
+        return (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-800">Voting & Payment Settings</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Voting Method</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => handleVotingMethodChange('single')}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${
+                      votingMethod === 'single'
+                        ? 'border-violet-600 bg-violet-50 text-violet-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    } ${votingType === 'free' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    disabled={votingType === 'free'}
+                  >
+                    Single Choice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVotingMethodChange('multiple')}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${
+                      votingMethod === 'multiple'
+                        ? 'border-violet-600 bg-violet-50 text-violet-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    } ${votingType === 'free' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    disabled={votingType === 'free'}
+                  >
+                    Multiple Choice
+                  </button>
+                </div>
+                {votingType === 'free' && <p className="text-xs text-gray-500 mt-2">Free elections are always Single Choice.</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Max Votes per User
+                  {votingMethod === 'single' && <span className="text-gray-400 font-normal ml-1">(fixed: 1)</span>}
+                </label>
+                <input
+                  type="number"
+                  name="maxVotesPerUser"
+                  value={form.maxVotesPerUser}
+                  onChange={handleChange}
+                  min={votingMethod === 'single' ? 1 : 2}
+                  max={form.maxCandidates}
+                  disabled={votingMethod === 'single'}
+                  className={`w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm outline-none focus:border-violet-500 ${
+                    votingMethod === 'single' ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
+                />
+                {votingMethod === 'multiple' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Each voter can vote for up to {form.maxVotesPerUser} candidate{form.maxVotesPerUser > 1 ? 's' : ''}.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Max Candidates *</label>
+                <input
+                  type="number"
+                  name="maxCandidates"
+                  value={form.maxCandidates}
+                  onChange={handleChange}
+                  min="1"
+                  max="50"
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Max Voters (0 = unlimited)</label>
+                <input
+                  type="number"
+                  name="maxVoters"
+                  value={form.maxVoters}
+                  onChange={handleChange}
+                  min="0"
+                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm"
+                />
+              </div>
+            </div>
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Payment Settings</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Election Type</label>
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleVotingTypeChange('free')}
+                      className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${
+                        votingType === 'free'
+                          ? 'border-violet-600 bg-violet-50 text-violet-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Free
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVotingTypeChange('paid')}
+                      className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${
+                        votingType === 'paid'
+                          ? 'border-violet-600 bg-violet-50 text-violet-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Paid
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Vote Price (Rs)</label>
+                  <input
+                    type="number"
+                    name="votePrice"
+                    value={form.votePrice}
+                    onChange={handleChange}
+                    min="0"
+                    step="1"
+                    disabled={votingType === 'free'}
+                    className={`w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm outline-none focus:border-violet-500 ${
+                      votingType === 'free' ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  />
+                  {votingType === 'free' && (
+                    <p className="text-xs text-gray-500 mt-1">Free election – voters pay nothing.</p>
+                  )}
+                  {votingType === 'paid' && (
+                    <p className="text-xs text-gray-500 mt-1">Set the amount voters must pay per vote.</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+                <div className="flex items-center gap-2">
+                  <CreditCard size={18} />
+                  <span className="font-semibold">Payments are processed via Khalti</span>
+                </div>
+                <p className="mt-1 text-xs text-blue-600">
+                  Voters will pay using Khalti wallet or mobile banking. This is the only available gateway.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-4">
+            {isEdit ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-gray-700">Contestants ({candidates.length})</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCandidateModal(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition"
+                  >
+                    <UserPlus size={14} />
+                    Add Candidate
+                  </button>
+                </div>
+                {candidates.length === 0 ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500 text-sm">
+                    No candidates added yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {candidates.map(c => (
+                      <div key={c.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl hover:shadow-sm transition">
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            {c.user?.firstName} {c.user?.lastName}
+                          </p>
+                          <p className="text-xs text-gray-500">{c.party || 'Independent'}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeCandidate(c.id)}
+                          className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+                <p>You can add candidates after the election is created from the <strong>Election Details</strong> page or the <strong>Candidates Management</strong> section.</p>
+              </div>
+            )}
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="h-24 bg-gradient-to-r from-violet-600 to-blue-600 relative flex items-end p-4">
+                <span className="absolute top-3 left-3 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">Draft</span>
+                <div className="text-white">
+                  <h3 className="text-lg font-bold">{form.title || 'Untitled Election'}</h3>
+                  <span className="text-xs opacity-80">{form.category}</span>
+                </div>
+              </div>
+              <div className="p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Start</span>
+                  <span>{form.startDate || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">End</span>
+                  <span>{form.endDate || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Candidates</span>
+                  <span>{form.maxCandidates}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Voting Method</span>
+                  <span className="text-gray-700">
+                    {votingMethod === 'single' ? 'Single Choice' : `Multiple Choice (max ${form.maxVotesPerUser} votes)`}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Price</span>
+                  <span>{form.votePrice === 0 ? 'Free' : `रू ${form.votePrice}`}</span>
+                </div>
+                {form.rules && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Rules</span>
+                    <span className="text-gray-700 text-right max-w-xs truncate">{form.rules}</span>
+                  </div>
+                )}
+                {form.organizerName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Organizer</span>
+                    <span className="text-gray-700">{form.organizerName}</span>
+                  </div>
+                )}
+                {form.organizerEmail && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Organizer Email</span>
+                    <span className="text-gray-700">{form.organizerEmail}</span>
+                  </div>
+                )}
+                {form.organizerPhone && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Organizer Phone</span>
+                    <span className="text-gray-700">{form.organizerPhone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              Review the summary above. Once published, the election becomes visible to voters immediately and moves to <strong>Live</strong> status on its start date.
+            </p>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -284,37 +708,53 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
           </div>
         </div>
 
-        {/* Wizard Steps */}
         <div className="flex gap-1 mb-6 border-b border-gray-200 pb-2 overflow-x-auto">
-          {steps.map((label, i) => (
-            <div key={i} className="flex items-center flex-1 min-w-[80px]">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(i)}
-                className={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold rounded-lg transition ${
-                  i === currentStep ? 'bg-violet-100 text-violet-700' :
-                  i < currentStep ? 'text-emerald-600' : 'text-gray-400'
-                }`}
-              >
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-                  i < currentStep ? 'bg-emerald-100 text-emerald-600' :
-                  i === currentStep ? 'bg-violet-600 text-white' :
-                  'bg-gray-100 text-gray-400'
-                }`}>
-                  {i < currentStep ? <Check size={12} /> : i + 1}
-                </span>
-                {label}
-              </button>
-              {i < steps.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-1 last:hidden" />}
-            </div>
-          ))}
+          {steps.map((label, i) => {
+            const isActive = i === currentStep;
+            const isCompleted = i < currentStep;
+            return (
+              <div key={i} className="flex items-center flex-1 min-w-[80px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isActive || isCompleted) {
+                      if (isActive || validateStep(i)) {
+                        setCurrentStep(i);
+                      }
+                    } else {
+                      toast.error('Please complete the current step first.');
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold rounded-lg transition ${
+                    isActive ? 'bg-violet-100 text-violet-700' :
+                    isCompleted ? 'text-emerald-600' : 'text-gray-400'
+                  } ${!isActive && !isCompleted ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                  disabled={!isActive && !isCompleted}
+                >
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                    isCompleted ? 'bg-emerald-100 text-emerald-600' :
+                    isActive ? 'bg-violet-600 text-white' :
+                    'bg-gray-100 text-gray-400'
+                  }`}>
+                    {isCompleted ? <Check size={12} /> : i + 1}
+                  </span>
+                  {label}
+                </button>
+                {i < steps.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-1 last:hidden" />}
+              </div>
+            );
+          })}
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">{renderStep()}</div>
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-            <button type="button" onClick={currentStep === 0 ? onClose : prevStep} className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={currentStep === 0 ? onClose : prevStep}
+              className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+            >
               {currentStep === 0 ? 'Cancel' : <><ChevronLeft size={16} /> Back</>}
             </button>
             <button
@@ -329,6 +769,15 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
           </div>
         </form>
       </div>
+
+      {/* AddCandidateModal for adding candidates during edit */}
+      <AddCandidateModal
+        open={showAddCandidateModal}
+        onClose={() => setShowAddCandidateModal(false)}
+        onSuccess={handleCandidateAdded}
+        electionId={isEdit ? election.id : null}
+        hideElectionSelect={true}
+      />
     </div>
   );
 }
