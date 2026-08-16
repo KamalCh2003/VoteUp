@@ -54,7 +54,6 @@ export default function Navbar() {
 
   const accountItems = [
     { to: '/voter-profile', label: 'Profile' },
-    { to: '/voter-payments', label: 'Payments' },
     { to: '/voter-settings', label: 'Settings' },
   ];
 
@@ -206,7 +205,7 @@ export default function Navbar() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E2E8F0] rounded-2xl shadow-lg z-50 py-1">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-[#E2E8F0] rounded-2xl shadow-lg z-50 py-1 max-h-[80vh] overflow-y-auto">
                   {accountItems.map((item) => (
                     <NavLink
                       key={item.to}
@@ -264,7 +263,6 @@ export default function Navbar() {
             </div>
 
             <div className="px-6 py-4">
-              {/* Mobile menu user info */}
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[#E2E8F0]">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white font-bold text-sm overflow-hidden flex-shrink-0">
                   {user.avatarUrl ? (

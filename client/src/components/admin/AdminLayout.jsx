@@ -212,7 +212,7 @@ export default function AdminLayout({ children }) {
           id: "create-election",
           label: "Create Election",
           icon: PlusCircle,
-          path: "/admin/create-election",
+          path: "/admin/elections/create",
         },
         {
           id: "finance",
