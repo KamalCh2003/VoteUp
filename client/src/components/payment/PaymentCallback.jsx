@@ -22,15 +22,39 @@ export default function PaymentCallback() {
       const transactionId = searchParams.get('transaction_id');
       const statusParam = searchParams.get('status');
 
+      // Log all params for debugging
+      console.log('Payment callback params:', {
+        pidx,
+        transactionId,
+        status: statusParam,
+        all: Object.fromEntries(searchParams.entries()),
+      });
+
+      // If status is not 'Completed' or pidx is missing → treat as failure
       if (!pidx || statusParam !== 'Completed') {
         setStatus('error');
-        setMessage('Payment failed or cancelled.');
-        toast.error('Payment was not successful');
+        const errorMsg = statusParam
+          ? `Payment ${statusParam}.`
+          : 'Payment failed or cancelled.';
+        setMessage(errorMsg);
+        toast.error(errorMsg);
         sessionStorage.removeItem('pendingVote');
-        setTimeout(() => navigate('/'), 3000);
+
+        // Redirect after 3 seconds
+        const pendingData = sessionStorage.getItem('pendingVote');
+        let redirectUrl = '/';
+        if (pendingData) {
+          try {
+            const parsed = JSON.parse(pendingData);
+            redirectUrl = parsed.returnUrl || `/elections/${parsed.electionId}`;
+          } catch {}
+        }
+        sessionStorage.removeItem('pendingVote');
+        setTimeout(() => navigate(redirectUrl, { replace: true }), 3000);
         return;
       }
 
+      // Payment is 'Completed' – proceed with verification
       const pendingData = sessionStorage.getItem('pendingVote');
       if (!pendingData) {
         setStatus('error');
@@ -53,7 +77,6 @@ export default function PaymentCallback() {
       }
 
       try {
-        // Verify payment – backend also creates the vote atomically
         const verifyRes = await api.post('/payments/khalti/verify', {
           pidx,
           transaction_id: transactionId,
@@ -70,10 +93,9 @@ export default function PaymentCallback() {
           setMessage(`${quantity} vote(s) cast successfully!`);
           toast.success('Vote recorded!');
         } else if (voteError) {
-          // Payment succeeded but vote could not be cast (e.g. already voted)
-          setStatus('success');   // still a successful payment
+          setStatus('success');
           setMessage(voteError);
-          toast(voteError); // react-hot-toast neutral toast
+          toast(voteError);
         } else {
           setStatus('error');
           setMessage('Unknown error occurred. Please contact support.');
