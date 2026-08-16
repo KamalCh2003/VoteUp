@@ -1,7 +1,12 @@
-// controllers/payment.controller.js
 const axios = require('axios');
 const paymentService = require('../services/payment.service');
 const prisma = require('../config/database');
+
+// Environment-aware Khalti API base URL
+const KHALTI_ENV = process.env.KHALTI_ENV || process.env.KHALTI_ENVIRONMENT || 'dev';
+const KHALTI_API_BASE = KHALTI_ENV === 'live'
+  ? 'https://khalti.com/api/v2'
+  : 'https://dev.khalti.com/api/v2';
 
 exports.createIntent = async (req, res) => {
   try {
@@ -75,11 +80,14 @@ exports.processVotePayment = async (req, res) => {
   }
 };
 
-
 exports.initiateKhaltiPayment = async (req, res) => {
   try {
     const { electionId, candidateId, quantity } = req.body;
     const userId = req.user.id;
+
+    if (!electionId || !candidateId || !quantity || quantity < 1) {
+      return res.status(400).json({ error: 'Invalid election, candidate, or quantity' });
+    }
 
     const election = await prisma.election.findUnique({
       where: { id: electionId },
@@ -95,24 +103,45 @@ exports.initiateKhaltiPayment = async (req, res) => {
     }
 
     const amount = election.votePrice * quantity;
-    const purchaseOrderId = `${electionId}_${Date.now()}`;
+    if (amount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than zero' });
+    }
+    // Khalti requires minimum 100 paisa (1 NPR)
+    if (amount < 1) {
+      return res.status(400).json({ error: 'Amount must be at least 1 NPR' });
+    }
+
+    const purchaseOrderId = `${electionId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const returnUrl = `${process.env.CLIENT_URL}/payment/callback`;
 
+    if (!returnUrl || !returnUrl.startsWith('http')) {
+      console.error('Invalid CLIENT_URL:', process.env.CLIENT_URL);
+      return res.status(500).json({ error: 'Invalid CLIENT_URL in environment' });
+    }
+
+    const payload = {
+      return_url: returnUrl,
+      website_url: process.env.CLIENT_URL,
+      amount: Math.round(amount * 100), // paisa
+      purchase_order_id: purchaseOrderId,
+      purchase_order_name: `Vote for ${election.title}`,
+    };
+
+    console.log('Khalti init payload:', JSON.stringify(payload, null, 2));
+
     const khaltiRes = await axios.post(
-      'https://dev.khalti.com/api/v2/epayment/initiate/',
+      `${KHALTI_API_BASE}/epayment/initiate/`,
+      payload,
       {
-        return_url: returnUrl,
-        website_url: process.env.CLIENT_URL,
-        amount: amount * 100,
-        purchase_order_id: purchaseOrderId,
-        purchase_order_name: 'Vote payment',
-      },
-      {
-        headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` },
+        headers: {
+          Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
       }
     );
 
-    // Store the payment intent locally
+    console.log('Khalti init response:', khaltiRes.data);
+
     await prisma.paymentIntent.create({
       data: {
         userId,
@@ -127,15 +156,24 @@ exports.initiateKhaltiPayment = async (req, res) => {
 
     res.json({ paymentUrl: khaltiRes.data.payment_url });
   } catch (err) {
-    console.error('Khalti initiate error:', err);
-    res.status(500).json({ error: 'Failed to initiate payment' });
+    console.error('Khalti initiate error:');
+    if (err.response) {
+      console.error('Status:', err.response.status);
+      console.error('Data:', err.response.data);
+    } else {
+      console.error(err.message);
+    }
+    const errorMsg = err.response?.data?.detail || err.response?.data?.error || err.message;
+    res.status(500).json({
+      error: 'Failed to initiate payment',
+      details: errorMsg,
+    });
   }
 };
 
 exports.verifyKhaltiPayment = async (req, res) => {
   try {
     const { pidx, transaction_id, status, electionId, candidateId, quantity } = req.body;
-    console.log('verifyKhaltiPayment called:', { pidx, transaction_id, status, electionId, candidateId, quantity });
 
     if (!pidx || !status) {
       return res.status(400).json({ error: 'Missing pidx or status' });
@@ -147,11 +185,10 @@ exports.verifyKhaltiPayment = async (req, res) => {
     let verifyRes;
     try {
       verifyRes = await axios.post(
-        'https://dev.khalti.com/api/v2/epayment/lookup/',
+        `${KHALTI_API_BASE}/epayment/lookup/`,
         { pidx },
         { headers: { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` } }
       );
-      console.log('Khalti lookup response:', verifyRes.data);
     } catch (apiErr) {
       console.error('Khalti lookup failed:', apiErr.response?.data || apiErr.message);
       return res.status(400).json({ error: 'Payment lookup failed. Please try again.' });
@@ -165,7 +202,6 @@ exports.verifyKhaltiPayment = async (req, res) => {
       where: { pidx },
     });
     if (!paymentIntent) {
-      console.error('No payment intent found for pidx:', pidx);
       return res.status(404).json({ error: 'Payment intent not found. Please try again.' });
     }
 
@@ -178,11 +214,8 @@ exports.verifyKhaltiPayment = async (req, res) => {
     const finalCandidateId = paymentIntent.candidateId;
     const finalQuantity = paymentIntent.quantity;
 
-    console.log(`Final data: userId=${userId}, electionId=${finalElectionId}, candidateId=${finalCandidateId}, quantity=${finalQuantity}`);
-
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      console.error('User not found:', userId);
       return res.status(400).json({ error: 'User not found. Please login again.' });
     }
 
@@ -191,11 +224,9 @@ exports.verifyKhaltiPayment = async (req, res) => {
       select: { votePrice: true, status: true },
     });
     if (!election) {
-      console.error('Election not found:', finalElectionId);
       return res.status(404).json({ error: 'Election not found' });
     }
     if (election.status !== 'ACTIVE') {
-      console.error('Election not active:', election.status);
       return res.status(400).json({ error: 'Election is not active' });
     }
 
@@ -203,7 +234,6 @@ exports.verifyKhaltiPayment = async (req, res) => {
       where: { id: finalCandidateId },
     });
     if (!candidate) {
-      console.error('Candidate not found:', finalCandidateId);
       return res.status(404).json({ error: 'Candidate not found' });
     }
 
@@ -219,7 +249,6 @@ exports.verifyKhaltiPayment = async (req, res) => {
         where: { stripePaymentIntentId: pidx, status: 'COMPLETED' },
       });
       if (existingPayment) {
-        console.log('Duplicate payment detected:', pidx);
         return { payment: existingPayment, vote: null, voteError: 'Payment already processed' };
       }
 
@@ -233,7 +262,6 @@ exports.verifyKhaltiPayment = async (req, res) => {
           candidateId: finalCandidateId,
         },
       });
-      console.log('Payment created:', payment.id);
 
       let vote = null;
       let voteError = null;
@@ -243,13 +271,11 @@ exports.verifyKhaltiPayment = async (req, res) => {
           where: { userId, electionId: finalElectionId },
         });
         if (existingVote) {
-          console.log('User already voted in free election:', userId, finalElectionId);
           voteError = 'You have already voted in this free election.';
           return { payment, vote: null, voteError };
         }
       }
 
-      // For paid elections, allow unlimited votes
       try {
         vote = await tx.vote.create({
           data: {
@@ -261,19 +287,16 @@ exports.verifyKhaltiPayment = async (req, res) => {
             txHash: pidx,
           },
         });
-        console.log('Vote created:', vote.id);
 
         await tx.candidate.update({
           where: { id: finalCandidateId },
           data: { votesReceived: { increment: finalQuantity } },
         });
-        console.log('Candidate votes updated');
 
         await tx.election.update({
           where: { id: finalElectionId },
           data: { totalVotes: { increment: finalQuantity } },
         });
-        console.log('Election total votes updated');
       } catch (err) {
         console.error('Vote creation error:', err);
         voteError = err.message || 'Failed to record vote';
