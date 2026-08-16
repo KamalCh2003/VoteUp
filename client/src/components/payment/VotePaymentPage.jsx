@@ -1,4 +1,3 @@
-// src/components/payment/VotePaymentPage.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, Minus, Plus, Shield, ArrowLeft } from 'lucide-react';
@@ -16,12 +15,10 @@ export default function VotePaymentPage() {
   const candidateId = searchParams.get('candidateId');
 
   const [election, setElection] = useState(null);
-  const [candidate, setCandidate] = useState(null);
   const [loadingElection, setLoadingElection] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [processing, setProcessing] = useState(false);
 
-  // Fetch election details (to get vote price)
   useEffect(() => {
     if (!electionId || !candidateId) {
       toast.error('Missing election or candidate information');
@@ -33,9 +30,6 @@ export default function VotePaymentPage() {
       try {
         const { data } = await api.get(`/elections/${electionId}`);
         setElection(data.election);
-        // Optionally fetch candidate info if needed
-        // const candRes = await api.get(`/candidates/${candidateId}`);
-        // setCandidate(candRes.data.candidate);
       } catch (err) {
         toast.error('Failed to load election details');
         navigate(-1);
@@ -65,14 +59,12 @@ export default function VotePaymentPage() {
 
     setProcessing(true);
     try {
-      // 1. Initiate Khalti payment
       const { data } = await api.post('/payments/khalti/initiate', {
         electionId,
         candidateId,
         quantity,
       });
 
-      // 2. Save pending vote data to sessionStorage
       sessionStorage.setItem('pendingVote', JSON.stringify({
         electionId,
         candidateId,
@@ -80,11 +72,11 @@ export default function VotePaymentPage() {
         returnUrl: `/elections/${electionId}`,
       }));
 
-      // 3. Redirect to Khalti payment page
       window.location.href = data.paymentUrl;
     } catch (err) {
       console.error('Payment initiation error:', err);
-      toast.error(err.response?.data?.error || 'Failed to initiate payment');
+      const errorMsg = err.response?.data?.details || err.response?.data?.error || 'Failed to initiate payment';
+      toast.error(errorMsg);
       setProcessing(false);
     }
   };
@@ -123,7 +115,6 @@ export default function VotePaymentPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Quantity Selector & Summary */}
           <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Select Number of Votes</h2>
 
@@ -153,7 +144,6 @@ export default function VotePaymentPage() {
             </div>
           </div>
 
-          {/* Payment Method & Pay Button */}
           <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Payment Method</h2>
             <div className="space-y-4 mb-8">
