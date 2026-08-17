@@ -22,7 +22,6 @@ export default function PaymentCallback() {
       const transactionId = searchParams.get('transaction_id');
       const statusParam = searchParams.get('status');
 
-      // Log all params for debugging
       console.log('Payment callback params:', {
         pidx,
         transactionId,
