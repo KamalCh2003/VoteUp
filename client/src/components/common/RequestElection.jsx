@@ -42,7 +42,7 @@ export default function RequestElection() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center px-4 py-4 sm:py-10">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl p-8">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center">
