@@ -161,49 +161,88 @@ export default function ContestantManagement() {
   const clearDateFilter = () => setFilterDate('');
 
   return (
-    <div className="p-6 bg-gray-50 text-gray-800 min-h-screen">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+    <div className="px-6 bg-gray-50 text-gray-800 min-h-screen">
+      {/* ─── Top Row: Title + Add Contestant Button ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">List of Contestants</h2>
           <p className="text-gray-500 text-sm">
             {filtered.length} of {totalContestants} contestant{totalContestants !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:w-auto">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500" />
-          </div>
-          <select value={electionFilter} onChange={(e) => setElectionFilter(e.target.value)} className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <option value="ALL">All Elections</option>
-            {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-          </select>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <option value="ALL">All Categories</option>
-            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-          </select>
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
-            />
-            {filterDate && (
-              <button
-                onClick={clearDateFilter}
-                className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
-              >
-                Clear date
-              </button>
-            )}
-          </div>
-          <Button variant="primary" onClick={() => setAddModalOpen(true)} className="bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-xl">
-            <UserPlus size={16} className="mr-1.5" /> Add Contestant
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          onClick={() => setAddModalOpen(true)}
+          className="bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-xl mt-2 sm:mt-0"
+        >
+          <UserPlus size={16} className="mr-1.5" /> Add Contestant
+        </Button>
       </div>
 
+      {/* ─── Filters Row ─── */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div className="relative w-full sm:w-auto flex-1 min-w-[160px]">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+          />
+        </div>
+
+        <select
+          value={electionFilter}
+          onChange={(e) => setElectionFilter(e.target.value)}
+          className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+        >
+          <option value="ALL">All Elections</option>
+          {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+        </select>
+
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+        >
+          <option value="ALL">All Categories</option>
+          {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+        </select>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+          />
+          {filterDate && (
+            <button
+              onClick={clearDateFilter}
+              className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
+            >
+              Clear date
+            </button>
+          )}
+        </div>
+
+        {(search || electionFilter !== 'ALL' || categoryFilter !== 'ALL' || filterDate) && (
+          <button
+            onClick={() => {
+              setSearch('');
+              setElectionFilter('ALL');
+              setCategoryFilter('ALL');
+              setFilterDate('');
+            }}
+            className="text-sm text-violet-600 hover:text-violet-700"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* ─── Tabs ─── */}
       <div className="flex gap-6 border-b border-gray-200 mb-6">
         {tabs.map(tab => (
           <button
@@ -216,6 +255,7 @@ export default function ContestantManagement() {
         ))}
       </div>
 
+      {/* ─── Candidate Cards Grid ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {paginatedCandidates.map(c => {
           const avatarInitials = c.user?.firstName?.[0] + c.user?.lastName?.[0] || '?';
@@ -257,7 +297,6 @@ export default function ContestantManagement() {
                 <span>#{c.candidateNumber || '—'}</span>
               </div>
 
-              {/* 👇 New: Show who added this candidate */}
               <div className="text-xs text-gray-400 mb-2">
                 Added by: {addedBy}
               </div>
@@ -363,7 +402,7 @@ export default function ContestantManagement() {
                 <div><p className="text-gray-500 text-xs uppercase tracking-wide">Category</p><p className="text-gray-900">{selectedCandidate.election?.category || 'N/A'}</p></div>
                 <div><p className="text-gray-500 text-xs uppercase tracking-wide">Party / Organization</p><p className="text-gray-900">{selectedCandidate.party || 'Independent'}</p></div>
                 <div><p className="text-gray-500 text-xs uppercase tracking-wide">Slogan</p><p className="text-gray-900 italic">{selectedCandidate.slogan || '—'}</p></div>
-                <div><p className="text-gray-500 text-xs uppercase tracking-wide">Bio</p><p className="text-gray-700 text-sm">{selectedCandidate.bio || 'No bio provided'}</p></div>
+                <div className="md:col-span-2"><p className="text-gray-500 text-xs uppercase tracking-wide">Bio</p><p className="text-gray-700 text-sm">{selectedCandidate.bio || 'No bio provided'}</p></div>
               </div>
 
               <div className="border-t border-gray-200 pt-4 mb-4">
@@ -372,7 +411,6 @@ export default function ContestantManagement() {
                   <span className="text-gray-500">Rank:</span><span className="text-gray-900">#{selectedCandidate.rank || '—'}</span>
                   <span className="text-gray-500">Total Votes:</span><span className="text-gray-900">{selectedCandidate.votesReceived?.toLocaleString()}</span>
                   <span className="text-gray-500">Joined:</span><span className="text-gray-900">{new Date(selectedCandidate.createdAt).toLocaleDateString()}</span>
-                  {/* 👇 New: Added By */}
                   <span className="text-gray-500">Added By:</span>
                   <span className="text-gray-900">
                     {selectedCandidate.createdByAdmin
