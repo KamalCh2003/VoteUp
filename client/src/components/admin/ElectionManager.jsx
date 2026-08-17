@@ -87,7 +87,6 @@ export default function ElectionManager() {
     loading: false,
   });
 
-  // Auto-open create modal if URL contains openCreate=true (now redirects to create page)
   useEffect(() => {
     fetchElections();
     if (searchParams.get('openCreate') === 'true') {
@@ -226,14 +225,14 @@ export default function ElectionManager() {
   };
 
   const handleEdit = async (election) => {
-  try {
-    const { data } = await api.get(`/elections/${election.id}`);
-    setEditingElection(data.election);
-    setShowAddModal(true);
-  } catch {
-    toast.error('Failed to load election details for editing');
-  }
-};
+    try {
+      const { data } = await api.get(`/elections/${election.id}`);
+      setEditingElection(data.election);
+      setShowAddModal(true);
+    } catch {
+      toast.error('Failed to load election details for editing');
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -277,8 +276,8 @@ export default function ElectionManager() {
   };
 
   return (
-    <div className="bg-gray-50 p-6 min-h-screen">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+    <div className="bg-gray-50 px-6 min-h-screen">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <BarChart3 size={24} className="text-violet-600" />
@@ -288,86 +287,103 @@ export default function ElectionManager() {
             {filtered.length} of {elections.length} election{elections.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative w-full sm:w-60">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search elections..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 transition"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 px-2 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <Filter size={16} className="text-violet-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-white outline-none cursor-pointer"
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="UPCOMING">Upcoming</option>
-              <option value="ENDED">Ended</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 px-2 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <BarChart3 size={16} className="text-violet-500" />
-            <select
-              value={categoryFilter}
-              onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-white outline-none cursor-pointer"
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <Filter size={16} className="text-violet-500" />
-            <select
-              value={priceFilter}
-              onChange={(e) => { setPriceFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-white outline-none cursor-pointer"
-            >
-              <option value="ALL">All Types</option>
-              <option value="FREE">Free</option>
-              <option value="PAID">Paid</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
-            <Clock size={16} className="text-violet-500" />
-            <select
-              value={timeFilter}
-              onChange={(e) => { setTimeFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-white outline-none cursor-pointer"
-            >
-              <option value="ALL">All Time</option>
-              <option value="TODAY">Today</option>
-              <option value="LAST_7_DAYS">Last 7 days</option>
-              <option value="LAST_30_DAYS">Last 30 days</option>
-              <option value="THIS_YEAR">This year</option>
-            </select>
-          </div>
-
-          {/* ─── Create Election Button – now navigates to dedicated page ─── */}
-          <Button
-            variant="primary"
-            onClick={() => navigate('/admin/elections/create')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white"
-          >
-            <Plus size={16} />
-            Create Election
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          onClick={() => navigate('/admin/elections/create')}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white mt-2 sm:mt-0"
+        >
+          <Plus size={16} />
+          Create Election
+        </Button>
       </div>
 
+      {/* ─── Filters Row ─── */}
+      <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search elections..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500 transition"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 px-2 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
+          <Filter size={16} className="text-violet-500" />
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            className="bg-white outline-none cursor-pointer"
+          >
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="UPCOMING">Upcoming</option>
+            <option value="ENDED">Ended</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 px-2 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
+          <BarChart3 size={16} className="text-violet-500" />
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+            className="bg-white outline-none cursor-pointer"
+          >
+            <option value="ALL">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
+          <Filter size={16} className="text-violet-500" />
+          <select
+            value={priceFilter}
+            onChange={(e) => { setPriceFilter(e.target.value); setCurrentPage(1); }}
+            className="bg-white outline-none cursor-pointer"
+          >
+            <option value="ALL">All Types</option>
+            <option value="FREE">Free</option>
+            <option value="PAID">Paid</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800">
+          <Clock size={16} className="text-violet-500" />
+          <select
+            value={timeFilter}
+            onChange={(e) => { setTimeFilter(e.target.value); setCurrentPage(1); }}
+            className="bg-white outline-none cursor-pointer"
+          >
+            <option value="ALL">All Time</option>
+            <option value="TODAY">Today</option>
+            <option value="LAST_7_DAYS">Last 7 days</option>
+            <option value="LAST_30_DAYS">Last 30 days</option>
+            <option value="THIS_YEAR">This year</option>
+          </select>
+        </div>
+
+        {(search || statusFilter !== 'ALL' || categoryFilter !== 'ALL' || priceFilter !== 'ALL' || timeFilter !== 'ALL') && (
+          <button
+            onClick={() => {
+              setSearch('');
+              setStatusFilter('ALL');
+              setCategoryFilter('ALL');
+              setPriceFilter('ALL');
+              setTimeFilter('ALL');
+              setCurrentPage(1);
+            }}
+            className="px-3 py-2 text-sm text-violet-600 hover:text-violet-700 transition"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* ─── Batch actions ─── */}
       {selectedIds.length > 0 && (
         <div className="mb-4 flex items-center gap-3 flex-wrap rounded-2xl bg-violet-50 border border-violet-200 px-5 py-3">
           <span className="text-violet-800 font-medium text-sm">
@@ -390,6 +406,7 @@ export default function ElectionManager() {
         </div>
       )}
 
+      {/* ─── Table ─── */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
