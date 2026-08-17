@@ -4,7 +4,7 @@ import { Shield, BarChart3, Globe, ClipboardList, Fingerprint, CreditCard, FileC
 const features = [
     {
         title: 'Secure Voting',
-        description: 'Blockchain-inspired integrity checks make every vote tamper-evident.',
+        description: 'Data integrity checks make every vote tamper-evident.',
         icon: Shield,
         color: 'text-purple-600',
         bg: 'bg-purple-50',
@@ -29,13 +29,6 @@ const features = [
         icon: Fingerprint,
         color: 'text-emerald-600',
         bg: 'bg-emerald-50',
-    },
-    {
-        title: 'Multi-language',
-        description: 'Serve voters in Nepali, English, and beyond.',
-        icon: Globe,
-        color: 'text-purple-600',
-        bg: 'bg-purple-50',
     },
     {
         title: 'Payment Integration',

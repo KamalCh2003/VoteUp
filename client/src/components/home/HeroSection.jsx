@@ -8,21 +8,62 @@ import api from '../../services/api';
 export default function HeroSection() {
     const { user } = useAuth();
     const [activeCount, setActiveCount] = useState(0);
+    const [stats, setStats] = useState({
+        totalElections: 0,
+        totalUsers: 0,
+        totalVotes: 0,
+        totalCandidates: 0,
+    });
     const [loadingStats, setLoadingStats] = useState(true);
     const [recentElection, setRecentElection] = useState(null);
     const [candidates, setCandidates] = useState([]);
     const [loadingCandidates, setLoadingCandidates] = useState(false);
 
     useEffect(() => {
-        setLoadingStats(true);
-        api
-            .get('/public/stats')
-            .then(({ data }) => {
-                setActiveCount(data.activeElections || 0);
-            })
-            .catch(() => {})
-            .finally(() => setLoadingStats(false));
+        const fetchStats = async () => {
+            setLoadingStats(true);
+            try {
+                // Fetch public stats
+                const [statsRes, electionsRes] = await Promise.all([
+                    api.get('/public/stats'),
+                    api.get('/elections', { params: { limit: 100 } }),
+                ]);
 
+                const publicStats = statsRes.data;
+                const elections = electionsRes.data.elections || [];
+
+                // Calculate total candidates (approved) across all elections
+                let totalCandidates = 0;
+                if (publicStats.totalCandidates !== undefined) {
+                    totalCandidates = publicStats.totalCandidates;
+                } else {
+                    // Fallback: sum approvedCandidates from each election
+                    elections.forEach(e => {
+                        totalCandidates += (e.approvedCandidates || 0);
+                    });
+                }
+
+                setStats({
+                    totalElections: publicStats.totalElections || elections.length || 0,
+                    totalUsers: publicStats.totalUsers || 0,
+                    totalVotes: publicStats.totalVotes || 0,
+                    totalCandidates,
+                });
+
+                // Active elections count
+                const active = elections.filter(e => e.status === 'ACTIVE');
+                setActiveCount(active.length || publicStats.activeElections || 0);
+
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+            } finally {
+                setLoadingStats(false);
+            }
+        };
+
+        fetchStats();
+
+        // Fetch most recent active election for the mockup card
         const fetchMostRecentActiveElection = async () => {
             setLoadingCandidates(true);
             try {
@@ -115,24 +156,56 @@ export default function HeroSection() {
                             </Link>
                         </div>
 
-                        {/* Hero Stats */}
+                        {/* Dynamic Stats */}
                         <div className="mt-10 flex flex-wrap items-center justify-center lg:justify-start gap-8">
-                            <div>
-                                <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">312</div>
-                                <div className="text-xs text-[#64748B]">Active Elections</div>
-                            </div>
-                            <div>
-                                <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">1.2M+</div>
-                                <div className="text-xs text-[#64748B]">Registered Users</div>
-                            </div>
-                            <div>
-                                <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">8.4M</div>
-                                <div className="text-xs text-[#64748B]">Votes Cast</div>
-                            </div>
-                            <div>
-                                <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">14</div>
-                                <div className="text-xs text-[#64748B]">Countries</div>
-                            </div>
+                            {loadingStats ? (
+                                // Skeleton loaders
+                                <>
+                                    <div className="animate-pulse">
+                                        <div className="h-8 w-16 bg-gray-200 rounded"></div>
+                                        <div className="h-4 w-20 bg-gray-100 rounded mt-1"></div>
+                                    </div>
+                                    <div className="animate-pulse">
+                                        <div className="h-8 w-16 bg-gray-200 rounded"></div>
+                                        <div className="h-4 w-20 bg-gray-100 rounded mt-1"></div>
+                                    </div>
+                                    <div className="animate-pulse">
+                                        <div className="h-8 w-16 bg-gray-200 rounded"></div>
+                                        <div className="h-4 w-20 bg-gray-100 rounded mt-1"></div>
+                                    </div>
+                                    <div className="animate-pulse">
+                                        <div className="h-8 w-16 bg-gray-200 rounded"></div>
+                                        <div className="h-4 w-20 bg-gray-100 rounded mt-1"></div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">
+                                            {stats.totalElections.toLocaleString()}
+                                        </div>
+                                        <div className="text-xs text-[#64748B]">Total Elections</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">
+                                            {stats.totalUsers.toLocaleString()}
+                                        </div>
+                                        <div className="text-xs text-[#64748B]">Registered Users</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">
+                                            {stats.totalVotes.toLocaleString()}
+                                        </div>
+                                        <div className="text-xs text-[#64748B]">Votes Cast</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-['IBM_Plex_Sans',sans-serif] text-2xl font-bold text-[#0F172A]">
+                                            {stats.totalCandidates.toLocaleString()}
+                                        </div>
+                                        <div className="text-xs text-[#64748B]">Total Contestants</div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -189,7 +262,6 @@ export default function HeroSection() {
                                     ))}
                                 </div>
                             </div>
-                            {/* Floating badges */}
                             <div className="absolute -top-3 -right-4 bg-white border border-[#E2E8F0] rounded-xl shadow-md px-3 py-2 flex items-center gap-2 text-xs font-bold">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_#ECFDF3]"></span>
                                 4,821 votes today

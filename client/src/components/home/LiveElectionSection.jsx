@@ -97,8 +97,6 @@ export default function LiveElectionSection({ search = '' }) {
 
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((election, index) => {
-                    const total = election.maxVoters || election.totalVotes || 1;
-                    const progress = Math.min(100, Math.round((election.totalVotes / total) * 100));
                     const color = colors[index % colors.length];
                     const remaining = timeLeft[election.id] || { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
 
@@ -126,15 +124,8 @@ export default function LiveElectionSection({ search = '' }) {
                                         {remaining.total > 0 ? formatCountdown(remaining) : 'Ended'}
                                     </span>
                                 </div>
-                                <div className="mt-4 h-1.5 w-full rounded-full bg-[#F8FAFC] overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full bg-gradient-to-r ${color}`}
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                                <div className="mt-3 flex justify-between text-xs text-[#64748B]">
-                                    <span>{election.totalVotes || 0} votes</span>
-                                    <span>{election.candidates?.length || 0} candidates</span>
+                                <div className="mt-3 text-xs text-[#64748B]">
+                                    <span>{election.approvedCandidates ?? 0} contestants</span>
                                 </div>
                             </div>
                         </Link>
