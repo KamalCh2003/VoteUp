@@ -13,6 +13,9 @@ import Navbar from "./components/layout/Navbar";
 import ContestantNavbar from "./components/layout/ContestantNavbar";
 import Footer from "./components/layout/Footer";
 import Landing from "./components/common/Landing";
+import PrivacyPolicy from "./components/common/PrivacyPolicy";
+import TermsOfService from "./components/common/TermsOfService";
+import Compliance from "./components/common/Compliance";
 import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
@@ -30,6 +33,7 @@ import VoterProfile from "./components/voter/VoterProfile";
 import VoterNotifications from "./components/voter/VoterNotifications";
 import VoterBookmarks from "./components/voter/VoterBookmarks";
 import VoterDashboard from "./components/voter/VoterDashboard";
+import VoterSettings from "./components/voter/VoterSettings";
 import AnalyticsView from "./components/contestant/AnalyticsView";
 import ApplyCandidacy from "./components/contestant/ApplyCandidacy";
 import PaymentSuccess from "./components/payment/PaymentSuccess";
@@ -72,9 +76,18 @@ function ScrollToTop() {
 
 function Protected({ children, roles }) {
   const { isAuthenticated, user, loading } = useAuth();
-  if (loading) return <div className="flex justify-center p-10">Loading...</div>;
+  if (loading)
+    return <div className="flex justify-center p-10">Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" />;
+  return children;
+}
+
+// ✅ New component: redirects authenticated users away from public pages
+function PublicRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return <div className="flex justify-center p-10">Loading...</div>;
+  if (isAuthenticated) return <Navigate to="/voter/dashboard" replace />;
   return children;
 }
 
@@ -95,7 +108,8 @@ function AppContent() {
     "/payment/callback",
     "/voter-profile",
   ];
-  const shouldHideNavbar = hideNavbarPaths.includes(location.pathname) || isAdminRoute;
+  const shouldHideNavbar =
+    hideNavbarPaths.includes(location.pathname) || isAdminRoute;
 
   const showContestantNavbar = isContestantRoute && !shouldHideNavbar;
   const showPublicNavbar = !shouldHideNavbar && !isContestantRoute;
@@ -184,7 +198,6 @@ function AppContent() {
               </Protected>
             }
           />
-
           <Route
             path="/admin/elections/:id"
             element={
@@ -195,8 +208,6 @@ function AppContent() {
               </Protected>
             }
           />
-
-          {/* ─── Create Election route ─── */}
           <Route
             path="/admin/elections/create"
             element={
@@ -207,13 +218,10 @@ function AppContent() {
               </Protected>
             }
           />
-
-          {/* Redirect from old /admin/create-election to new path */}
           <Route
             path="/admin/create-election"
             element={<Navigate to="/admin/elections/create" replace />}
           />
-
           <Route
             path="/admin/vote-verifier"
             element={
@@ -274,7 +282,6 @@ function AppContent() {
               </Protected>
             }
           />
-
           <Route
             path="/admin/*"
             element={
@@ -289,7 +296,26 @@ function AppContent() {
       ) : (
         <main className="min-h-screen">
           <Routes>
-            <Route path="/" element={<Landing />} />
+            {/* Redirect from old /voter/home to dashboard */}
+            <Route
+              path="/voter/home"
+              element={<Navigate to="/voter/dashboard" replace />}
+            />
+
+            {/* ✅ Public landing page – redirects if already logged in */}
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <Landing />
+                </PublicRoute>
+              }
+            />
+
+            {/* Other public routes (no authentication required) */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/compliance" element={<Compliance />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -306,14 +332,7 @@ function AppContent() {
             <Route path="/reset-link-sent" element={<ResetLinkSent />} />
             <Route path="/request-election" element={<RequestElection />} />
 
-            <Route
-              path="/voter/home"
-              element={
-                <Protected roles={["VOTER"]}>
-                  <VoterHome />
-                </Protected>
-              }
-            />
+            {/* Protected Voter Routes */}
             <Route
               path="/voter/dashboard"
               element={
@@ -370,7 +389,32 @@ function AppContent() {
                 </Protected>
               }
             />
+            <Route
+              path="/voter-settings"
+              element={
+                <Protected roles={["VOTER"]}>
+                  <VoterSettings />
+                </Protected>
+              }
+            />
+            <Route
+              path="/voter-notifications"
+              element={
+                <Protected>
+                  <VoterNotifications />
+                </Protected>
+              }
+            />
+            <Route
+              path="/voter-bookmarks"
+              element={
+                <Protected>
+                  <VoterBookmarks />
+                </Protected>
+              }
+            />
 
+            {/* Contestant Routes */}
             <Route
               path="/contestant/profile"
               element={
@@ -395,24 +439,6 @@ function AppContent() {
                 </Protected>
               }
             />
-
-            <Route
-              path="/voter-notifications"
-              element={
-                <Protected>
-                  <VoterNotifications />
-                </Protected>
-              }
-            />
-            <Route
-              path="/voter-bookmarks"
-              element={
-                <Protected>
-                  <VoterBookmarks />
-                </Protected>
-              }
-            />
-
             <Route
               path="/contestant/analytics"
               element={
@@ -438,6 +464,7 @@ function AppContent() {
               }
             />
 
+            {/* Payment Routes */}
             <Route
               path="/payment/success"
               element={
@@ -464,6 +491,7 @@ function AppContent() {
             />
             <Route path="/payment/callback" element={<PaymentCallback />} />
 
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
