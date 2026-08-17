@@ -1,7 +1,7 @@
 // src/components/Navbar.jsx
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, Menu, X, Bell, ChevronDown } from 'lucide-react';
+import { LogOut, Menu, X, Bell, ChevronDown, Vote } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import LogoutConfirmModal from '../common/LogoutConfirmModal';
 import api from '../../services/api';
@@ -52,9 +52,9 @@ export default function Navbar() {
     { to: '/voter/results', label: 'Results' },
   ];
 
- const accountItems = [
-  { to: '/voter-settings', label: 'Settings' },
-];
+  const accountItems = [
+    { to: '/voter-settings', label: 'Settings' },
+  ];
 
   const linkClass = ({ isActive }) =>
     `px-3 py-2 rounded-xl text-sm font-semibold transition ${
@@ -73,8 +73,8 @@ export default function Navbar() {
                 to="/"
                 className="flex items-center gap-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A]"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white text-sm font-bold">
-                  V
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white">
+                  <Vote size={18} className="text-white" />
                 </div>
                 <span>
                   Vote<span className="text-purple-600">Up</span>
@@ -142,8 +142,8 @@ export default function Navbar() {
             to="/voter/dashboard"
             className="flex items-center gap-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A] flex-shrink-0"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white text-sm font-bold">
-              V
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white">
+              <Vote size={18} className="text-white" />
             </div>
             <span>
               Vote<span className="text-purple-600">Up</span>

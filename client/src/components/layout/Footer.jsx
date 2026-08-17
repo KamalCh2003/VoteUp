@@ -11,8 +11,8 @@ export default function Footer() {
                     {/* Brand */}
                     <div className="lg:col-span-2">
                         <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white text-sm font-bold">
-                                V
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#2563EB] text-white">
+                                <Vote size={20} className="text-white" />
                             </div>
                             <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-xl font-extrabold text-[#0F172A]">
                                 Vote<span className="text-purple-600">Up</span>
