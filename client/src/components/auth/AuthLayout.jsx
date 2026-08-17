@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Vote, Users, Calendar, Award } from "lucide-react";
 import api from "../../services/api";
 
-export default function AuthLayout({ children, title, subtitle, backTo }) {
+export default function AuthLayout({ children, title, subtitle }) {
   const [stats, setStats] = useState({
     totalVotes: 0,
     totalElections: 0,
@@ -137,13 +137,12 @@ export default function AuthLayout({ children, title, subtitle, backTo }) {
           {/* Form Content */}
           <div className="mt-6">{children}</div>
 
-          {backTo && (
-            <div className="mt-4 text-center text-sm text-[#64748B]">
-              <Link to={backTo} className="text-[#6D28D9] hover:underline">
-                ← Back to site
-              </Link>
-            </div>
-          )}
+          {/* Always show "Back to site" link, always points to landing page */}
+          <div className="mt-4 text-center text-sm text-[#64748B]">
+            <Link to="/" className="text-[#6D28D9] hover:underline">
+              ← Back to site
+            </Link>
+          </div>
         </div>
       </div>
 
