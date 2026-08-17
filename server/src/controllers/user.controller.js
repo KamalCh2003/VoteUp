@@ -283,13 +283,20 @@ exports.getBookmarks = async (req, res) => {
 exports.addBookmark = async (req, res) => {
   try {
     const { electionId } = req.params;
-    await prisma.bookmark.create({
-      data: {
-        userId: req.user.id,
-        electionId,
-      },
-    });
-    res.status(201).json({ message: 'Bookmark added' });
+    try {
+      await prisma.bookmark.create({
+        data: {
+          userId: req.user.id,
+          electionId,
+        },
+      });
+      return res.status(201).json({ message: 'Bookmark added' });
+    } catch (err) {
+      if (err.code === 'P2002') {
+        return res.status(200).json({ message: 'Bookmark already exists' });
+      }
+      throw err;
+    }
   } catch (err) {
     console.error('Add bookmark error:', err);
     res.status(500).json({ error: 'Failed to add bookmark' });
