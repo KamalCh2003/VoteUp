@@ -5,19 +5,20 @@ import {
   Calendar, Clock, Users, Vote, BarChart3, Flag,
   Settings, Shield, FileText, Edit, Trash2, Archive,
   ChevronLeft, Check, X, UserCheck, Eye, MoreHorizontal,
-  Play, StopCircle, // 👈 added
+  Play, StopCircle, UserPlus, Pencil,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
 import AddElectionModal from './AddElectionModal';
+import AddCandidateModal from './AddCandidateModal';
+import EditCandidateModal from './EditCandidateModal';
 
 export default function ElectionDetailView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
 
-  // Guard: if no ID, show error immediately
   if (!id) {
     return (
       <div className="text-center py-12">
@@ -37,6 +38,9 @@ export default function ElectionDetailView() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
+  const [showEditCandidateModal, setShowEditCandidateModal] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({ totalVotes: 0, totalCandidates: 0 });
 
@@ -45,7 +49,6 @@ export default function ElectionDetailView() {
     setError(null);
     try {
       const res = await api.get(`/elections/${id}`);
-      console.log('Election API response:', res.data);
       const data = res.data.election;
       if (!data) {
         throw new Error('Election data not found in response');
@@ -87,6 +90,26 @@ export default function ElectionDetailView() {
       navigate('/admin/elections');
     } catch {
       toast.error('Failed to delete election');
+    }
+  };
+
+  const handleAddCandidate = () => {
+    setShowAddCandidateModal(true);
+  };
+
+  const handleEditCandidate = (candidate) => {
+    setSelectedCandidate(candidate);
+    setShowEditCandidateModal(true);
+  };
+
+  const handleDeleteCandidate = async (candidateId) => {
+    if (!window.confirm('Delete this candidate permanently?')) return;
+    try {
+      await api.delete(`/admin/candidates/${candidateId}`);
+      toast.success('Candidate deleted');
+      fetchElection();
+    } catch {
+      toast.error('Failed to delete candidate');
     }
   };
 
@@ -136,7 +159,6 @@ export default function ElectionDetailView() {
 
   return (
     <div className="bg-gray-50 min-h-screen p-6">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
         <button onClick={() => navigate('/admin/elections')} className="hover:text-violet-600 flex items-center gap-1">
           <ChevronLeft size={16} /> Elections
@@ -305,8 +327,13 @@ export default function ElectionDetailView() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Candidates ({candidates.length})</h3>
-              <Button variant="primary" size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
-                <UserCheck size={14} className="mr-1.5" /> Add Candidate
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddCandidate}
+                className="bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                <UserPlus size={14} className="mr-1.5" /> Add Candidate
               </Button>
             </div>
             {candidates.length === 0 ? (
@@ -356,9 +383,22 @@ export default function ElectionDetailView() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <button className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700">
-                            <MoreHorizontal size={16} />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleEditCandidate(c)}
+                              className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-500 hover:text-blue-600 transition"
+                              title="Edit"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCandidate(c.id)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-600 transition"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -456,7 +496,7 @@ export default function ElectionDetailView() {
         )}
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit Election Modal */}
       <AddElectionModal
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -465,6 +505,33 @@ export default function ElectionDetailView() {
           setShowEditModal(false);
         }}
         election={election}
+      />
+
+      {/* Add Candidate Modal */}
+      <AddCandidateModal
+        open={showAddCandidateModal}
+        onClose={() => setShowAddCandidateModal(false)}
+        onSuccess={() => {
+          fetchElection();
+          setShowAddCandidateModal(false);
+        }}
+        electionId={id}
+        hideElectionSelect={true}
+      />
+
+      {/* Edit Candidate Modal */}
+      <EditCandidateModal
+        open={showEditCandidateModal}
+        onClose={() => {
+          setShowEditCandidateModal(false);
+          setSelectedCandidate(null);
+        }}
+        candidate={selectedCandidate}
+        onSuccess={() => {
+          fetchElection();
+          setShowEditCandidateModal(false);
+          setSelectedCandidate(null);
+        }}
       />
     </div>
   );
