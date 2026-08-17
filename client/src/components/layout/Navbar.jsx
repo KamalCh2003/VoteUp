@@ -52,10 +52,9 @@ export default function Navbar() {
     { to: '/voter/results', label: 'Results' },
   ];
 
-  const accountItems = [
-    { to: '/voter-profile', label: 'Profile' },
-    { to: '/voter-settings', label: 'Settings' },
-  ];
+ const accountItems = [
+  { to: '/voter-settings', label: 'Settings' },
+];
 
   const linkClass = ({ isActive }) =>
     `px-3 py-2 rounded-xl text-sm font-semibold transition ${

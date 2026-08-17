@@ -54,7 +54,7 @@ export default function Footer() {
                         <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#64748B]">Product</h3>
                         <ul className="space-y-2.5 text-sm">
                             <li><Link to="/elections" className="text-[#64748B] hover:text-purple-600 transition">Elections</Link></li>
-                            <li><Link to="/results" className="text-[#64748B] hover:text-purple-600 transition">Results</Link></li>
+                            <li><Link to="/voter/results" className="text-[#64748B] hover:text-purple-600 transition">Results</Link></li>
                             <li><Link to="/request-election" className="text-[#64748B] hover:text-purple-600 transition">Create Election</Link></li>
                             <li><Link to="/about" className="text-[#64748B] hover:text-purple-600 transition">About</Link></li>
                         </ul>
@@ -64,9 +64,9 @@ export default function Footer() {
                     <div>
                         <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-[#64748B]">Legal</h3>
                         <ul className="space-y-2.5 text-sm">
-                            <li><Link to="/privacy" className="text-[#64748B] hover:text-purple-600 transition">Privacy Policy</Link></li>
-                            <li><Link to="/terms" className="text-[#64748B] hover:text-purple-600 transition">Terms of Service</Link></li>
-                            <li><Link to="/cookies" className="text-[#64748B] hover:text-purple-600 transition">Compliance</Link></li>
+                            <li><Link to="/privacy-policy" className="text-[#64748B] hover:text-purple-600 transition">Privacy Policy</Link></li>
+                            <li><Link to="/terms-of-service" className="text-[#64748B] hover:text-purple-600 transition">Terms of Service</Link></li>
+                            <li><Link to="/compliance" className="text-[#64748B] hover:text-purple-600 transition">Compliance</Link></li>
                         </ul>
                     </div>
 
@@ -80,11 +80,11 @@ export default function Footer() {
                             </div>
                             <div className="flex gap-3">
                                 <Phone size={16} className="mt-0.5 text-purple-600 flex-shrink-0" />
-                                <span className="text-[#64748B]">+977-1-4XXXXXX</span>
+                                <span className="text-[#64748B]">+977-9800000005</span>
                             </div>
                             <div className="flex gap-3">
                                 <MapPin size={16} className="mt-0.5 text-purple-600 flex-shrink-0" />
-                                <span className="text-[#64748B]">Kathmandu, Nepal</span>
+                                <span className="text-[#64748B]"> Pokhara, Nepal</span>
                             </div>
                         </div>
                     </div>
