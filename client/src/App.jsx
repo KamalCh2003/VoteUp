@@ -65,6 +65,7 @@ import AuditLogs from "./components/admin/AuditLogs";
 import ElectionDetailView from "./components/admin/ElectionDetailView";
 import AdminAnalytics from "./components/admin/AdminAnalytics";
 import CreateElectionPage from "./components/admin/CreateElectionPage";
+import PastResults from "./components/admin/PastResults";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -86,7 +87,8 @@ function Protected({ children, roles }) {
 // ✅ New component: redirects authenticated users away from public pages
 function PublicRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div className="flex justify-center p-10">Loading...</div>;
+  if (loading)
+    return <div className="flex justify-center p-10">Loading...</div>;
   if (isAuthenticated) return <Navigate to="/voter/dashboard" replace />;
   return children;
 }
@@ -164,6 +166,17 @@ function AppContent() {
               <Protected roles={["ADMIN"]}>
                 <AdminLayout>
                   <Leaderboard />
+                </AdminLayout>
+              </Protected>
+            }
+          />
+
+          <Route
+            path="/admin/past-results"
+            element={
+              <Protected roles={["ADMIN"]}>
+                <AdminLayout>
+                  <PastResults />
                 </AdminLayout>
               </Protected>
             }
