@@ -27,7 +27,6 @@ export default function UserManager() {
   const [timeFilter, setTimeFilter] = useState("ALL");
   const toast = useToast();
 
-  const [openDropdownId, setOpenDropdownId] = useState(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newRole, setNewRole] = useState("");
@@ -85,14 +84,12 @@ export default function UserManager() {
     } catch (err) {
       toast.error("Failed to delete user");
     }
-    setOpenDropdownId(null);
   };
 
   const openRoleModal = (user) => {
     setSelectedUser(user);
     setNewRole(user.role);
     setShowRoleModal(true);
-    setOpenDropdownId(null);
   };
 
   const updateRole = async () => {
@@ -243,7 +240,7 @@ export default function UserManager() {
 
   return (
     <div className="p-6 bg-gray-50 text-gray-800 min-h-screen">
-      {/* Smaller stats cards */}
+      {/* Stats cards (unchanged) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-3">
           <div className="flex items-center justify-between">
@@ -283,7 +280,7 @@ export default function UserManager() {
         </div>
       </div>
 
-      {/* List of Users header + search/role/time filters */}
+      {/* Header + search/role/time filters (unchanged) */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -334,7 +331,7 @@ export default function UserManager() {
         </div>
       </div>
 
-      {/* Batch actions bar */}
+      {/* Batch actions bar (unchanged) */}
       {selectedIds.length > 0 && (
         <div className="mb-4 flex items-center gap-3 flex-wrap rounded-2xl bg-violet-50 border border-violet-200 px-5 py-3">
           <span className="text-violet-800 font-medium text-sm">
@@ -363,7 +360,7 @@ export default function UserManager() {
         </div>
       )}
 
-      {/* USER TABLE */}
+      {/* USER TABLE – actions now visible buttons */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -419,33 +416,24 @@ export default function UserManager() {
                     <td className="p-4 text-gray-500">
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-right relative">
-                      <button
-                        onClick={() => setOpenDropdownId(openDropdownId === u.id ? null : u.id)}
-                        className="p-2 rounded-lg hover:bg-gray-100 transition"
-                      >
-                        <MoreHorizontal size={18} className="text-gray-500" />
-                      </button>
-                      {openDropdownId === u.id && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-10">
-                          <div className="py-1">
-                            <button
-                              onClick={() => openRoleModal(u)}
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
-                            >
-                              <Shield size={14} className="text-violet-500" />
-                              Change Role
-                            </button>
-                            <button
-                              onClick={() => deleteUser(u.id)}
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
-                            >
-                              <UserX size={14} />
-                              Delete User
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    <td className="p-4 text-right">
+                      {/* Action buttons now always visible */}
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openRoleModal(u)}
+                          className="p-2 rounded-lg hover:bg-violet-50 text-violet-600 transition"
+                          title="Change role"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => deleteUser(u.id)}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition"
+                          title="Delete user"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -461,7 +449,7 @@ export default function UserManager() {
           </table>
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls (unchanged) */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm">
             <button
@@ -485,7 +473,7 @@ export default function UserManager() {
         )}
       </div>
 
-      {/* Individual Role Change Modal */}
+      {/* Individual Role Change Modal (unchanged) */}
       {showRoleModal && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl p-6">
@@ -527,7 +515,7 @@ export default function UserManager() {
         </div>
       )}
 
-      {/* Batch Role Change Modal */}
+      {/* Batch Role Change Modal (unchanged) */}
       {showBatchRoleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl p-6">
