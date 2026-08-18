@@ -125,6 +125,7 @@ model Election {
   organizerPhone  String?
   bannerUrl       String? 
   createdBy       String
+  resultsPublishedAt DateTime? 
   candidates      Candidate[]
   votes           Vote[]
   createdAt       DateTime       @default(now())
