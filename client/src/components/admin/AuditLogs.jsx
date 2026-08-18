@@ -1,6 +1,6 @@
 // src/components/admin/AuditLogs.jsx
 import { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, ChevronRight, Shield, Clock } from 'lucide-react';
+import { Search, Filter, ChevronDown, ChevronRight, Shield, Clock, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -10,6 +10,9 @@ export default function AuditLogs() {
   const [eventFilter, setEventFilter] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
   const toast = useToast();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; 
 
   useEffect(() => {
     api.get('/admin/audit-logs')
@@ -30,11 +33,26 @@ export default function AuditLogs() {
     return matchesSearch && matchesEvent;
   });
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, eventFilter]);
+
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const currentLogs = filtered.slice(startIndex, endIndex);
+
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    setExpandedId(null);
+  };
+
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  // Helper to get role badge style
   const getRoleBadge = (role) => {
     if (!role) return <span className="badge badge-neutral">System</span>;
     switch (role) {
@@ -92,13 +110,13 @@ export default function AuditLogs() {
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Time</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Event</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">User</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-500">Role</th> {/* 👈 new column */}
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Role</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Result</th>
                 <th className="text-right py-4 px-6 font-medium text-gray-500">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((log) => (
+              {currentLogs.map((log) => (
                 <>
                   <tr
                     key={log.id}
@@ -123,7 +141,7 @@ export default function AuditLogs() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-gray-700">{log.user?.email || 'System'}</td>
-                    <td className="py-4 px-6">{getRoleBadge(log.user?.role)}</td> {/* 👈 role badge */}
+                    <td className="py-4 px-6">{getRoleBadge(log.user?.role)}</td>
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
                         log.result === 'OK' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
@@ -141,7 +159,7 @@ export default function AuditLogs() {
                   </tr>
                   {expandedId === log.id && (
                     <tr key={`${log.id}-details`} className="bg-gray-50">
-                      <td colSpan={6} className="py-4 px-6 text-gray-600 text-xs"> {/* 👈 colSpan updated to 6 */}
+                      <td colSpan={6} className="py-4 px-6 text-gray-600 text-xs">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex gap-2">
                             <span className="text-gray-500">IP:</span>
@@ -157,9 +175,9 @@ export default function AuditLogs() {
                   )}
                 </>
               ))}
-              {filtered.length === 0 && (
+              {currentLogs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-500"> {/* 👈 colSpan updated to 6 */}
+                  <td colSpan={6} className="text-center py-12 text-gray-500">
                     No audit logs found.
                   </td>
                 </tr>
@@ -167,6 +185,47 @@ export default function AuditLogs() {
             </tbody>
           </table>
         </div>
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+            <div className="text-sm text-gray-500">
+              Showing {startIndex + 1}–{endIndex} of {totalItems} logs
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                      currentPage === page
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                aria-label="Next page"
+              >
+                <ChevronRightIcon size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
