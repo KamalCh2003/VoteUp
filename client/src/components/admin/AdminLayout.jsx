@@ -8,6 +8,7 @@ import {
   Vote,
   LogOut,
   Bell,
+  BarChart3,
   Trophy,
   CreditCard,
   Eye,
@@ -22,6 +23,7 @@ import {
   PanelLeftOpen,
   Shield,
   PlusCircle,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import LogoutConfirmModal from "../common/LogoutConfirmModal";
@@ -186,8 +188,14 @@ export default function AdminLayout({ children }) {
         {
           id: "analytics",
           label: "Analytics",
-          icon: Trophy,
+          icon: BarChart3,
           path: "/admin/analytics",
+        },
+        {
+          id: "leaderboard",
+          label: "Leaderboard",
+          icon: Trophy,
+          path: "/admin/leaderboard",
         },
       ],
     },
@@ -227,17 +235,17 @@ export default function AdminLayout({ children }) {
           path: "/admin/election-requests",
           badge: pendingRequestsCount > 0 ? pendingRequestsCount : null,
         },
+        {
+          id: "past-results",
+          label: "Results",
+          icon: ClipboardList,
+          path: "/admin/past-results",
+        }
       ],
     },
     {
       label: "Insights",
       items: [
-        {
-          id: "leaderboard",
-          label: "Leaderboard",
-          icon: Trophy,
-          path: "/admin/leaderboard",
-        },
         {
           id: "vote-verifier",
           label: "Vote Verifier",
@@ -411,18 +419,6 @@ export default function AdminLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-1.5 text-sm text-[#64748B] w-64">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search users, elections, payments…"
-                className="bg-transparent outline-none w-full text-[#0F172A] placeholder:text-[#64748B]"
-                onKeyDown={(e) =>
-                  e.key === "Enter" && alert("Searching for " + e.target.value)
-                }
-              />
-            </div>
-
             <button
               onClick={() => navigate("/admin/notifications")}
               className="relative h-9 w-9 rounded-xl border border-[#E2E8F0] bg-white flex items-center justify-center text-[#64748B] hover:border-[#6D28D9] hover:text-[#6D28D9] transition"
