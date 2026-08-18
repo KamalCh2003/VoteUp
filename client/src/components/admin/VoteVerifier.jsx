@@ -47,7 +47,6 @@ export default function VoteVerifier() {
     }
   };
 
-  // Unique elections for filter dropdown
   const elections = useMemo(() => {
     const unique = new Map();
     votes.forEach(v => {
@@ -58,7 +57,6 @@ export default function VoteVerifier() {
     return Array.from(unique.values()).sort((a, b) => a.title.localeCompare(b.title));
   }, [votes]);
 
-  // Time filter helper
   const getTimeFilterCutoff = () => {
     if (timeFilter === 'ALL') return null;
     const now = new Date();
@@ -95,12 +93,12 @@ export default function VoteVerifier() {
     return searchMatch && electionMatch && timeMatch;
   });
 
-  // Pagination logic
+  const totalVotesSum = votes.reduce((sum, v) => sum + (v.quantity || 1), 0);
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedVotes = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, electionFilter, timeFilter]);
@@ -135,11 +133,10 @@ export default function VoteVerifier() {
           <h2 className="text-xl font-bold text-gray-900">Vote Verifier</h2>
           <p className="text-gray-500 text-sm">Inspect and manage every vote</p>
           {votes.length > 0 && (
-            <p className="text-xs text-emerald-600 mt-1">Total votes: {votes.length}</p>
+            <p className="text-xs text-emerald-600 mt-1">Total votes: {totalVotesSum}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Search */}
           <div className="relative w-full sm:w-64">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -151,7 +148,6 @@ export default function VoteVerifier() {
             />
           </div>
 
-          {/* Election Filter */}
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 min-w-[180px]">
             <Filter size={16} className="text-violet-500 flex-shrink-0" />
             <select
@@ -168,7 +164,6 @@ export default function VoteVerifier() {
             </select>
           </div>
 
-          {/* Time Filter */}
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 min-w-[160px]">
             <Clock size={16} className="text-violet-500 flex-shrink-0" />
             <select
