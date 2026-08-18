@@ -205,24 +205,24 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
     if (user.id === req.user.id) {
-      return res.status(403).json({ error: 'You cannot delete your own account' });
+      return res.status(403).json({ error: "You cannot delete your own account" });
     }
     await prisma.user.delete({ where: { id } });
 
     await createAuditLog({
       userId: req.user.id,
-      event: 'USER_DELETED',
+      event: "USER_DELETED",
       details: `Deleted user ${user.email} (${user.firstName} ${user.lastName})`,
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      result: 'OK',
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
-    res.json({ message: 'User deleted successfully' });
+    res.json({ message: "User deleted successfully" });
   } catch (err) {
-    console.error('Delete user error:', err);
-    res.status(500).json({ error: 'Failed to delete user' });
+    console.error("Delete user error:", err);
+    res.status(500).json({ error: "Failed to delete user" });
   }
 };
 
@@ -230,12 +230,12 @@ exports.updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    const validRoles = ['VOTER', 'CONTESTANT'];
-    if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
+    const validRoles = ["VOTER", "CONTESTANT"];
+    if (!validRoles.includes(role)) return res.status(400).json({ error: "Invalid role" });
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
     if (user.id === req.user.id) {
-      return res.status(403).json({ error: 'You cannot change your own role' });
+      return res.status(403).json({ error: "You cannot change your own role" });
     }
     const updatedUser = await prisma.user.update({
       where: { id },
@@ -245,16 +245,16 @@ exports.updateUserRole = async (req, res) => {
 
     await createAuditLog({
       userId: req.user.id,
-      event: 'USER_ROLE_UPDATED',
+      event: "USER_ROLE_UPDATED",
       details: `Changed role of ${user.email} from ${user.role} to ${role}`,
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      result: 'OK',
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
     res.json({ user: updatedUser });
   } catch (err) {
-    console.error('Update role error:', err);
-    res.status(500).json({ error: 'Failed to update user role' });
+    console.error("Update role error:", err);
+    res.status(500).json({ error: "Failed to update user role" });
   }
 };
 
@@ -269,7 +269,6 @@ exports.getAllCandidates = async (req, res) => {
           select: { id: true, title: true, status: true, category: true },
         },
         createdByAdmin: { select: { id: true, firstName: true, lastName: true } },
-
       },
       orderBy: { createdAt: "desc" },
     });
@@ -286,18 +285,14 @@ exports.updateCandidate = async (req, res) => {
     const { party, slogan, bio, candidateNumber } = req.body;
     const avatarUrl = req.file ? req.file.path : undefined;
     const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate)
-      return res.status(404).json({ error: "Candidate not found" });
+    if (!candidate) return res.status(404).json({ error: "Candidate not found" });
     const updated = await prisma.candidate.update({
       where: { id },
       data: {
         party: party !== undefined ? party : candidate.party,
         slogan: slogan !== undefined ? slogan : candidate.slogan,
         bio: bio !== undefined ? bio : candidate.bio,
-        candidateNumber:
-          candidateNumber !== undefined
-            ? candidateNumber
-            : candidate.candidateNumber,
+        candidateNumber: candidateNumber !== undefined ? candidateNumber : candidate.candidateNumber,
         ...(avatarUrl && { avatarUrl }),
       },
       include: {
@@ -331,8 +326,7 @@ exports.deleteCandidate = async (req, res) => {
       where: { id },
       include: { user: true, election: true, createdByAdmin: true },
     });
-    if (!candidate)
-      return res.status(404).json({ error: "Candidate not found" });
+    if (!candidate) return res.status(404).json({ error: "Candidate not found" });
     await prisma.candidate.delete({ where: { id } });
 
     await createAuditLog({
@@ -355,8 +349,8 @@ exports.approveCandidate = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+    if (!["APPROVED", "REJECTED", "PENDING"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
     }
 
     const candidate = await prisma.candidate.findUnique({
@@ -364,14 +358,14 @@ exports.approveCandidate = async (req, res) => {
       include: { election: true, user: true },
     });
     if (!candidate) {
-      return res.status(404).json({ error: 'Candidate not found' });
+      return res.status(404).json({ error: "Candidate not found" });
     }
 
-    if (status === 'APPROVED') {
+    if (status === "APPROVED") {
       const approvedCount = await prisma.candidate.count({
         where: {
           electionId: candidate.electionId,
-          status: 'APPROVED',
+          status: "APPROVED",
           id: { not: candidate.id },
         },
       });
@@ -392,8 +386,7 @@ exports.approveCandidate = async (req, res) => {
     await prisma.notification.create({
       data: {
         userId: candidate.user.id,
-        title:
-          status === "APPROVED" ? "Candidacy Approved 🎉" : "Candidacy Update",
+        title: status === "APPROVED" ? "Candidacy Approved 🎉" : "Candidacy Update",
         message:
           status === "APPROVED"
             ? `Your application for "${candidate.election.title}" has been approved. Good luck!`
@@ -420,6 +413,11 @@ exports.approveCandidate = async (req, res) => {
 
 exports.createCandidateFromAdmin = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      console.error("createCandidateFromAdmin: req.user missing or no id");
+      return res.status(401).json({ error: "Admin authentication required" });
+    }
+
     const {
       firstName,
       lastName,
@@ -428,8 +426,6 @@ exports.createCandidateFromAdmin = async (req, res) => {
       electionId,
       slogan,
       bio,
-      candidateNumber,
-      
     } = req.body;
     const avatarUrl = req.file ? req.file.path : null;
 
@@ -442,11 +438,9 @@ exports.createCandidateFromAdmin = async (req, res) => {
       where: { electionId, status: "APPROVED" },
     });
     if (election.maxCandidates && candidateCount >= election.maxCandidates) {
-      return res
-        .status(400)
-        .json({
-          error: `Candidate limit reached for this election (max ${election.maxCandidates})`,
-        });
+      return res.status(400).json({
+        error: `Candidate limit reached for this election (max ${election.maxCandidates})`,
+      });
     }
 
     let user = await prisma.user.findUnique({ where: { email } });
@@ -472,11 +466,9 @@ exports.createCandidateFromAdmin = async (req, res) => {
         where: { userId: user.id, electionId },
       });
       if (existingCandidate) {
-        return res
-          .status(400)
-          .json({
-            error: "User already has a candidate profile for this election",
-          });
+        return res.status(400).json({
+          error: "User already has a candidate profile for this election",
+        });
       }
     }
 
@@ -524,10 +516,13 @@ exports.createCandidateFromAdmin = async (req, res) => {
       }
     }
 
+    const adminName = `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() || "Admin";
+    const adminEmail = req.user.email || "unknown";
+
     await createAuditLog({
       userId: req.user.id,
       event: "CANDIDATE_CREATED",
-      details: `Created candidate ${user.email} for election "${election.title}"`,
+      details: `Created candidate ${user.email} for election "${election.title}" by ${adminName} (${adminEmail})`,
       ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
       result: "OK",
     });
@@ -722,25 +717,25 @@ exports.getFreeVsPaidVotes = async (req, res) => {
       total: freeVotes + paidVotes,
     });
   } catch (err) {
-    console.error('Free vs Paid votes error:', err);
-    res.status(500).json({ error: 'Failed to fetch vote breakdown' });
+    console.error("Free vs Paid votes error:", err);
+    res.status(500).json({ error: "Failed to fetch vote breakdown" });
   }
 };
 
 exports.getTopElectionsByRevenue = async (req, res) => {
   try {
     const voteGroups = await prisma.vote.groupBy({
-      by: ['electionId'],
+      by: ["electionId"],
       where: {
         paymentId: { not: null },
-        payment: { status: 'COMPLETED' },
+        payment: { status: "COMPLETED" },
       },
       _sum: {
         quantity: true,
       },
       orderBy: {
         _sum: {
-          quantity: 'desc',
+          quantity: "desc",
         },
       },
       take: 10,
@@ -758,7 +753,7 @@ exports.getTopElectionsByRevenue = async (req, res) => {
         const paymentAgg = await prisma.payment.aggregate({
           _sum: { amount: true },
           where: {
-            status: 'COMPLETED',
+            status: "COMPLETED",
             votes: {
               some: { electionId },
             },
@@ -777,8 +772,8 @@ exports.getTopElectionsByRevenue = async (req, res) => {
         const rev = revenueByElection.find((r) => r.electionId === group.electionId);
         return {
           id: group.electionId,
-          title: election?.title || 'Unknown',
-          status: election?.status || 'UNKNOWN',
+          title: election?.title || "Unknown",
+          status: election?.status || "UNKNOWN",
           votes: group._sum.quantity || 0,
           revenue: rev?.revenue || 0,
         };
@@ -788,8 +783,8 @@ exports.getTopElectionsByRevenue = async (req, res) => {
 
     res.json({ topElections: result });
   } catch (err) {
-    console.error('Top elections by revenue error:', err);
-    res.status(500).json({ error: 'Failed to fetch top elections' });
+    console.error("Top elections by revenue error:", err);
+    res.status(500).json({ error: "Failed to fetch top elections" });
   }
 };
 
@@ -831,7 +826,7 @@ exports.deleteVote = async (req, res) => {
         election: { select: { title: true } },
       },
     });
-    if (!vote) return res.status(404).json({ error: 'Vote not found' });
+    if (!vote) return res.status(404).json({ error: "Vote not found" });
 
     await prisma.$transaction([
       prisma.candidate.update({
@@ -847,16 +842,16 @@ exports.deleteVote = async (req, res) => {
 
     await createAuditLog({
       userId: req.user.id,
-      event: 'VOTE_DELETED',
+      event: "VOTE_DELETED",
       details: `Deleted vote from ${vote.user.email} for candidate ${vote.candidate.user.firstName} ${vote.candidate.user.lastName} in election "${vote.election.title}"`,
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      result: 'OK',
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
-    res.json({ message: 'Vote deleted successfully' });
+    res.json({ message: "Vote deleted successfully" });
   } catch (err) {
-    console.error('Delete vote error:', err);
-    res.status(500).json({ error: 'Failed to delete vote' });
+    console.error("Delete vote error:", err);
+    res.status(500).json({ error: "Failed to delete vote" });
   }
 };
 
@@ -1027,8 +1022,8 @@ exports.updateElectionRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const validStatuses = ['PENDING', 'REVIEWED', 'COMPLETED', 'ARCHIVED'];
-    if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const validStatuses = ["PENDING", "REVIEWED", "COMPLETED", "ARCHIVED"];
+    if (!validStatuses.includes(status)) return res.status(400).json({ error: "Invalid status" });
 
     const request = await prisma.electionRequest.update({
       where: { id },
@@ -1037,16 +1032,16 @@ exports.updateElectionRequestStatus = async (req, res) => {
 
     await createAuditLog({
       userId: req.user.id,
-      event: 'REQUEST_STATUS_UPDATED',
+      event: "REQUEST_STATUS_UPDATED",
       details: `Updated election request from ${request.email} to status ${status}`,
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      result: 'OK',
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
     res.json({ request });
   } catch (err) {
-    console.error('Update request status error:', err);
-    res.status(500).json({ error: 'Failed to update request' });
+    console.error("Update request status error:", err);
+    res.status(500).json({ error: "Failed to update request" });
   }
 };
 
@@ -1054,22 +1049,22 @@ exports.deleteElectionRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const request = await prisma.electionRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (!request) return res.status(404).json({ error: "Request not found" });
 
     await prisma.electionRequest.delete({ where: { id } });
 
     await createAuditLog({
       userId: req.user.id,
-      event: 'REQUEST_DELETED',
+      event: "REQUEST_DELETED",
       details: `Deleted election request from ${request.email}`,
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      result: 'OK',
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
-    res.json({ message: 'Request deleted' });
+    res.json({ message: "Request deleted" });
   } catch (err) {
-    console.error('Delete request error:', err);
-    res.status(500).json({ error: 'Failed to delete request' });
+    console.error("Delete request error:", err);
+    res.status(500).json({ error: "Failed to delete request" });
   }
 };
 
@@ -1078,36 +1073,36 @@ exports.replyToElectionRequest = async (req, res) => {
     const { id } = req.params;
     const { message } = req.body;
     const request = await prisma.electionRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (!request) return res.status(404).json({ error: "Request not found" });
 
     const sent = await emailService.sendEmail({
       to: request.email,
-      subject: 'Response to your election request',
+      subject: "Response to your election request",
       html: `<p>${message}</p>`,
     });
-    if (!sent) return res.status(500).json({ error: 'Failed to send reply email' });
+    if (!sent) return res.status(500).json({ error: "Failed to send reply email" });
 
     await createAuditLog({
       userId: req.user.id,
-      event: 'REQUEST_REPLIED',
+      event: "REQUEST_REPLIED",
       details: `Sent reply to ${request.email} regarding their election request`,
-      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-      result: 'OK',
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
+      result: "OK",
     });
 
-    res.json({ success: true, message: 'Reply sent' });
+    res.json({ success: true, message: "Reply sent" });
   } catch (err) {
-    console.error('Reply error:', err);
-    res.status(500).json({ error: 'Failed to send reply' });
+    console.error("Reply error:", err);
+    res.status(500).json({ error: "Failed to send reply" });
   }
 };
 
 exports.getAnalytics = async (req, res) => {
   try {
     const votesByCategory = await prisma.election.groupBy({
-      by: ['category'],
+      by: ["category"],
       _sum: { totalVotes: true },
-      orderBy: { _sum: { totalVotes: 'desc' } },
+      orderBy: { _sum: { totalVotes: "desc" } },
     });
 
     const revenueByCategory = await prisma.$queryRaw`
@@ -1133,7 +1128,7 @@ exports.getAnalytics = async (req, res) => {
         totalVotes: true,
         status: true,
       },
-      orderBy: { totalVotes: 'desc' },
+      orderBy: { totalVotes: "desc" },
       take: 5,
     });
 
@@ -1153,15 +1148,15 @@ exports.getAnalytics = async (req, res) => {
     }));
 
     const paymentsByMethod = await prisma.payment.groupBy({
-      by: ['type'],
+      by: ["type"],
       _count: { id: true },
       _sum: { amount: true },
     });
 
     const [totalVotes, totalRevenue, activeElections, totalUsers] = await Promise.all([
       prisma.vote.count(),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED' } }),
-      prisma.election.count({ where: { status: 'ACTIVE' } }),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { status: "COMPLETED" } }),
+      prisma.election.count({ where: { status: "ACTIVE" } }),
       prisma.user.count(),
     ]);
 
@@ -1179,7 +1174,7 @@ exports.getAnalytics = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Analytics error:', err);
-    res.status(500).json({ error: 'Failed to fetch analytics data' });
+    console.error("Analytics error:", err);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
   }
 };

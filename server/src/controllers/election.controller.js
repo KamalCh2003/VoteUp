@@ -8,29 +8,49 @@ exports.getAll = async (req, res) => {
       data: { status: 'ENDED' },
     });
 
-    const { status, category, limit } = req.query;
+    const { status, category, limit, published, includeDetails } = req.query;
     const where = {};
     if (status) where.status = status;
     if (category) where.category = category;
+
+    if (published === 'true') {
+      where.status = 'ENDED';
+      where.resultsPublishedAt = { not: null };
+    }
+
+    const include = {
+      _count: { select: { candidates: true, votes: true } },
+    };
+
+    if (includeDetails === 'true') {
+      include.candidates = {
+        where: { status: 'APPROVED' },
+        include: {
+          user: { select: { firstName: true, lastName: true, avatarUrl: true } },
+        },
+      };
+    } else {
+      include.candidates = {
+        where: { status: 'APPROVED' },
+        select: { id: true },
+      };
+    }
 
     const elections = await prisma.election.findMany({
       where,
       take: limit ? parseInt(limit) : 20,
       orderBy: { startDate: 'desc' },
-      include: {
-        _count: { select: { candidates: true, votes: true } },
-        candidates: {
-          where: { status: 'APPROVED' },
-          select: { id: true },
-        },
-      },
+      include,
     });
 
-    const formatted = elections.map(election => ({
-      ...election,
-      approvedCandidates: election.candidates.length,
-      candidates: undefined,
-    }));
+    const formatted = elections.map(election => {
+      const { candidates, ...rest } = election;
+      return {
+        ...rest,
+        approvedCandidates: candidates?.length || 0,
+        candidates: includeDetails === 'true' ? candidates : undefined,
+      };
+    });
 
     res.json({ elections: formatted });
   } catch (err) {
@@ -94,7 +114,6 @@ exports.create = async (req, res) => {
       }
     }
 
-    // Parse and validate max votes per user (single/multiple choice)
     let parsedMaxVotesPerUser = 1;
     if (maxVotesPerUser !== undefined && maxVotesPerUser !== null && maxVotesPerUser !== '') {
       parsedMaxVotesPerUser = parseInt(maxVotesPerUser, 10);
@@ -242,7 +261,6 @@ exports.update = async (req, res) => {
       updateData.votePrice = newPrice;
     }
 
-    // Update max votes per user with validation against current or new maxCandidates
     if (maxVotesPerUser !== undefined) {
       if (maxVotesPerUser === null || maxVotesPerUser === '') {
         return res.status(400).json({ error: 'Max votes per user cannot be empty' });
@@ -251,7 +269,6 @@ exports.update = async (req, res) => {
       if (isNaN(newMaxVotes) || newMaxVotes < 1) {
         return res.status(400).json({ error: 'Max votes per user must be at least 1' });
       }
-      // Use the new maxCandidates if provided, otherwise current
       const maxCand = maxCandidates !== undefined ? parseInt(maxCandidates, 10) : current.maxCandidates;
       if (newMaxVotes > maxCand) {
         return res.status(400).json({ error: 'Max votes per user cannot exceed max candidates' });
@@ -306,5 +323,36 @@ exports.delete = async (req, res) => {
   } catch (err) {
     console.error('Delete election error:', err);
     res.status(500).json({ error: 'Failed to delete election' });
+  }
+};
+
+exports.publishResults = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const election = await prisma.election.findUnique({ where: { id } });
+    if (!election) {
+      return res.status(404).json({ error: 'Election not found' });
+    }
+    if (election.status !== 'ENDED') {
+      return res.status(400).json({ error: 'Only ended elections can be published' });
+    }
+
+    const updated = await prisma.election.update({
+      where: { id },
+      data: { resultsPublishedAt: new Date() },
+    });
+
+    await createAuditLog({
+      userId: req.user.id,
+      event: 'RESULTS_PUBLISHED',
+      details: `Published results for election "${updated.title}" (ID: ${updated.id})`,
+      ipAddress: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+      result: 'OK',
+    });
+
+    res.json({ election: updated });
+  } catch (err) {
+    console.error('Publish results error:', err);
+    res.status(500).json({ error: 'Failed to publish results' });
   }
 };
