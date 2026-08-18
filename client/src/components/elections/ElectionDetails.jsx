@@ -369,22 +369,22 @@ export default function ElectionDetails() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h3>
                     <div className="relative border-l-2 border-gray-200 pl-6 space-y-6">
                       <div className="relative">
-                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Registration opened</p>
                         <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
                       </div>
                       <div className="relative">
-                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Voting begins</p>
                         <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
                       </div>
                       <div className="relative">
-                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Voting ends</p>
                         <p className="text-sm text-gray-500">{new Date(election.endDate).toLocaleString()}</p>
                       </div>
                       <div className="relative">
-                        <div className="absolute -left-2.5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
+                        <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Results announced</p>
                         <p className="text-sm text-gray-500">Within 24 hours of close</p>
                       </div>
