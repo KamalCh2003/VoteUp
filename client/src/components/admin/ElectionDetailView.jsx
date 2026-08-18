@@ -1,11 +1,24 @@
 // src/components/admin/ElectionDetailView.jsx
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Calendar, Clock, Users, Vote, BarChart3, Flag,
-  Settings, Shield, FileText, Edit, Trash2, Archive,
-  ChevronLeft, Check, X, UserCheck, Eye, MoreHorizontal,
-  Play, StopCircle, UserPlus, Pencil,
+  Calendar,
+  Clock,
+  Users,
+  Vote,
+  BarChart3,
+  Flag,
+  FileText,
+  Edit,
+  Trash2,
+  Archive,
+  ChevronLeft,
+  Check,
+  X,
+  Play,
+  StopCircle,
+  UserPlus,
+  Pencil,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -129,8 +142,6 @@ export default function ElectionDetailView() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'candidates', label: 'Candidates', icon: Users },
-    { id: 'settings', label: 'Voting Settings', icon: Settings },
-    { id: 'moderation', label: 'Moderation', icon: Shield },
     { id: 'results', label: 'Results', icon: FileText },
   ];
 
@@ -409,58 +420,6 @@ export default function ElectionDetailView() {
           </div>
         )}
 
-        {activeTab === 'settings' && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Voting Settings</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <div>
-                  <div className="font-medium text-gray-800">Require OTP at vote time</div>
-                  <div className="text-sm text-gray-500">Adds an extra verification step before submission</div>
-                </div>
-                <div className="relative inline-block w-12 h-6 rounded-full bg-violet-600 cursor-pointer">
-                  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform translate-x-6" />
-                </div>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <div>
-                  <div className="font-medium text-gray-800">Allow anonymous results view</div>
-                  <div className="text-sm text-gray-500">Let non-voters watch live results</div>
-                </div>
-                <div className="relative inline-block w-12 h-6 rounded-full bg-violet-600 cursor-pointer">
-                  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform translate-x-6" />
-                </div>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <div>
-                  <div className="font-medium text-gray-800">Enable paid voting</div>
-                  <div className="text-sm text-gray-500">Charge per additional vote</div>
-                </div>
-                <div className="relative inline-block w-12 h-6 rounded-full bg-gray-300 cursor-pointer">
-                  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform" />
-                </div>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <div>
-                  <div className="font-medium text-gray-800">Public visibility</div>
-                  <div className="text-sm text-gray-500">List this election on the public browse page</div>
-                </div>
-                <div className="relative inline-block w-12 h-6 rounded-full bg-violet-600 cursor-pointer">
-                  <span className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform translate-x-6" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'moderation' && (
-          <div className="text-center py-12 text-gray-500">
-            <Shield size={48} className="mx-auto mb-4 text-gray-300" />
-            <h4 className="text-lg font-medium text-gray-700">No moderation flags</h4>
-            <p className="text-sm">This election has no reported issues or disputed votes.</p>
-          </div>
-        )}
-
         {activeTab === 'results' && (
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Results</h3>
@@ -496,7 +455,7 @@ export default function ElectionDetailView() {
         )}
       </div>
 
-      {/* Edit Election Modal */}
+      {/* Modals */}
       <AddElectionModal
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -507,7 +466,6 @@ export default function ElectionDetailView() {
         election={election}
       />
 
-      {/* Add Candidate Modal */}
       <AddCandidateModal
         open={showAddCandidateModal}
         onClose={() => setShowAddCandidateModal(false)}
@@ -519,7 +477,6 @@ export default function ElectionDetailView() {
         hideElectionSelect={true}
       />
 
-      {/* Edit Candidate Modal */}
       <EditCandidateModal
         open={showEditCandidateModal}
         onClose={() => {
