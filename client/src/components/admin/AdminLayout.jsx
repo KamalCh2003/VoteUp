@@ -376,7 +376,7 @@ export default function AdminLayout({ children }) {
 
         <div className="px-3 mt-3 border-t border-[#E2E8F0] pt-3">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/admin/dashboard")}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#64748B] hover:bg-[#F8FAFC] transition w-full ${
               !sidebarOpen ? "justify-center" : ""
             }`}
