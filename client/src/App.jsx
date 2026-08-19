@@ -5,7 +5,7 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -66,6 +66,8 @@ import ElectionDetailView from "./components/admin/ElectionDetailView";
 import AdminAnalytics from "./components/admin/AdminAnalytics";
 import CreateElectionPage from "./components/admin/CreateElectionPage";
 import PastResults from "./components/admin/PastResults";
+import MaintenancePage from "./components/common/MaintenancePage";
+import api from "./services/api";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -111,6 +113,28 @@ function AppContent() {
   const { user } = useAuth();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isContestantRoute = location.pathname.startsWith("/contestant");
+
+  const [maintenance, setMaintenance] = useState({ loading: true, enabled: false });
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const res = await api.get("/maintenance-status");
+        setMaintenance({ loading: false, enabled: res.data.maintenanceMode });
+      } catch {
+        setMaintenance({ loading: false, enabled: false });
+      }
+    };
+    checkMaintenance();
+  }, []);
+
+  if (maintenance.loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  if (maintenance.enabled && user?.role !== "ADMIN") {
+    return <MaintenancePage />;
+  }
 
   const hideNavbarPaths = [
     "/login",
@@ -322,13 +346,11 @@ function AppContent() {
       ) : (
         <main className="min-h-screen">
           <Routes>
-            {/* Redirect from old /voter/home to dashboard */}
             <Route
               path="/voter/home"
               element={<Navigate to="/voter/dashboard" replace />}
             />
 
-            {/* ✅ Public landing page – redirects if already logged in */}
             <Route
               path="/"
               element={
@@ -338,7 +360,6 @@ function AppContent() {
               }
             />
 
-            {/* Other public routes (no authentication required) */}
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/compliance" element={<Compliance />} />
@@ -358,7 +379,6 @@ function AppContent() {
             <Route path="/reset-link-sent" element={<ResetLinkSent />} />
             <Route path="/request-election" element={<RequestElection />} />
 
-            {/* Protected Voter Routes */}
             <Route
               path="/voter/dashboard"
               element={
@@ -440,7 +460,6 @@ function AppContent() {
               }
             />
 
-            {/* Contestant Routes */}
             <Route
               path="/contestant/profile"
               element={
@@ -490,7 +509,6 @@ function AppContent() {
               }
             />
 
-            {/* Payment Routes */}
             <Route
               path="/payment/success"
               element={
@@ -517,7 +535,6 @@ function AppContent() {
             />
             <Route path="/payment/callback" element={<PaymentCallback />} />
 
-            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

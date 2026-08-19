@@ -15,23 +15,23 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    if (!user) return;
+  // useEffect(() => {
+  //   if (!user) return;
 
-    const fetchUnreadCount = async () => {
-      try {
-        const res = await api.get('/users/me/notifications/unread-count');
-        setUnreadCount(res.data.count || 0);
-      } catch (err) {
-        console.error('Failed to fetch unread count:', err);
-        setUnreadCount(0);
-      }
-    };
+  //   const fetchUnreadCount = async () => {
+  //     try {
+  //       const res = await api.get('/users/me/notifications/unread-count');
+  //       setUnreadCount(res.data.count || 0);
+  //     } catch (err) {
+  //       console.error('Failed to fetch unread count:', err);
+  //       setUnreadCount(0);
+  //     }
+  //   };
 
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+  //   fetchUnreadCount();
+  //   const interval = setInterval(fetchUnreadCount, 30000);
+  //   return () => clearInterval(interval);
+  // }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -170,7 +170,7 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
+            {/* <button
               onClick={() => navigate('/voter-notifications')}
               className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#64748B] hover:border-purple-600 hover:text-purple-600 transition"
             >
@@ -180,7 +180,7 @@ export default function Navbar() {
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
-            </button>
+            </button> */}
 
             <div className="hidden md:flex relative" ref={dropdownRef}>
               <button
