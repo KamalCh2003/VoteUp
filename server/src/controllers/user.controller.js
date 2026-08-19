@@ -101,10 +101,13 @@ exports.changePassword = async (req, res) => {
 
 exports.uploadAvatar = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const avatarUrl = req.file.secure_url || req.file.path;
     const user = await prisma.user.update({
       where: { id: req.user.id },
-      data: { avatarUrl: req.file.path },
+      data: { avatarUrl },
     });
 
     await createAuditLog({
@@ -250,8 +253,6 @@ exports.getPayments = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch payment history' });
   }
 };
-
-// ─── Bookmark endpoints ──────────────────────────────────────────────
 
 exports.getBookmarks = async (req, res) => {
   try {

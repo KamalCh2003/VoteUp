@@ -112,6 +112,10 @@ export default function VoterProfile() {
       toast.error("Please select an image file");
       return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
     setUploadingAvatar(true);
     try {
       const formData = new FormData();
@@ -119,11 +123,13 @@ export default function VoterProfile() {
       const { data } = await api.post("/users/me/avatar", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      const updatedUser = { ...user, avatarUrl: data.avatarUrl };
+      const avatarUrl = data.avatarUrl;
+      const updatedUser = { ...user, avatarUrl };
       updateUser(updatedUser);
-      setProfile((prev) => ({ ...prev, avatarUrl: data.avatarUrl }));
+      setProfile((prev) => ({ ...prev, avatarUrl }));
       toast.success("Avatar updated!");
     } catch (err) {
+      console.error("Avatar upload error:", err);
       toast.error(err.response?.data?.error || "Upload failed");
     } finally {
       setUploadingAvatar(false);
@@ -155,7 +161,6 @@ export default function VoterProfile() {
         onChange={handleAvatarChange}
       />
 
-      {/* Desktop back button */}
       <div className="hidden lg:block w-full px-6 pt-6">
         <Link
           to={backLink}
@@ -166,9 +171,7 @@ export default function VoterProfile() {
         </Link>
       </div>
 
-      {/* Profile content */}
       <div className="mt-4 max-w-lg mx-auto space-y-6 pb-0 px-4">
-        {/* Personal Info Card */}
         <GlassCard>
           <div className="lg:hidden absolute top-4 right-4">
             <Link
@@ -184,12 +187,18 @@ export default function VoterProfile() {
             Personal Information
           </h2>
 
-          {/* Avatar */}
           <div className="flex items-center gap-4 mb-6">
             <div className="relative">
               <div className="h-20 w-20 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden shadow-md">
                 {profile.avatarUrl ? (
-                  <img src={profile.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  <img
+                    src={profile.avatarUrl}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                    onError={() => {
+                      setProfile((prev) => ({ ...prev, avatarUrl: "" }));
+                    }}
+                  />
                 ) : (
                   <span className="text-white text-2xl font-bold">
                     {profile.firstName?.[0]?.toUpperCase()}
@@ -204,11 +213,17 @@ export default function VoterProfile() {
                 className="absolute bottom-0 right-0 p-1.5 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-violet-600 shadow-sm transition disabled:opacity-50"
                 title="Change avatar"
               >
-                {uploadingAvatar ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                {uploadingAvatar ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Camera size={16} />
+                )}
               </button>
             </div>
             <div>
-              <p className="font-medium text-gray-800">{profile.firstName} {profile.lastName}</p>
+              <p className="font-medium text-gray-800">
+                {profile.firstName} {profile.lastName}
+              </p>
               <p className="text-sm text-gray-500 flex items-center gap-1">
                 <Mail size={14} /> {profile.email}
               </p>
@@ -225,19 +240,22 @@ export default function VoterProfile() {
             </div>
           </div>
 
-          {/* Edit form */}
           <form onSubmit={handleUpdate} className="space-y-3">
             <input
               className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
               placeholder="First Name"
               value={profile.firstName}
-              onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+              onChange={(e) =>
+                setProfile({ ...profile, firstName: e.target.value })
+              }
             />
             <input
               className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
               placeholder="Last Name"
               value={profile.lastName}
-              onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+              onChange={(e) =>
+                setProfile({ ...profile, lastName: e.target.value })
+              }
             />
             <input
               className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
@@ -250,15 +268,25 @@ export default function VoterProfile() {
               className="w-full p-3 rounded-xl border border-[var(--gb)] bg-[var(--glass)] text-sm"
               placeholder="Phone"
               value={profile.phone}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+              onChange={(e) =>
+                setProfile({ ...profile, phone: e.target.value })
+              }
             />
-            <Button type="submit" variant="primary" className="w-full" disabled={saving}>
-              {saving ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Save Changes"}
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={saving}
+            >
+              {saving ? (
+                <Loader2 className="animate-spin mx-auto" size={18} />
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </form>
         </GlassCard>
 
-        {/* Change Password Card */}
         <GlassCard>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Key size={20} className="text-violet-600" />
@@ -319,8 +347,17 @@ export default function VoterProfile() {
                 {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <Button type="submit" variant="primary" className="w-full" disabled={changingPassword}>
-              {changingPassword ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Update Password"}
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={changingPassword}
+            >
+              {changingPassword ? (
+                <Loader2 className="animate-spin mx-auto" size={18} />
+              ) : (
+                "Update Password"
+              )}
             </Button>
           </form>
         </GlassCard>
