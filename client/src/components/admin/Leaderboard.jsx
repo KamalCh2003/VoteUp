@@ -114,7 +114,6 @@ export default function Leaderboard() {
     try {
       await api.patch(`/elections/${electionId}/publish`);
       toast.success("Results published successfully!");
-      // Refresh the election list and reload the selected election
       await fetchAllElections();
       if (selectedElection?.id === electionId) {
         await loadElectionDetails(electionId);
@@ -147,6 +146,16 @@ export default function Leaderboard() {
     }, 30000);
     return () => clearInterval(interval);
   }, [fetchAllElections]);
+
+  useEffect(() => {
+    if (!selectedElection) return;
+    if (selectedElection.status !== "ACTIVE") return;
+
+    const interval = setInterval(() => {
+      loadElectionDetails(selectedElection.id);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [selectedElection?.id, selectedElection?.status]);
 
   useEffect(() => {
     if (!activeElections.length) return;
@@ -537,117 +546,78 @@ export default function Leaderboard() {
       );
     }
 
-    if (selectedElection.status === "ACTIVE") {
-      const remaining =
-        timeLeft[selectedElection.id] ||
-        getTimeRemaining(selectedElection.endDate);
-      return (
-        <div className="space-y-5">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-indigo-600 to-indigo-700 px-6 py-8 text-white shadow-lg sm:px-8">
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-            <div className="relative">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" />
-                LIVE ELECTION
-              </div>
-              <h2 className="max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
-                {selectedElection.title}
-              </h2>
-              {selectedElection.description && (
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">
-                  {selectedElection.description}
-                </p>
-              )}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs">
-                  <Calendar size={13} />
-                  Ends {new Date(selectedElection.endDate).toLocaleDateString()}
-                </span>
-                {remaining.total > 0 && (
-                  <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs">
-                    <Clock size={13} />
-                    {formatCountdown(remaining)}
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs">
-                  <Users size={13} />
-                  {rankedCandidates.length} candidates
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-3xl border border-gray-200 bg-white px-6 py-12 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-500">
-              <Activity size={30} />
-            </div>
-            <h3 className="mt-5 text-xl font-bold text-gray-950">
-              Election is currently live
-            </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
-              Voting is still in progress. Final leaderboard results will become
-              available once the election has ended.
-            </p>
-            <div className="mx-auto mt-6 flex max-w-md items-center gap-2 rounded-xl bg-gray-50 p-3 text-left">
-              <CircleCheck size={18} className="shrink-0 text-emerald-500" />
-              <p className="text-xs text-gray-500">
-                The leaderboard will automatically update after the election is
-                completed.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    const isActive = selectedElection.status === "ACTIVE";
+    const isEnded = selectedElection.status === "ENDED";
+    const remaining = isActive
+      ? timeLeft[selectedElection.id] || getTimeRemaining(selectedElection.endDate)
+      : null;
+    const isPublished = isEnded && !!selectedElection.resultsPublishedAt;
 
-    // ENDED election
-    const isPublished = !!selectedElection.resultsPublishedAt;
     return (
       <div className="space-y-5">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-950 via-gray-900 to-violet-950 px-6 py-7 text-white shadow-lg sm:px-8">
-          <div className="absolute -right-20 -top-32 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div
+          className={`relative overflow-hidden rounded-3xl px-6 py-7 text-white shadow-lg sm:px-8 ${
+            isActive
+              ? "bg-gradient-to-br from-violet-600 via-indigo-600 to-indigo-700"
+              : "bg-gradient-to-br from-gray-950 via-gray-900 to-violet-950"
+          }`}
+        >
+          <div className="absolute -right-20 -top-32 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
           <div className="relative">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold">
-                <CircleCheck size={13} />
-                ELECTION ENDED
-              </span>
+              {isActive ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold backdrop-blur">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" />
+                  LIVE ELECTION
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold">
+                  <CircleCheck size={13} />
+                  ELECTION ENDED
+                </span>
+              )}
               {selectedElection.category && (
                 <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] text-white/70">
                   {selectedElection.category}
                 </span>
               )}
-              {/* Publish / Published button */}
-              {isPublished ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
-                  <CircleCheck size={13} /> Published
-                </span>
-              ) : (
-                <button
-                  onClick={() => handlePublish(selectedElection.id)}
-                  disabled={publishing === selectedElection.id}
-                  className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-violet-700 transition disabled:opacity-50"
-                >
-                  {publishing === selectedElection.id ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <Eye size={13} />
-                  )}
-                  Publish Results
-                </button>
+              {isEnded && (
+                isPublished ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                    <CircleCheck size={13} /> Published
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => handlePublish(selectedElection.id)}
+                    disabled={publishing === selectedElection.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-violet-700 transition disabled:opacity-50"
+                  >
+                    {publishing === selectedElection.id ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Eye size={13} />
+                    )}
+                    Publish Results
+                  </button>
+                )
               )}
             </div>
+
             <h2 className="mt-4 max-w-3xl text-2xl font-bold tracking-tight sm:text-3xl">
               {selectedElection.title}
             </h2>
+
             {selectedElection.description && (
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">
                 {selectedElection.description}
               </p>
             )}
-            <div className="mt-6 flex flex-wrap gap-4 text-xs text-white/60">
+
+            <div className="mt-6 flex flex-wrap gap-3 text-xs text-white/60">
               <span className="flex items-center gap-1.5">
                 <Calendar size={13} />
-                Ended {new Date(selectedElection.endDate).toLocaleDateString()}
+                {isActive ? "Ends" : "Ended"}{" "}
+                {new Date(selectedElection.endDate).toLocaleDateString()}
               </span>
               <span className="h-4 w-px bg-white/20" />
               <span className="flex items-center gap-1.5">
@@ -659,15 +629,23 @@ export default function Leaderboard() {
                 <BarChart3 size={13} />
                 {totalVotes.toLocaleString()} total votes
               </span>
+              {isActive && remaining?.total > 0 && (
+                <>
+                  <span className="h-4 w-px bg-white/20" />
+                  <span className="flex items-center gap-1.5 text-cyan-300">
+                    <Clock size={13} />
+                    {formatCountdown(remaining)}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
+
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-400">
-                Total Votes
-              </span>
+              <span className="text-xs font-medium text-gray-400">Total Votes</span>
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
                 <BarChart3 size={17} />
               </div>
@@ -677,11 +655,10 @@ export default function Leaderboard() {
             </p>
             <p className="mt-1 text-xs text-gray-400">Across all candidates</p>
           </div>
+
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-400">
-                Candidates
-              </span>
+              <span className="text-xs font-medium text-gray-400">Candidates</span>
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                 <Users size={17} />
               </div>
@@ -691,11 +668,10 @@ export default function Leaderboard() {
             </p>
             <p className="mt-1 text-xs text-gray-400">Final participants</p>
           </div>
+
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-400">
-                Winner Share
-              </span>
+              <span className="text-xs font-medium text-gray-400">Winner Share</span>
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                 <TrendingUp size={17} />
               </div>
@@ -705,13 +681,12 @@ export default function Leaderboard() {
             </p>
             <p className="mt-1 truncate text-xs text-gray-400">
               {winner
-                ? `${winner.user?.firstName || ""} ${
-                    winner.user?.lastName || ""
-                  }`
+                ? `${winner.user?.firstName || ""} ${winner.user?.lastName || ""}`
                 : "No winner"}
             </p>
           </div>
         </div>
+
         {rankedCandidates.length > 0 && renderPodium()}
         {renderFullLeaderboard()}
       </div>
