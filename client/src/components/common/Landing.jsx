@@ -12,9 +12,7 @@ import ElectionRequestCTA from '../home/ElectionRequestCTA';
 import TestimonialsSection from '../home/TestimonialsSection';
 import FAQSection from '../home/FAQSection';
 
-/* =========================================================
-   Scroll Reveal Animation
-========================================================= */
+
 function AnimatedSection({ children, delay = 0 }) {
   const ref = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -65,16 +63,11 @@ function AnimatedSection({ children, delay = 0 }) {
   );
 }
 
-/* =========================================================
-   Landing Page
-========================================================= */
+
 export default function Landing() {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
 
-  /* =======================================================
-     Authentication Redirect
-  ======================================================= */
   useEffect(() => {
     if (loading) return;
 
@@ -96,22 +89,12 @@ export default function Landing() {
     }
   }, [user, isAuthenticated, loading, navigate]);
 
-  /* =======================================================
-     Loading / Redirect State
-  ======================================================= */
   if (loading || isAuthenticated) {
     return null;
   }
-
-  /* =======================================================
-     Landing Page
-  ======================================================= */
   return (
     <div className="min-h-screen overflow-hidden text-gray-900">
 
-      {/* ===================================================
-          Animated Background
-      =================================================== */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
 
         {/* Purple Glow */}
@@ -164,58 +147,39 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-b from-white via-gray-50 to-white" />
       </div>
 
-      {/* ===================================================
-          Hero
-      =================================================== */}
+
       <AnimatedSection>
         <HeroSection />
       </AnimatedSection>
 
-      {/* ===================================================
-          Live Elections
-      =================================================== */}
       <AnimatedSection delay={100}>
         <LiveElectionSection />
       </AnimatedSection>
 
-      {/* ===================================================
-          Who Can Use
-      =================================================== */}
+
       <AnimatedSection delay={150}>
         <WhoCanUse />
       </AnimatedSection>
 
-      {/* ===================================================
-          Features
-      =================================================== */}
+
       <AnimatedSection delay={200}>
         <FeaturesSection />
       </AnimatedSection>
 
-      {/* ===================================================
-          Testimonials
-      =================================================== */}
+   
       <AnimatedSection delay={250}>
         <TestimonialsSection />
       </AnimatedSection>
 
-      {/* ===================================================
-          FAQ
-      =================================================== */}
       <AnimatedSection delay={300}>
         <FAQSection />
       </AnimatedSection>
 
-      {/* ===================================================
-          CTA
-      =================================================== */}
+
       <AnimatedSection delay={350}>
         <ElectionRequestCTA />
       </AnimatedSection>
 
-      {/* ===================================================
-          Animation Keyframes
-      =================================================== */}
       <style>{`
         @keyframes backgroundFloat {
           0%, 100% {
