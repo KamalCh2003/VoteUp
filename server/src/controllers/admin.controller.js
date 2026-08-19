@@ -434,10 +434,10 @@ exports.createCandidateFromAdmin = async (req, res) => {
     });
     if (!election) return res.status(404).json({ error: "Election not found" });
 
-    const candidateCount = await prisma.candidate.count({
+    const approvedCount = await prisma.candidate.count({
       where: { electionId, status: "APPROVED" },
     });
-    if (election.maxCandidates && candidateCount >= election.maxCandidates) {
+    if (election.maxCandidates && approvedCount >= election.maxCandidates) {
       return res.status(400).json({
         error: `Candidate limit reached for this election (max ${election.maxCandidates})`,
       });
@@ -472,10 +472,11 @@ exports.createCandidateFromAdmin = async (req, res) => {
       }
     }
 
-    const existingCandidatesCount = await prisma.candidate.count({
+    // Generate unique candidate number based on total candidates in the election (including all statuses)
+    const totalCandidatesInElection = await prisma.candidate.count({
       where: { electionId },
     });
-    const sequence = String(existingCandidatesCount + 1).padStart(2, "0");
+    const sequence = String(totalCandidatesInElection + 1).padStart(2, "0");
     const electionShortId = electionId.slice(0, 6);
     const generatedCandidateNumber = `CN-${electionShortId}-${sequence}`;
 
@@ -489,6 +490,8 @@ exports.createCandidateFromAdmin = async (req, res) => {
         bio,
         avatarUrl,
         createdByAdminId: req.user.id,
+        createdAt: new Date(), 
+        status: 'APPROVED',
       },
       include: { user: true, election: true, createdByAdmin: true },
     });

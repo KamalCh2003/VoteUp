@@ -1,4 +1,3 @@
-// src/components/admin/ElectionRequestManager.jsx
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -17,10 +16,8 @@ export default function ElectionRequestManager() {
   const itemsPerPage = 10;
   const toast = useToast();
 
-  // Detail modal state
   const [selectedRequest, setSelectedRequest] = useState(null);
 
-  // Reply modal state
   const [replyTarget, setReplyTarget] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
@@ -41,7 +38,6 @@ export default function ElectionRequestManager() {
     fetchRequests();
   }, []);
 
-  // Refetch when a status is changed or a request is deleted, to keep data fresh
   const refreshData = () => fetchRequests();
 
   const handleStatusChange = async (id, status) => {
@@ -104,7 +100,6 @@ export default function ElectionRequestManager() {
     }
   };
 
-  // Client‑side filtering
   const filtered = requests.filter(req => {
     const searchMatch = !search ||
       (req.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -115,11 +110,9 @@ export default function ElectionRequestManager() {
     return searchMatch && statusMatch;
   });
 
-  // Pagination
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedRequests = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter]);
@@ -197,7 +190,6 @@ export default function ElectionRequestManager() {
                       <td className="p-4">{getStatusBadge(req.status)}</td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-1">
-                          {/* Reply button */}
                           <button
                             onClick={() => setReplyTarget(req)}
                             className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
@@ -235,13 +227,18 @@ export default function ElectionRequestManager() {
         </>
       )}
 
-      {/* Detail Modal */}
       {selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setSelectedRequest(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setSelectedRequest(null)}
-              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-400 hover:text-gray-600"
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-400 hover:text-gray-600 z-10"
             >
               <X size={20} />
             </button>
@@ -281,13 +278,12 @@ export default function ElectionRequestManager() {
 
               <div className="mb-6">
                 <p className="text-xs text-gray-500 uppercase mb-2">Message</p>
-                <div className="bg-gray-50 rounded-xl p-4 text-gray-700 whitespace-pre-wrap">
+                <div className="bg-gray-50 rounded-xl p-4 text-gray-700 whitespace-pre-wrap max-h-70 overflow-y-auto">
                   {selectedRequest.message}
                 </div>
               </div>
 
               <div className="flex flex-wrap justify-end gap-2">
-                {/* Reply button inside modal */}
                 <button
                   onClick={() => {
                     setReplyTarget(selectedRequest);
@@ -342,10 +338,15 @@ export default function ElectionRequestManager() {
         </div>
       )}
 
-      {/* Reply Modal */}
       {replyTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg bg-white border border-gray-200 rounded-3xl shadow-2xl p-6">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setReplyTarget(null)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-white border border-gray-200 rounded-3xl shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setReplyTarget(null)}
               className="absolute top-4 right-4 p-2 rounded-xl hover:bg-gray-100 transition text-gray-400 hover:text-gray-600"
