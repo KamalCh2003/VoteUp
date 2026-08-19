@@ -65,8 +65,8 @@ export default function AddCandidateModal({ open, onClose, onSuccess, electionId
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.firstName || !form.lastName || !form.email || !form.party) {
-      return toast.error('Please fill all required fields (name, email, party).');
+    if (!form.firstName || !form.lastName || !form.email) {
+      return toast.error('Please fill all required fields (name and email).');
     }
 
     if (!hideElectionSelect && !form.electionId) {
@@ -81,7 +81,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess, electionId
           firstName: form.firstName,
           lastName: form.lastName,
           email: form.email,
-          party: form.party,
+          party: form.party || null,
           slogan: form.slogan,
           bio: form.bio,
           avatarFile: avatarFile,
@@ -95,7 +95,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess, electionId
       payload.append('firstName', form.firstName);
       payload.append('lastName', form.lastName);
       payload.append('email', form.email);
-      payload.append('party', form.party);
+      payload.append('party', form.party || '');
       payload.append('electionId', form.electionId);
       payload.append('slogan', form.slogan);
       payload.append('bio', form.bio);
@@ -188,7 +188,7 @@ export default function AddCandidateModal({ open, onClose, onSuccess, electionId
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Organization / Party *</label>
+              <label className="block text-sm text-gray-700 mb-1">Organization / Party</label>
               <div className="relative">
                 <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -196,9 +196,8 @@ export default function AddCandidateModal({ open, onClose, onSuccess, electionId
                   name="party"
                   value={form.party}
                   onChange={handleChange}
-                  required
                   className="w-full h-11 pl-10 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-violet-500"
-                  placeholder="Progressive Alliance"
+                  placeholder="Optional"
                 />
               </div>
             </div>

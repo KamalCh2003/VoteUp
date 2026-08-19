@@ -1,8 +1,7 @@
-// src/components/admin/CandidateManager.jsx
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import {
-  Search, Check, X, UserCheck, Mail, Calendar, PartyPopper, Quote, FileText,
+  Search, Check, X, UserCheck, Mail, PartyPopper, Quote, FileText,
   XCircle, Users, UserCog, UserMinus, Eye, Edit, ChevronLeft, ChevronRight, Trash2,
   Square, SquareCheckBig, Clock, UserPlus,
 } from 'lucide-react';
@@ -10,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
 import AddCandidateModal from './AddCandidateModal';
 import EditCandidateModal from './EditCandidateModal';
+import { Link } from 'react-router-dom';
 
 export default function ContestantManagement() {
   const [candidates, setCandidates] = useState([]);
@@ -160,9 +160,174 @@ export default function ContestantManagement() {
 
   const clearDateFilter = () => setFilterDate('');
 
+  const getAddedBy = (c) => {
+    return c.createdByAdmin
+      ? `${c.createdByAdmin.firstName} ${c.createdByAdmin.lastName}`
+      : 'System';
+  };
+
+  const renderCandidateCard = (c) => {
+    const avatarInitials = c.user?.firstName?.[0] + c.user?.lastName?.[0] || '?';
+    const addedBy = getAddedBy(c);
+    return (
+      <div key={c.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition p-5 flex flex-col">
+        <div className="flex items-center gap-4 mb-3">
+          <div className="h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {c.avatarUrl ? (
+              <img src={c.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white text-lg font-bold">{avatarInitials}</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-gray-900 truncate">
+              {c.user?.firstName} {c.user?.lastName}
+            </div>
+            <div className="text-xs text-gray-500 truncate">{c.user?.email}</div>
+            {c.election && (
+              <div className="text-xs text-violet-600 mt-0.5 truncate">{c.election.title}</div>
+            )}
+          </div>
+          <div>{getStatusBadge(c.status)}</div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2 mb-4 border border-gray-100">
+          <FileText size={14} className="text-violet-500 flex-shrink-0" />
+          <span>
+            {c.status === 'PENDING' ? 'National ID uploaded — pending review' :
+             c.status === 'APPROVED' ? 'Verified' : 'Rejected'}
+          </span>
+        </div>
+
+        <div className="flex justify-between text-xs text-gray-500 mb-4">
+          <span>Party: {c.party || 'Independent'}</span>
+          <span>#{c.candidateNumber || '—'}</span>
+        </div>
+
+        <div className="text-xs text-gray-400 mb-2">
+          Added by: {addedBy}
+        </div>
+
+        <div className="flex gap-2 mt-auto">
+          <button
+            onClick={() => openDetailModal(c)}
+            className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition text-sm font-medium flex items-center justify-center gap-1.5"
+          >
+            <Eye size={14} /> Review
+          </button>
+          {c.status === 'PENDING' && (
+            <>
+              <button
+                onClick={() => handleApprove(c.id)}
+                className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center justify-center gap-1.5 transition"
+              >
+                <Check size={14} /> Approve
+              </button>
+              <button
+                onClick={() => handleReject(c.id)}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium flex items-center justify-center gap-1.5 transition"
+              >
+                <X size={14} /> Reject
+              </button>
+            </>
+          )}
+          {c.status !== 'PENDING' && (
+            <>
+              <button
+                onClick={() => openEditModal(c)}
+                className="py-2 px-3 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 transition"
+                title="Edit"
+              >
+                <Edit size={14} />
+              </button>
+              <button
+                onClick={() => handleDelete(c.id)}
+                className="py-2 px-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition"
+                title="Delete"
+              >
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderApprovedTable = (approvedList) => {
+    if (approvedList.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-2xl bg-white">
+          No approved candidates found.
+        </div>
+      );
+    }
+    return (
+      <div className="overflow-x-auto border border-gray-200 rounded-2xl bg-white">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600 border-b border-gray-200">
+            <tr>
+              <th className="text-left py-3 px-4">Candidate</th>
+              <th className="text-left py-3 px-4">Party</th>
+              <th className="text-left py-3 px-4">Election</th>
+              <th className="text-left py-3 px-4">Votes</th>
+              <th className="text-left py-3 px-4">Status</th>
+              <th className="text-right py-3 px-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {approvedList.map(c => (
+              <tr key={c.id} className="hover:bg-gray-50 transition">
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        `${c.user?.firstName?.[0]}${c.user?.lastName?.[0]}`
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {c.user?.firstName} {c.user?.lastName}
+                      </div>
+                      <div className="text-xs text-gray-500">{c.user?.email}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-3 px-4 text-gray-700">{c.party || 'Independent'}</td>
+                <td className="py-3 px-4 text-gray-700">{c.election?.title || 'N/A'}</td>
+                <td className="py-3 px-4 text-gray-900 font-medium">{c.votesReceived || 0}</td>
+                <td className="py-3 px-4">{getStatusBadge(c.status)}</td>
+                <td className="py-3 px-4 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => openEditModal(c)}
+                      className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-500 hover:text-blue-600 transition"
+                      title="Edit"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-600 transition"
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
     <div className="px-6 bg-gray-50 text-gray-800 min-h-screen">
-      {/* ─── Top Row: Title + Add Contestant Button ─── */}
+      {/* Top Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">List of Contestants</h2>
@@ -179,7 +344,7 @@ export default function ContestantManagement() {
         </Button>
       </div>
 
-      {/* ─── Filters Row ─── */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
         <div className="relative w-full sm:w-auto flex-1 min-w-[160px]">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -242,7 +407,7 @@ export default function ContestantManagement() {
         )}
       </div>
 
-      {/* ─── Tabs ─── */}
+      {/* Tabs */}
       <div className="flex gap-6 border-b border-gray-200 mb-6">
         {tabs.map(tab => (
           <button
@@ -255,103 +420,70 @@ export default function ContestantManagement() {
         ))}
       </div>
 
-      {/* ─── Candidate Cards Grid ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {paginatedCandidates.map(c => {
-          const avatarInitials = c.user?.firstName?.[0] + c.user?.lastName?.[0] || '?';
-          const addedBy = c.createdByAdmin
-            ? `${c.createdByAdmin.firstName} ${c.createdByAdmin.lastName}`
-            : 'System';
-          return (
-            <div key={c.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition p-5 flex flex-col">
-              <div className="flex items-center gap-4 mb-3">
-                <div className="h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {c.avatarUrl ? (
-                    <img src={c.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-white text-lg font-bold">{avatarInitials}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 truncate">
-                    {c.user?.firstName} {c.user?.lastName}
+      {/* Content */}
+      {statusFilter === 'ALL' ? (
+        <>
+          {/* Pending Section */}
+          {(() => {
+            const pendingList = paginatedCandidates.filter(c => c.status === 'PENDING');
+            if (pendingList.length > 0) {
+              return (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    Pending ({pendingList.length})
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {pendingList.map(c => renderCandidateCard(c))}
                   </div>
-                  <div className="text-xs text-gray-500 truncate">{c.user?.email}</div>
-                  {c.election && (
-                    <div className="text-xs text-violet-600 mt-0.5 truncate">{c.election.title}</div>
-                  )}
                 </div>
-                <div>{getStatusBadge(c.status)}</div>
-              </div>
+              );
+            } else {
+              return (
+                <div className="mb-8 text-center text-gray-500 py-4">
+                  No pending candidates.
+                </div>
+              );
+            }
+          })()}
 
-              <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2 mb-4 border border-gray-100">
-                <FileText size={14} className="text-violet-500 flex-shrink-0" />
-                <span>
-                  {c.status === 'PENDING' ? 'National ID uploaded — pending review' :
-                   c.status === 'APPROVED' ? 'Verified' : 'Rejected'}
-                </span>
-              </div>
+          {/* Approved Section */}
+          {(() => {
+            const approvedList = paginatedCandidates.filter(c => c.status === 'APPROVED');
+            if (approvedList.length > 0) {
+              return (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <Check size={18} className="text-emerald-600" />
+                    Approved ({approvedList.length})
+                  </h3>
+                  {renderApprovedTable(approvedList)}
+                </div>
+              );
+            } else {
+              return (
+                <div className="text-center text-gray-500 py-4">
+                  No approved candidates.
+                </div>
+              );
+            }
+          })()}
+        </>
+      ) : statusFilter === 'APPROVED' ? (
+        /* Approved tab: table */
+        renderApprovedTable(paginatedCandidates)
+      ) : (
+        /* Pending / Rejected tabs: cards */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedCandidates.map(c => renderCandidateCard(c))}
+        </div>
+      )}
 
-              <div className="flex justify-between text-xs text-gray-500 mb-4">
-                <span>Party: {c.party || 'Independent'}</span>
-                <span>#{c.candidateNumber || '—'}</span>
-              </div>
-
-              <div className="text-xs text-gray-400 mb-2">
-                Added by: {addedBy}
-              </div>
-
-              <div className="flex gap-2 mt-auto">
-                <button
-                  onClick={() => openDetailModal(c)}
-                  className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition text-sm font-medium flex items-center justify-center gap-1.5"
-                >
-                  <Eye size={14} /> Review
-                </button>
-                {c.status === 'PENDING' && (
-                  <>
-                    <button
-                      onClick={() => handleApprove(c.id)}
-                      className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center justify-center gap-1.5 transition"
-                    >
-                      <Check size={14} /> Approve
-                    </button>
-                    <button
-                      onClick={() => handleReject(c.id)}
-                      className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium flex items-center justify-center gap-1.5 transition"
-                    >
-                      <X size={14} /> Reject
-                    </button>
-                  </>
-                )}
-                {c.status !== 'PENDING' && (
-                  <>
-                    <button
-                      onClick={() => openEditModal(c)}
-                      className="py-2 px-3 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 transition"
-                      title="Edit"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      className="py-2 px-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition"
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {paginatedCandidates.length === 0 && (
+      {paginatedCandidates.length === 0 && statusFilter !== 'ALL' && (
         <div className="text-center py-12 text-gray-500">No contestants found.</div>
       )}
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-8 text-sm">
           <button
@@ -372,6 +504,7 @@ export default function ContestantManagement() {
         </div>
       )}
 
+      {/* Detail Modal */}
       {showDetailModal && selectedCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
