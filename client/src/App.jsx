@@ -84,12 +84,25 @@ function Protected({ children, roles }) {
   return children;
 }
 
-// ✅ New component: redirects authenticated users away from public pages
 function PublicRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-  if (loading)
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
     return <div className="flex justify-center p-10">Loading...</div>;
-  if (isAuthenticated) return <Navigate to="/voter/dashboard" replace />;
+  }
+
+  if (isAuthenticated) {
+    if (user?.role === "ADMIN") {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    if (user?.role === "CONTESTANT") {
+      return <Navigate to="/contestant/dashboard" replace />;
+    }
+
+    return <Navigate to="/voter/dashboard" replace />;
+  }
+
   return children;
 }
 
