@@ -4,6 +4,7 @@ const ctrl = require("../controllers/admin.controller");
 const { authenticate } = require("../middleware/auth");
 const { requireRole } = require("../middleware/roleCheck");
 const upload = require("../middleware/upload");
+const settingsController = require('../controllers/settings.controller');
 
 router.post("/election-requests", ctrl.submitElectionRequest);
 
@@ -43,5 +44,9 @@ router.get("/election-requests", ctrl.getElectionRequests);
 router.patch("/election-requests/:id/status", ctrl.updateElectionRequestStatus);
 router.delete("/election-requests/:id", ctrl.deleteElectionRequest);
 router.post("/election-requests/:id/reply", ctrl.replyToElectionRequest);
+
+
+router.get('/settings', authenticate, requireRole('ADMIN'), settingsController.getSettings);
+router.put('/settings', authenticate, requireRole('ADMIN'), settingsController.updateSettings);
 
 module.exports = router;
