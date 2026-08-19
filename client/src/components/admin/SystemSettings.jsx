@@ -1,4 +1,3 @@
-// src/components/admin/SystemSettings.jsx
 import { useState, useEffect } from 'react';
 import { Save, Loader2 } from 'lucide-react';
 import api from '../../services/api';
@@ -9,9 +8,6 @@ export default function SystemSettings() {
     siteName: 'VoteUp',
     maintenanceMode: false,
     maxLoginAttempts: 5,
-    candidacyFee: 5000,
-    currency: 'NPR',
-    enablePayments: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,7 +59,6 @@ export default function SystemSettings() {
     <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">System Settings</h2>
 
-      {/* General Section */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4">General</h3>
         <div className="space-y-4">
@@ -88,7 +83,6 @@ export default function SystemSettings() {
         </div>
       </div>
 
-      {/* Security Section */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold mb-4">Security</h3>
         <div>
@@ -99,42 +93,6 @@ export default function SystemSettings() {
             onChange={(e) => handleChange('maxLoginAttempts', parseInt(e.target.value))}
             className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm"
           />
-        </div>
-      </div>
-
-      {/* Payment Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Payment</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm text-gray-700">Candidacy Fee (रू)</label>
-            <input
-              type="number"
-              value={settings.candidacyFee}
-              onChange={(e) => handleChange('candidacyFee', parseFloat(e.target.value))}
-              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-gray-700">Currency</label>
-            <select
-              value={settings.currency}
-              onChange={(e) => handleChange('currency', e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm"
-            >
-              <option value="NPR">NPR (रू)</option>
-              <option value="USD">USD ($)</option>
-            </select>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Enable Payments</span>
-            <button
-              onClick={() => handleChange('enablePayments', !settings.enablePayments)}
-              className={`relative w-12 h-6 rounded-full transition ${settings.enablePayments ? 'bg-violet-600' : 'bg-gray-300'}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition ${settings.enablePayments ? 'translate-x-6' : ''}`} />
-            </button>
-          </div>
         </div>
       </div>
 
