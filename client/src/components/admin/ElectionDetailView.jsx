@@ -1,4 +1,3 @@
-// src/components/admin/ElectionDetailView.jsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +25,7 @@ import Button from '../common/Button';
 import AddElectionModal from './AddElectionModal';
 import AddCandidateModal from './AddCandidateModal';
 import EditCandidateModal from './EditCandidateModal';
+import { formatADtoBS, formatADtoBSLong } from '../../utils/date';
 
 export default function ElectionDetailView() {
   const { id } = useParams();
@@ -251,9 +251,9 @@ export default function ElectionDetailView() {
         </div>
         <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500">Ends</p>
+            <p className="text-xs text-gray-500">Ends (BS)</p>
             <h3 className="text-base font-bold text-gray-900">
-              {new Date(election.endDate).toLocaleDateString()}
+              {formatADtoBS(election.endDate)}
             </h3>
           </div>
           <div className="h-10 w-10 rounded-xl bg-cyan-100 flex items-center justify-center">
@@ -303,15 +303,15 @@ export default function ElectionDetailView() {
             </p>
             <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-500">Start Date:</span>
+                <span className="text-gray-500">Start Date (BS):</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {new Date(election.startDate).toLocaleString()}
+                  {formatADtoBSLong(election.startDate)} ({formatADtoBS(election.startDate)})
                 </span>
               </div>
               <div>
-                <span className="text-gray-500">End Date:</span>
+                <span className="text-gray-500">End Date (BS):</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {new Date(election.endDate).toLocaleString()}
+                  {formatADtoBSLong(election.endDate)} ({formatADtoBS(election.endDate)})
                 </span>
               </div>
               <div>

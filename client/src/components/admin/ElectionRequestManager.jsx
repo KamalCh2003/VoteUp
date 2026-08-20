@@ -6,6 +6,7 @@ import {
   XCircle, Clock, Archive, Trash2, ChevronLeft, ChevronRight,
   X, Send, Loader2, Phone,
 } from 'lucide-react';
+import NepaliDate from 'nepali-date-converter';
 
 export default function ElectionRequestManager() {
   const [requests, setRequests] = useState([]);
@@ -21,6 +22,38 @@ export default function ElectionRequestManager() {
   const [replyTarget, setReplyTarget] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
+
+  const formatBsDate = (adDateString) => {
+    const date = new Date(adDateString);
+    if (isNaN(date.getTime())) return '—';
+    try {
+      const npDate = new NepaliDate(date);
+      const year = npDate.getYear();
+      const month = String(npDate.getMonth()).padStart(2, '0');
+      const day = String(npDate.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    } catch {
+      return '—';
+    }
+  };
+
+  const formatBsDateTime = (adDateString) => {
+    const date = new Date(adDateString);
+    if (isNaN(date.getTime())) return '—';
+    try {
+      const npDate = new NepaliDate(date);
+      const year = npDate.getYear();
+      const month = String(npDate.getMonth()).padStart(2, '0');
+      const day = String(npDate.getDate()).padStart(2, '0');
+      const time = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return `${year}/${month}/${day} ${time}`;
+    } catch {
+      return '—';
+    }
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -161,11 +194,10 @@ export default function ElectionRequestManager() {
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
                     <th className="p-4 text-left">Requester</th>
-                    <th className="p-4 text-left">Email</th>
                     <th className="p-4 text-left">Phone</th>
                     <th className="p-4 text-left">Organization</th>
                     <th className="p-4 text-left">Message</th>
-                    <th className="p-4 text-left">Date</th>
+                    <th className="p-4 text-left">Date (BS)</th>
                     <th className="p-4 text-left">Status</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
@@ -173,8 +205,10 @@ export default function ElectionRequestManager() {
                 <tbody className="divide-y divide-gray-100">
                   {paginatedRequests.map((req) => (
                     <tr key={req.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-medium">{req.name || 'N/A'}</td>
-                      <td className="p-4 text-gray-600">{req.email}</td>
+                      <td className="p-4">
+                        <div className="font-medium text-gray-900">{req.name || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{req.email}</div>
+                      </td>
                       <td className="p-4 text-gray-600">{req.phone || '—'}</td>
                       <td className="p-4 text-gray-600">{req.organization || '—'}</td>
                       <td
@@ -185,7 +219,7 @@ export default function ElectionRequestManager() {
                         {req.message}
                       </td>
                       <td className="p-4 text-gray-500 text-xs">
-                        {new Date(req.createdAt).toLocaleDateString()}
+                        {formatBsDate(req.createdAt)}
                       </td>
                       <td className="p-4">{getStatusBadge(req.status)}</td>
                       <td className="p-4 text-right">
@@ -257,10 +291,7 @@ export default function ElectionRequestManager() {
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Name</p>
                   <p className="text-gray-800 font-medium">{selectedRequest.name || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Email</p>
-                  <p className="text-gray-800">{selectedRequest.email}</p>
+                  <p className="text-xs text-gray-500 mt-1">{selectedRequest.email}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Phone</p>
@@ -271,8 +302,8 @@ export default function ElectionRequestManager() {
                   <p className="text-gray-800">{selectedRequest.organization || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Date</p>
-                  <p className="text-gray-800 text-sm">{new Date(selectedRequest.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 uppercase mb-1">Date & Time (BS)</p>
+                  <p className="text-gray-800 text-sm">{formatBsDateTime(selectedRequest.createdAt)}</p>
                 </div>
               </div>
 
