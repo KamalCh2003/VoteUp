@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../../services/api';
 import {
   Search, Check, X, UserCheck, Mail, PartyPopper, Quote, FileText,
@@ -10,6 +10,9 @@ import Button from '../common/Button';
 import AddCandidateModal from './AddCandidateModal';
 import EditCandidateModal from './EditCandidateModal';
 import { Link } from 'react-router-dom';
+import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
+import 'nepali-datepicker-reactjs/dist/index.css';
+import { convertBStoAD } from '../../utils/date';
 
 export default function ContestantManagement() {
   const [candidates, setCandidates] = useState([]);
@@ -19,6 +22,7 @@ export default function ContestantManagement() {
   const [electionFilter, setElectionFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [filterDate, setFilterDate] = useState('');
+  const [nepaliFilterDate, setNepaliFilterDate] = useState('');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -30,6 +34,9 @@ export default function ContestantManagement() {
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [loadingBatch, setLoadingBatch] = useState(false);
+
+  const datePickerRef = useRef(null);
+  const [datePickerKey, setDatePickerKey] = useState(0);
 
   useEffect(() => {
     fetchCandidates();
@@ -73,6 +80,41 @@ export default function ContestantManagement() {
     elections.forEach(e => { if (e.category) cats.add(e.category); });
     return Array.from(cats).sort();
   }, [elections]);
+
+  const handleNepaliDateChange = (date) => {
+    if (date) {
+      const ad = convertBStoAD(date);
+      if (ad) {
+        setNepaliFilterDate(date);
+        setFilterDate(ad);
+      } else {
+        toast.error('Invalid Nepali date');
+        setNepaliFilterDate('');
+        setFilterDate('');
+      }
+    } else {
+      setNepaliFilterDate('');
+      setFilterDate('');
+    }
+  };
+
+  const clearDateFilter = () => {
+    setFilterDate('');
+    setNepaliFilterDate('');
+    if (datePickerRef.current) {
+      const input = datePickerRef.current;
+      if (input.input) {
+        input.input.value = '';
+      } else if (input.value !== undefined) {
+        input.value = '';
+      }
+      if (input.dispatchEvent) {
+        const event = new Event('input', { bubbles: true });
+        input.dispatchEvent(event);
+      }
+    }
+    setDatePickerKey(prev => prev + 1);
+  };
 
   const filtered = candidatesWithRank.filter(c => {
     const searchMatch = 
@@ -157,8 +199,6 @@ export default function ContestantManagement() {
     { label: 'Approved', value: 'APPROVED', count: approved },
     { label: 'Rejected', value: 'REJECTED', count: rejected },
   ];
-
-  const clearDateFilter = () => setFilterDate('');
 
   const getAddedBy = (c) => {
     return c.createdByAdmin
@@ -327,7 +367,6 @@ export default function ContestantManagement() {
 
   return (
     <div className="px-6 bg-gray-50 text-gray-800 min-h-screen">
-      {/* Top Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">List of Contestants</h2>
@@ -344,7 +383,6 @@ export default function ContestantManagement() {
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
         <div className="relative w-full sm:w-auto flex-1 min-w-[160px]">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -376,13 +414,16 @@ export default function ContestantManagement() {
         </select>
 
         <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+          <NepaliDatePicker
+            key={datePickerKey}
+            ref={datePickerRef}
+            value={nepaliFilterDate || ''}
+            onChange={handleNepaliDateChange}
+            placeholder="Filter by BS date"
+            inputClassName="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500 w-full sm:w-48 placeholder:text-gray-400"
+            options={{ format: 'YYYY-MM-DD' }}
           />
-          {filterDate && (
+          {nepaliFilterDate && (
             <button
               onClick={clearDateFilter}
               className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
@@ -398,7 +439,7 @@ export default function ContestantManagement() {
               setSearch('');
               setElectionFilter('ALL');
               setCategoryFilter('ALL');
-              setFilterDate('');
+              clearDateFilter();
             }}
             className="text-sm text-violet-600 hover:text-violet-700"
           >
@@ -407,7 +448,6 @@ export default function ContestantManagement() {
         )}
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-6 border-b border-gray-200 mb-6">
         {tabs.map(tab => (
           <button
@@ -420,10 +460,8 @@ export default function ContestantManagement() {
         ))}
       </div>
 
-      {/* Content */}
       {statusFilter === 'ALL' ? (
         <>
-          {/* Pending Section */}
           {(() => {
             const pendingList = paginatedCandidates.filter(c => c.status === 'PENDING');
             if (pendingList.length > 0) {
@@ -447,7 +485,6 @@ export default function ContestantManagement() {
             }
           })()}
 
-          {/* Approved Section */}
           {(() => {
             const approvedList = paginatedCandidates.filter(c => c.status === 'APPROVED');
             if (approvedList.length > 0) {
@@ -470,10 +507,8 @@ export default function ContestantManagement() {
           })()}
         </>
       ) : statusFilter === 'APPROVED' ? (
-        /* Approved tab: table */
         renderApprovedTable(paginatedCandidates)
       ) : (
-        /* Pending / Rejected tabs: cards */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedCandidates.map(c => renderCandidateCard(c))}
         </div>
@@ -483,7 +518,6 @@ export default function ContestantManagement() {
         <div className="text-center py-12 text-gray-500">No contestants found.</div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-8 text-sm">
           <button
@@ -504,7 +538,6 @@ export default function ContestantManagement() {
         </div>
       )}
 
-      {/* Detail Modal */}
       {showDetailModal && selectedCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">

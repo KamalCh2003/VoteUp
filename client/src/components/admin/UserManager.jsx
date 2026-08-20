@@ -1,4 +1,3 @@
-// src/components/admin/UserManager.jsx
 import { useState, useEffect } from "react";
 import api from "../../services/api";
 import {
@@ -19,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
+import { formatADtoBS } from "../../utils/date";
 
 export default function UserManager() {
   const [users, setUsers] = useState([]);
@@ -32,12 +32,10 @@ export default function UserManager() {
   const [newRole, setNewRole] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Batch selection states
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBatchRoleModal, setShowBatchRoleModal] = useState(false);
   const [batchNewRole, setBatchNewRole] = useState("");
 
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -110,7 +108,6 @@ export default function UserManager() {
     }
   };
 
-  // Time filter helper
   const getTimeFilterCutoff = () => {
     if (timeFilter === "ALL") return null;
     const now = new Date();
@@ -139,7 +136,6 @@ export default function UserManager() {
     return searchMatch && roleMatch && timeMatch;
   });
 
-  // Pagination calculations
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedUsers = filtered.slice(
     (currentPage - 1) * itemsPerPage,
@@ -147,7 +143,6 @@ export default function UserManager() {
   );
   const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
 
-  // Reset to page 1 when filters/search change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, roleFilter, timeFilter]);
@@ -240,7 +235,6 @@ export default function UserManager() {
 
   return (
     <div className="p-6 bg-gray-50 text-gray-800 min-h-screen">
-      {/* Stats cards (unchanged) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-3">
           <div className="flex items-center justify-between">
@@ -280,7 +274,6 @@ export default function UserManager() {
         </div>
       </div>
 
-      {/* Header + search/role/time filters (unchanged) */}
       <div className="mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -331,7 +324,6 @@ export default function UserManager() {
         </div>
       </div>
 
-      {/* Batch actions bar (unchanged) */}
       {selectedIds.length > 0 && (
         <div className="mb-4 flex items-center gap-3 flex-wrap rounded-2xl bg-violet-50 border border-violet-200 px-5 py-3">
           <span className="text-violet-800 font-medium text-sm">
@@ -360,7 +352,6 @@ export default function UserManager() {
         </div>
       )}
 
-      {/* USER TABLE – actions now visible buttons */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -384,7 +375,7 @@ export default function UserManager() {
                 <th className="p-4">Name</th>
                 <th className="p-4">Email</th>
                 <th className="p-4">Role</th>
-                <th className="p-4">Joined</th>
+                <th className="p-4">Joined (BS)</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -414,10 +405,9 @@ export default function UserManager() {
                     <td className="p-4 text-gray-600">{u.email}</td>
                     <td className="p-4">{getRoleBadge(u.role)}</td>
                     <td className="p-4 text-gray-500">
-                      {new Date(u.createdAt).toLocaleDateString()}
+                      {formatADtoBS(u.createdAt)}
                     </td>
                     <td className="p-4 text-right">
-                      {/* Action buttons now always visible */}
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => openRoleModal(u)}
@@ -449,7 +439,6 @@ export default function UserManager() {
           </table>
         </div>
 
-        {/* Pagination Controls (unchanged) */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm">
             <button
@@ -459,9 +448,7 @@ export default function UserManager() {
             >
               <ChevronLeft size={16} />
             </button>
-            <span>
-              Page {currentPage} of {totalPages}
-            </span>
+            <span>Page {currentPage} of {totalPages}</span>
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
@@ -473,7 +460,6 @@ export default function UserManager() {
         )}
       </div>
 
-      {/* Individual Role Change Modal (unchanged) */}
       {showRoleModal && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl p-6">
@@ -515,7 +501,6 @@ export default function UserManager() {
         </div>
       )}
 
-      {/* Batch Role Change Modal (unchanged) */}
       {showBatchRoleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl p-6">
