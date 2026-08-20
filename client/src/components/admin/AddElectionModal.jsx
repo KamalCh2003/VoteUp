@@ -1,4 +1,3 @@
-// src/components/admin/AddElectionModal.jsx
 import { useState, useEffect } from 'react';
 import {
   X, Calendar, Clock, Users, Image as ImageIcon, Type, AlignLeft,
@@ -9,6 +8,7 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import AddCandidateModal from './AddCandidateModal';
+import { formatADtoBSLong } from '../../utils/date';
 
 const steps = ['General', 'Voting & Payment', 'Candidates', 'Preview & Publish'];
 
@@ -43,7 +43,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
   const [candidates, setCandidates] = useState([]);
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
 
-  // Load election data when editing
   useEffect(() => {
     if (open && isEdit && election) {
       const start = election.startDate ? new Date(election.startDate) : null;
@@ -70,7 +69,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
       });
       setVotingType(price > 0 ? 'paid' : 'free');
       setVotingMethod(maxVotes > 1 ? 'multiple' : 'single');
-      // Load candidates (approved only, from election object)
       setCandidates(election.candidates || []);
     } else if (open && !isEdit) {
       setForm({
@@ -126,7 +124,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
     }
   };
 
-  // Candidate management
   const handleCandidateAdded = async (candidateData) => {
     try {
       const payload = new FormData();
@@ -143,7 +140,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
       const { data } = await api.post('/admin/create-candidate', payload, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // Add the new candidate to the local list
       setCandidates(prev => [...prev, data.candidate]);
       toast.success('Candidate added successfully!');
     } catch (err) {
@@ -632,12 +628,12 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
               </div>
               <div className="p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Start</span>
-                  <span>{form.startDate || '—'}</span>
+                  <span className="text-gray-500">Start (BS)</span>
+                  <span>{formatADtoBSLong(form.startDate) || '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">End</span>
-                  <span>{form.endDate || '—'}</span>
+                  <span className="text-gray-500">End (BS)</span>
+                  <span>{formatADtoBSLong(form.endDate) || '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Candidates</span>
@@ -770,7 +766,6 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
         </form>
       </div>
 
-      {/* AddCandidateModal for adding candidates during edit */}
       <AddCandidateModal
         open={showAddCandidateModal}
         onClose={() => setShowAddCandidateModal(false)}

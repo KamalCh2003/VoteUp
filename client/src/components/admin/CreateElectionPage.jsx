@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import AddCandidateModal from './AddCandidateModal';
+import { formatADtoBSLong } from '../../utils/date';
 
 const steps = ['General', 'Voting & Payment', 'Candidates', 'Preview & Publish'];
 
@@ -126,7 +127,6 @@ export default function CreateElectionPage() {
       }
       return true;
     }
-    // Steps 2 and 3 have no validation (candidates are optional, preview is final)
     return true;
   };
 
@@ -142,7 +142,6 @@ export default function CreateElectionPage() {
       setCurrentStep(index);
       return;
     }
-    // Trying to go to a future step – validate current step first
     if (validateStep(currentStep)) {
       setCurrentStep(index);
     }
@@ -234,7 +233,6 @@ export default function CreateElectionPage() {
       case 0:
         return (
           <div className="space-y-4">
-            {/* General step – unchanged */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Election Title *</label>
@@ -611,12 +609,12 @@ export default function CreateElectionPage() {
               </div>
               <div className="p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Start</span>
-                  <span>{form.startDate || '—'}</span>
+                  <span className="text-gray-500">Start (BS)</span>
+                  <span>{formatADtoBSLong(form.startDate) || '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">End</span>
-                  <span>{form.endDate || '—'}</span>
+                  <span className="text-gray-500">End (BS)</span>
+                  <span>{formatADtoBSLong(form.endDate) || '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Candidates</span>
