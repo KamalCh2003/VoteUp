@@ -23,6 +23,7 @@ import {
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { formatADtoBS, formatADtoBSLong } from "../../utils/date";
 
 export default function ElectionDetails() {
   const { id } = useParams();
@@ -36,7 +37,7 @@ export default function ElectionDetails() {
   const [votingCandidateId, setVotingCandidateId] = useState(null);
   const [copiedCandidateId, setCopiedCandidateId] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('candidates');
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmCandidateId, setConfirmCandidateId] = useState(null);
@@ -201,15 +202,15 @@ export default function ElectionDetails() {
           key={candidate.id}
           className="flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow"
         >
-          <div className="relative w-full pt-[100%] bg-gradient-to-br from-violet-500 to-indigo-500">
+          <div className="relative w-full pt-[100%] bg-white overflow-hidden">
             {candidate.avatarUrl ? (
               <img
                 src={candidate.avatarUrl}
                 alt={`${candidate.user?.firstName} ${candidate.user?.lastName}`}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-contain"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold">
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-5xl sm:text-6xl font-bold">
                 {candidate.user?.firstName?.[0]}{candidate.user?.lastName?.[0]}
               </div>
             )}
@@ -335,8 +336,8 @@ export default function ElectionDetails() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">About this election</h3>
                     <p className="text-gray-700 leading-relaxed">{election.description || 'No description provided.'}</p>
                     <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-                      <div><span className="text-gray-500">Start Date</span><br /><span className="font-medium">{new Date(election.startDate).toLocaleString()}</span></div>
-                      <div><span className="text-gray-500">End Date</span><br /><span className="font-medium">{new Date(election.endDate).toLocaleString()}</span></div>
+                      <div><span className="text-gray-500">Start Date (BS)</span><br /><span className="font-medium">{formatADtoBSLong(election.startDate)} ({formatADtoBS(election.startDate)})</span></div>
+                      <div><span className="text-gray-500">End Date (BS)</span><br /><span className="font-medium">{formatADtoBSLong(election.endDate)} ({formatADtoBS(election.endDate)})</span></div>
                       <div><span className="text-gray-500">Category</span><br /><span className="font-medium">{election.category}</span></div>
                       <div><span className="text-gray-500">Candidates</span><br /><span className="font-medium">{election.candidates?.length || 0}</span></div>
                       <div className="col-span-2"><span className="text-gray-500">Vote Price</span><br /><span className="font-medium">{election.votePrice === 0 ? 'Free' : `रू ${election.votePrice}`}</span></div>
@@ -371,17 +372,17 @@ export default function ElectionDetails() {
                       <div className="relative">
                         <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Registration opened</p>
-                        <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{formatADtoBS(election.startDate)}</p>
                       </div>
                       <div className="relative">
                         <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Voting begins</p>
-                        <p className="text-sm text-gray-500">{new Date(election.startDate).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{formatADtoBS(election.startDate)}</p>
                       </div>
                       <div className="relative">
                         <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
                         <p className="font-medium text-gray-800">Voting ends</p>
-                        <p className="text-sm text-gray-500">{new Date(election.endDate).toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{formatADtoBS(election.endDate)}</p>
                       </div>
                       <div className="relative">
                         <div className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-violet-600" />
@@ -411,7 +412,7 @@ export default function ElectionDetails() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-800 mb-4">Election Info</h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Voting ends</span><span className="font-medium">{new Date(election.endDate).toLocaleDateString()}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Voting ends (BS)</span><span className="font-medium">{formatADtoBS(election.endDate)}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Candidates</span><span className="font-medium">{election.candidates?.length || 0}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Price per vote</span><span className="font-medium">{election.votePrice === 0 ? 'Free' : `रू ${election.votePrice}`}</span></div>
               </div>
@@ -448,12 +449,6 @@ export default function ElectionDetails() {
                   <p className="text-xs text-gray-500">{election.category}</p>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <button className="w-full py-2.5 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition flex items-center justify-center gap-2 text-sm font-medium">
-                <Share2 size={16} /> Share Election
-              </button>
             </div>
           </div>
         </div>

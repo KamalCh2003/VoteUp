@@ -1,6 +1,5 @@
-// src/components/voter/ElectionList.jsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Clock,
   Activity,
@@ -18,6 +17,9 @@ import {
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { formatADtoBSLong, convertBStoAD } from "../../utils/date";
+import { NepaliDatePicker } from "nepali-datepicker-reactjs";
+import "nepali-datepicker-reactjs/dist/index.css";
 
 const BANNER_COLORS = [
   "linear-gradient(135deg,#6D28D9,#2563EB)",
@@ -31,13 +33,15 @@ const BANNER_COLORS = [
 ];
 
 export default function ElectionList() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dateFilter, setDateFilter] = useState("");
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [nepaliDateFilter, setNepaliDateFilter] = useState("");
+  const [activeTab, setActiveTab] = useState("LIVE");
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState({});
@@ -46,8 +50,8 @@ export default function ElectionList() {
   const [votedElections, setVotedElections] = useState(new Set());
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
-
   const [candidateCounts, setCandidateCounts] = useState({});
+  const [datePickerKey, setDatePickerKey] = useState(0);
 
   const getTimeRemaining = (endDate) => {
     const total = Date.parse(endDate) - Date.now();
@@ -162,6 +166,29 @@ export default function ElectionList() {
     }
   };
 
+  const handleNepaliDateChange = (date) => {
+    if (date) {
+      const ad = convertBStoAD(date);
+      if (ad) {
+        setNepaliDateFilter(date);
+        setDateFilter(ad);
+      } else {
+        toast.error("Invalid Nepali date");
+        setNepaliDateFilter("");
+        setDateFilter("");
+      }
+    } else {
+      setNepaliDateFilter("");
+      setDateFilter("");
+    }
+  };
+
+  const clearDateFilter = () => {
+    setDateFilter("");
+    setNepaliDateFilter("");
+    setDatePickerKey(prev => prev + 1);
+  };
+
   const getStatusFromTab = (tab) => {
     switch (tab) {
       case "LIVE":
@@ -242,11 +269,11 @@ export default function ElectionList() {
       } else if (isFree && !hasVotedInElection) {
         actionLabel = "Vote Now";
         actionClasses =
-          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-medium hover:shadow-md transition";
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-medium";
       } else {
         actionLabel = hasVotedInElection ? "Vote Again" : "Vote Now";
         actionClasses =
-          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-medium hover:shadow-md transition";
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-medium";
         showVotedBadge = hasVotedInElection;
       }
     } else if (isEnded && hasVotedInElection) {
@@ -266,7 +293,10 @@ export default function ElectionList() {
     }
 
     return (
-      <div className="group relative rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+      <div
+        className="relative rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden cursor-pointer"
+        onClick={() => navigate(`/elections/${election.id}`)}
+      >
         <div
           className="relative h-24 bg-gradient-to-r"
           style={{ background: color }}
@@ -283,7 +313,7 @@ export default function ElectionList() {
               }`}
             >
               {isActive && (
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                <span className="h-1.5 w-1.5 rounded-full bg-white" />
               )}
               {isActive ? "Live" : isUpcoming ? "Upcoming" : "Ended"}
             </span>
@@ -310,9 +340,9 @@ export default function ElectionList() {
           </button>
         </div>
 
-        <Link to={`/elections/${election.id}`} className="block p-4">
+        <div className="block p-4">
           <div>
-            <h3 className="text-base font-semibold text-gray-900 group-hover:text-violet-600 transition line-clamp-1">
+            <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
               {election.title}
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">{election.category}</p>
@@ -326,9 +356,7 @@ export default function ElectionList() {
                 </span>{" "}
                 candidates
               </span>
-              <span>
-                Ends {new Date(election.endDate).toLocaleDateString()}
-              </span>
+              <span>Ends {formatADtoBSLong(election.endDate)}</span>
             </div>
             {isActive && (
               <span className="text-cyan-600 font-mono text-xs flex items-center gap-1">
@@ -357,10 +385,10 @@ export default function ElectionList() {
             )}
             <ChevronRight
               size={16}
-              className="text-gray-400 group-hover:text-violet-600 transition group-hover:translate-x-1"
+              className="text-gray-400 transition"
             />
           </div>
-        </Link>
+        </div>
       </div>
     );
   };
@@ -392,9 +420,9 @@ export default function ElectionList() {
         <div className="absolute inset-0 bg-gradient-to-b from-white via-gray-50 to-white" />
       </div>
 
-      <div className="mx-auto max-w-6xl px-6 pt-10">
+      <div className="mx-auto max-w-6xl px-6 pt-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Browse Elections</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Browse Elections</h1>
           <p className="text-gray-500 mt-1">
             Discover and vote in active elections. Save your favorites and track
             your voting history.
@@ -442,12 +470,25 @@ export default function ElectionList() {
               <option value="priceHigh">Price: High–Low</option>
             </select>
 
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 outline-none"
-            />
+            {/* Nepali Date Picker with typing support */}
+            <div className="flex items-center gap-2">
+              <NepaliDatePicker
+                key={datePickerKey}
+                value={nepaliDateFilter || ''}
+                onChange={handleNepaliDateChange}
+                placeholder="Filter by BS date"
+                inputClassName="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 outline-none w-[170px] placeholder:text-gray-400"
+                options={{ format: 'YYYY-MM-DD' }}
+              />
+              {nepaliDateFilter && (
+                <button
+                  onClick={clearDateFilter}
+                  className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           <button
@@ -489,7 +530,7 @@ export default function ElectionList() {
                 setSearch("");
                 setCategory("");
                 setStatusFilter("ALL");
-                setDateFilter("");
+                clearDateFilter();
                 setShowBookmarkedOnly(false);
                 setSortBy("newest");
               }}

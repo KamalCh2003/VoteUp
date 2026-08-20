@@ -6,7 +6,7 @@ import {
   Calendar,
   User,
   Hash,
-  DollarSign,
+  Wallet,
   TrendingUp,
   ChevronDown,
   ChevronUp,
@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { formatADtoBSLong } from '../../utils/date';
 
 export default function VoteHistory() {
   const [history, setHistory] = useState([]);
@@ -42,14 +43,16 @@ export default function VoteHistory() {
     }
   };
 
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+  const formatNepaliDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '—';
+    const bsDate = formatADtoBSLong(date);
+    const time = date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
+    return `${bsDate}, ${time}`;
+  };
 
   const getVoteType = (votePrice) => (votePrice === 0 ? 'Free' : 'Paid');
 
@@ -203,7 +206,7 @@ export default function VoteHistory() {
             delay="160ms"
           />
           <SummaryCard
-            icon={DollarSign}
+            icon={Wallet}
             label="Total Spent"
             value={totalSpent > 0 ? `रू ${totalSpent.toLocaleString()}` : '—'}
             iconClass="bg-blue-50 text-blue-600"
@@ -303,7 +306,7 @@ export default function VoteHistory() {
                       </td>
                       <td className="px-6 py-5 font-semibold text-gray-800">{spend}</td>
                       <td className="whitespace-nowrap px-6 py-5 text-gray-500">
-                        {formatDate(vote.votedAt)}
+                        {formatNepaliDate(vote.votedAt)}
                       </td>
                       <td className="px-6 py-5">
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -343,7 +346,7 @@ export default function VoteHistory() {
                     <button
                       key={page}
                       onClick={() => goToPage(page)}
-                      className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold transition ${
+                      className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold transition ${ 
                         page === currentPage
                           ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
                           : 'border border-gray-200 bg-white text-gray-500 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600'
@@ -426,8 +429,8 @@ export default function VoteHistory() {
                         <Detail icon={User} label="Candidate" value={name} />
                         <Detail icon={TrendingUp} label="Type" value={`${voteType} Vote`} />
                         <Detail icon={Hash} label="Quantity" value={vote.quantity || 1} />
-                        <Detail icon={DollarSign} label="Spend" value={spend} />
-                        <Detail icon={Calendar} label="Date" value={formatDate(vote.votedAt)} full />
+                        <Detail icon={Wallet} label="Spend" value={spend} />
+                        <Detail icon={Calendar} label="Date" value={formatNepaliDate(vote.votedAt)} full />
                         <Detail icon={CheckCircle2} label="Status" value="Counted" full />
                       </div>
                     </div>

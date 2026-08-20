@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import api from "../../services/api";
+import { formatADtoBS, formatADtoBSLong } from "../../utils/date";
 
 export default function ResultsPage() {
   const [activeElections, setActiveElections] = useState([]);
@@ -220,8 +221,8 @@ export default function ResultsPage() {
             <div className="mt-3 flex items-center gap-1.5 text-[11px] text-gray-400">
               <Calendar size={12} />
               {isActive
-                ? `Ends ${new Date(election.endDate).toLocaleDateString()}`
-                : `Ended ${new Date(election.endDate).toLocaleDateString()}`}
+                ? `Ends ${formatADtoBSLong(election.endDate)}`
+                : `Ended ${formatADtoBSLong(election.endDate)}`}
             </div>
           </div>
         </div>
@@ -385,7 +386,7 @@ export default function ResultsPage() {
               <div className="mt-6 flex flex-wrap gap-3 text-xs">
                 <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5">
                   <Calendar size={13} />
-                  Ends {new Date(selectedElection.endDate).toLocaleDateString()}
+                  Ends {formatADtoBSLong(selectedElection.endDate)}
                 </span>
                 <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5">
                   <Clock size={13} />
@@ -443,7 +444,7 @@ export default function ResultsPage() {
             <div className="mt-6 flex flex-wrap gap-3 text-xs text-white/60">
               <span className="flex items-center gap-1.5">
                 <Calendar size={13} />
-                Ended {new Date(selectedElection.endDate).toLocaleDateString()}
+                Ended {formatADtoBSLong(selectedElection.endDate)}
               </span>
               <span className="h-4 w-px bg-white/20" />
               <span className="flex items-center gap-1.5">
