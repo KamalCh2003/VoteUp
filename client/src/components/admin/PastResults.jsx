@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatADtoBSLong } from '../../utils/date';
 
 export default function PastResults() {
   const [elections, setElections] = useState([]);
@@ -33,7 +34,6 @@ export default function PastResults() {
     try {
       setLoading(true);
       setError(null);
-      // 👇 Request full candidate details
       const res = await api.get('/elections', {
         params: { status: 'ENDED', includeDetails: true },
       });
@@ -63,7 +63,6 @@ export default function PastResults() {
     }
   };
 
-  // ── Pagination ──
   const totalItems = elections.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -79,7 +78,6 @@ export default function PastResults() {
     setCurrentPage(1);
   }, [elections.length]);
 
-  // ── Real data helpers ──
   const getWinner = (election) => {
     if (!election.candidates || election.candidates.length === 0) return '—';
     const sorted = [...election.candidates].sort(
@@ -95,7 +93,6 @@ export default function PastResults() {
     return election.candidates.reduce((sum, c) => sum + (c.votesReceived || 0), 0);
   };
 
-  // ── Loading states ──
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -158,7 +155,7 @@ export default function PastResults() {
             <thead className="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
               <tr>
                 <th className="p-4">Election</th>
-                <th className="p-4">End Date</th>
+                <th className="p-4">End Date (BS)</th>
                 <th className="p-4">Total Votes</th>
                 <th className="p-4">Winner</th>
                 <th className="p-4 text-center">Publish</th>
@@ -183,7 +180,7 @@ export default function PastResults() {
                     <td className="p-4 text-gray-500">
                       <span className="flex items-center gap-1.5">
                         <Calendar size={14} />
-                        {new Date(election.endDate).toLocaleDateString()}
+                        {formatADtoBSLong(election.endDate)}
                       </span>
                     </td>
                     <td className="p-4 text-gray-700">
