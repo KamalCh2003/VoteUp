@@ -1,5 +1,4 @@
-// src/components/admin/DashboardOverview.jsx
-import React, { Fragment } from 'react'; // 👈 added React import
+import React, { Fragment } from 'react';
 import { useEffect, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -12,6 +11,7 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Link } from 'react-router-dom';
+import { formatADtoBS, formatADtoBSLong } from '../../utils/date';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -25,7 +25,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-// Helper to format relative time
 const formatRelativeTime = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
@@ -61,7 +60,6 @@ export default function DashboardOverview() {
   const [trendRange, setTrendRange] = useState('THIS_YEAR');
   const toast = useToast();
 
-  // Recent Activity – always keep only 5 most recent logs
   const [recentLogs, setRecentLogs] = useState([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState(null);
@@ -109,7 +107,6 @@ export default function DashboardOverview() {
     }
   };
 
-  // Fetch audit logs and keep only the 5 most recent
   const fetchRecentActivities = async () => {
     setActivityLoading(true);
     try {
@@ -158,6 +155,12 @@ export default function DashboardOverview() {
   const toggleExpand = (id) => {
     setExpandedLogId(expandedLogId === id ? null : id);
   };
+
+  // Convert vote trend dates to BS
+  const bsVoteTrend = voteTrend.map(item => ({
+    ...item,
+    date: formatADtoBS(item.date),
+  }));
 
   if (loading) {
     return (
@@ -256,7 +259,7 @@ export default function DashboardOverview() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp size={18} className="text-violet-600" />
-              Vote Trend
+              Vote Trend (BS)
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <Clock size={16} className="text-violet-500" />
@@ -274,7 +277,7 @@ export default function DashboardOverview() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={voteTrend}>
+            <LineChart data={bsVoteTrend}>
               <XAxis dataKey="date" stroke="#888888" fontSize={12} />
               <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
               <Tooltip content={<CustomTooltip />} />
@@ -348,7 +351,7 @@ export default function DashboardOverview() {
                       />
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
-                      Ends {new Date(election.endDate).toLocaleDateString()}
+                      Ends {formatADtoBSLong(election.endDate)}
                     </p>
                   </div>
                 );

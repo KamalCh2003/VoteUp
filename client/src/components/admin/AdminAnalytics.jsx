@@ -195,30 +195,6 @@ export default function AdminAnalytics() {
             </div>
           ) : <p className="text-gray-500 text-center py-8">No elections yet</p>}
         </div>
-
-        {/* Monthly Vote Trend */}
-        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Calendar size={18} className="text-blue-600" />
-            Monthly Vote Trend
-          </h3>
-          {monthlyVotes.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={monthlyVotes}>
-                <XAxis dataKey="month" stroke="#888888" fontSize={12} />
-                <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="votes"
-                  stroke="#7c6fff"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#7c6fff' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : <p className="text-gray-500 text-center py-8">No data</p>}
-        </div>
       </div>
     </div>
   );
