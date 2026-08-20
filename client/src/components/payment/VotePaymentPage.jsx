@@ -1,5 +1,5 @@
 // src/components/payment/VotePaymentPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, Minus, Plus, Shield, ArrowLeft, Wallet, QrCode, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -21,7 +21,8 @@ export default function VotePaymentPage() {
   const [quantity, setQuantity] = useState(1);
   const [processing, setProcessing] = useState(false);
 
-  // Helper to detect mobile device
+  const initiationTimeRef = useRef(null);
+
   const isMobile = () => {
     return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   };
@@ -49,6 +50,23 @@ export default function VotePaymentPage() {
     };
     fetchElection();
   }, [electionId, candidateId, navigate, toast]);
+
+  // Reset processing when user returns to the tab after a delay
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && processing && initiationTimeRef.current) {
+        const elapsed = Date.now() - initiationTimeRef.current;
+        // If more than 5 seconds have passed, assume user came back without completing payment
+        if (elapsed > 5000) {
+          setProcessing(false);
+          initiationTimeRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [processing]);
 
   const pricePerVote = election?.votePrice || 100;
   const totalAmount = quantity * pricePerVote;
@@ -96,6 +114,8 @@ export default function VotePaymentPage() {
     }
 
     setProcessing(true);
+    initiationTimeRef.current = Date.now();
+
     try {
       const { data } = await api.post('/payments/khalti/initiate', {
         electionId,
@@ -112,16 +132,12 @@ export default function VotePaymentPage() {
 
       let paymentUrl = data.paymentUrl;
 
-      // If we are on desktop and the URL is a deep link, convert to web URL
       if (!isMobile() && paymentUrl.startsWith('khaltipay://')) {
-        // Extract pidx from deep link: khaltipay://go/?t=kpg&pidx=abc123
         const urlParams = new URLSearchParams(paymentUrl.split('?')[1]);
         const pidx = urlParams.get('pidx');
         if (pidx) {
-          // Khalti web payment URL format
           paymentUrl = `https://payment.khalti.com/epayment/?pidx=${pidx}`;
         } else {
-          // Fallback: use the returned URL as-is (will likely fail, but better than nothing)
           console.warn('Could not extract pidx from deep link, using original URL');
         }
       }
@@ -132,6 +148,7 @@ export default function VotePaymentPage() {
       const errorMsg = err.response?.data?.details || err.response?.data?.error || 'Failed to initiate payment';
       toast.error(errorMsg);
       setProcessing(false);
+      initiationTimeRef.current = null;
     }
   };
 
@@ -176,15 +193,15 @@ export default function VotePaymentPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {/*Candidate Card*/}
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="relative w-full pt-[90%] bg-gradient-to-br from-violet-500 to-indigo-500">
+            <div className="relative w-full pt-[90%] bg-white overflow-hidden">
               {candidate?.avatarUrl ? (
                 <img
                   src={candidate.avatarUrl}
                   alt={`${candidate.user?.firstName} ${candidate.user?.lastName}`}
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-contain"
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-white text-6xl font-bold">
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-6xl font-bold">
                   {candidateInitials}
                 </div>
               )}
@@ -207,7 +224,6 @@ export default function VotePaymentPage() {
               Payment Summary
             </h2>
 
-            {/* Quantity Selector with editable input */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Number of Votes</label>
               <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-3">
@@ -240,7 +256,6 @@ export default function VotePaymentPage() {
               <p className="text-xs text-gray-500 mt-1">Max 100 votes per transaction</p>
             </div>
 
-            {/* Summary */}
             <div className="space-y-2 text-sm bg-gray-50 rounded-xl p-4 mb-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">Price per vote</span>
@@ -256,20 +271,18 @@ export default function VotePaymentPage() {
               </div>
             </div>
 
-            {/* Disclaimer / Note */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
               <div className="flex items-start gap-2">
                 <MessageCircle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm text-amber-800 font-medium">Important</p>
                   <p className="text-xs text-amber-700">
-                    Send the payment screenshot on <strong>WhatsApp: 9845522505</strong> and in remarks type the candidate number: <strong>{candidate?.candidateNumber || '—'}</strong>
+                    Send the payment screenshot on <strong>WhatsApp: 9800000005</strong> and in remarks type the candidate number: <strong>{candidate?.candidateNumber || '—'}</strong>
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* QR Code Placeholder */}
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-3 mb-4">
               <div className="h-20 w-20 bg-gray-100 rounded-lg flex items-center justify-center">
                 <QrCode size={40} className="text-gray-400" />
@@ -277,7 +290,6 @@ export default function VotePaymentPage() {
               <p className="text-xs text-gray-400 mt-1">Scan to pay (placeholder)</p>
             </div>
 
-            {/* Pay Button */}
             <button
               onClick={handleKhaltiPayment}
               disabled={processing}

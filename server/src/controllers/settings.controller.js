@@ -44,6 +44,25 @@ exports.getMaintenanceStatus = async (req, res) => {
     const maintenanceMode = setting ? JSON.parse(setting.value) : false;
     res.json({ maintenanceMode });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch maintenance status' });
+  }
+};
+
+exports.getPublicStats = async (req, res) => {
+  try {
+    const [totalVotesAgg, totalElections, totalUsers] = await Promise.all([
+      prisma.vote.aggregate({ _sum: { quantity: true } }),
+      prisma.election.count(),
+      prisma.user.count({ where: { role: { not: 'ADMIN' } } }),
+    ]);
+    res.json({
+      totalVotes: totalVotesAgg._sum.quantity || 0,
+      totalElections: totalElections || 0,
+      totalUsers: totalUsers || 0,
+    });
+  } catch (err) {
+    console.error('Failed to fetch public stats:', err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 };
