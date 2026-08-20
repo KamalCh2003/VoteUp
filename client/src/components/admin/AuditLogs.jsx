@@ -1,8 +1,8 @@
-// src/components/admin/AuditLogs.jsx
 import { useState, useEffect } from 'react';
 import { Search, Filter, ChevronDown, ChevronRight, Shield, Clock, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import NepaliDate from 'nepali-date-converter';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
@@ -12,7 +12,25 @@ export default function AuditLogs() {
   const toast = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; 
+  const itemsPerPage = 10;
+
+  const formatBsDateTime = (adDateString) => {
+    const date = new Date(adDateString);
+    if (isNaN(date.getTime())) return '—';
+    try {
+      const npDate = new NepaliDate(date);
+      const year = npDate.getYear();
+      const month = String(npDate.getMonth()).padStart(2, '0');
+      const day = npDate.getDate();
+      const time = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return `${year}/${month}/${day} ${time}`;
+    } catch {
+      return '—';
+    }
+  };
 
   useEffect(() => {
     api.get('/admin/audit-logs')
@@ -107,7 +125,7 @@ export default function AuditLogs() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left py-4 px-6 font-medium text-gray-500">Time</th>
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Time (BS)</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Event</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">User</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Role</th>
@@ -126,7 +144,7 @@ export default function AuditLogs() {
                     <td className="py-4 px-6 text-gray-500 text-xs whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <Clock size={13} />
-                        {new Date(log.createdAt).toLocaleString()}
+                        {formatBsDateTime(log.createdAt)}
                       </div>
                     </td>
                     <td className="py-4 px-6">

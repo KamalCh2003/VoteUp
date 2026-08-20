@@ -1,8 +1,8 @@
-// src/components/admin/VoteVerifier.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Trash2, AlertCircle, Filter, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatADtoBSLong } from '../../utils/date';
 
 export default function VoteVerifier() {
   const [votes, setVotes] = useState([]);
@@ -14,6 +14,17 @@ export default function VoteVerifier() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const toast = useToast();
+
+  const formatNepaliDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '—';
+    const bsDate = formatADtoBSLong(date);
+    const time = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${bsDate}, ${time}`;
+  };
 
   useEffect(() => {
     fetchVotes();
@@ -191,7 +202,7 @@ export default function VoteVerifier() {
                 <th className="p-4">Voted For</th>
                 <th className="p-4">Election</th>
                 <th className="p-4">Quantity</th>
-                <th className="p-4">Voted At</th>
+                <th className="p-4">Voted At (BS)</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -203,7 +214,7 @@ export default function VoteVerifier() {
                   <td className="p-4 text-gray-900">{vote.candidate?.user?.firstName} {vote.candidate?.user?.lastName}</td>
                   <td className="p-4 text-gray-600">{vote.election?.title}</td>
                   <td className="p-4 text-gray-700">{vote.quantity ?? 1}</td>
-                  <td className="p-4 text-gray-500">{new Date(vote.votedAt).toLocaleString()}</td>
+                  <td className="p-4 text-gray-500">{formatNepaliDate(vote.votedAt)}</td>
                   <td className="p-4 text-right">
                     <button
                       onClick={() => handleDelete(vote.id, `${vote.user?.firstName} ${vote.user?.lastName}`, `${vote.candidate?.user?.firstName} ${vote.candidate?.user?.lastName}`)}

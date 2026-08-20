@@ -1,4 +1,3 @@
-// src/components/admin/FinanceView.jsx
 import { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -9,8 +8,8 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import NepaliDate from 'nepali-date-converter';
 
-// Custom tooltip for light theme
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -23,6 +22,36 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
   }
   return null;
+};
+
+const formatBsDateTime = (adDateString) => {
+  const date = new Date(adDateString);
+  if (isNaN(date.getTime())) return '—';
+  try {
+    const npDate = new NepaliDate(date);
+    const year = npDate.getYear();
+    const month = String(npDate.getMonth()).padStart(2, '0');
+    const day = String(npDate.getDate()).padStart(2, '0');
+    const time = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${year}/${month}/${day} ${time}`;
+  } catch {
+    return '—';
+  }
+};
+
+const formatBsMonth = (monthLabel) => {
+  try {
+    // Parse the AD month label (e.g., "Jan 2024") into a Date
+    const date = new Date(monthLabel);
+    if (isNaN(date.getTime())) return monthLabel;
+    const npDate = new NepaliDate(date);
+    return npDate.format('YYYY MMM');
+  } catch {
+    return monthLabel;
+  }
 };
 
 export default function FinanceView() {
@@ -46,7 +75,7 @@ export default function FinanceView() {
       setRevenueData(revenueRes.data.revenueData || []);
       setTopVoters(votersRes.data.topVoters || []);
       setRecentPayments(paymentsRes.data.payments || []);
-      setCurrentPage(1); // reset to first page after fresh data
+      setCurrentPage(1);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load finance data');
@@ -59,7 +88,6 @@ export default function FinanceView() {
     fetchFinanceData();
   }, [revenueRange]);
 
-  // Pagination logic for recent payments
   const totalPages = Math.ceil(recentPayments.length / itemsPerPage);
   const paginatedPayments = recentPayments.slice(
     (currentPage - 1) * itemsPerPage,
@@ -73,6 +101,12 @@ export default function FinanceView() {
   const totalTransactions = recentPayments.length;
   const failedTransactions = recentPayments.filter(p => p.status === 'FAILED').length;
   const avgTransaction = totalTransactions ? totalRevenue / totalTransactions : 0;
+
+  // Convert month labels to BS format for the chart
+  const bsRevenueData = revenueData.map(item => ({
+    ...item,
+    month: formatBsMonth(item.month),
+  }));
 
   if (loading && !revenueData.length) {
     return (
@@ -157,7 +191,7 @@ export default function FinanceView() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <TrendingUp size={18} className="text-emerald-600" />
-              Revenue Trend
+              Revenue Trend (BS)
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <Calendar size={16} className="text-violet-500" />
@@ -175,8 +209,8 @@ export default function FinanceView() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={revenueData}>
-              <XAxis dataKey="month" stroke="#888888" fontSize={12} />
+            <LineChart data={bsRevenueData}>
+              <XAxis dataKey="month" stroke="#888888" fontSize={12} tickMargin={8} />
               <YAxis stroke="#888888" fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
               <Line
@@ -228,7 +262,7 @@ export default function FinanceView() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left">
-                <th className="py-3 px-4 text-gray-500 font-medium">Date</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Date & Time (BS)</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Voter</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Contestant</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Amount</th>
@@ -240,7 +274,7 @@ export default function FinanceView() {
               {paginatedPayments.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 transition">
                   <td className="py-3 px-4 text-gray-500 text-xs">
-                    {new Date(p.createdAt).toLocaleDateString()}
+                    {formatBsDateTime(p.createdAt)}
                   </td>
                   <td className="py-3 px-4 text-gray-700">
                     {p.voterName || (p.user?.firstName || p.user?.email || 'N/A')}
