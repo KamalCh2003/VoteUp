@@ -9,7 +9,6 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import AddCandidateModal from './AddCandidateModal';
-import { formatADtoBSLong } from '../../utils/date';
 
 const steps = ['General', 'Voting & Payment', 'Candidates', 'Preview & Publish'];
 
@@ -18,7 +17,7 @@ export default function CreateElectionPage() {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const toast = useToast();
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
 
   const [form, setForm] = useState({
     title: '',
@@ -609,12 +608,12 @@ export default function CreateElectionPage() {
               </div>
               <div className="p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Start (BS)</span>
-                  <span>{formatADtoBSLong(form.startDate) || '—'}</span>
+                  <span className="text-gray-500">Start</span>
+                  <span>{form.startDate ? new Date(form.startDate).toLocaleDateString() : '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">End (BS)</span>
-                  <span>{formatADtoBSLong(form.endDate) || '—'}</span>
+                  <span className="text-gray-500">End</span>
+                  <span>{form.endDate ? new Date(form.endDate).toLocaleDateString() : '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Candidates</span>

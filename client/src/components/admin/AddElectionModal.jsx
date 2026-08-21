@@ -8,7 +8,6 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import AddCandidateModal from './AddCandidateModal';
-import { formatADtoBSLong } from '../../utils/date';
 
 const steps = ['General', 'Voting & Payment', 'Candidates', 'Preview & Publish'];
 
@@ -17,7 +16,7 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const toast = useToast();
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
 
   const [form, setForm] = useState({
     title: '',
@@ -53,10 +52,10 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
         title: election.title || '',
         description: election.description || '',
         category: election.category || 'Academic',
-        startDate: start && !isNaN(start.getTime()) ? start.toISOString().split('T')[0] : '',
-        startTime: start && !isNaN(start.getTime()) ? start.toTimeString().slice(0,5) : '08:00',
-        endDate: end && !isNaN(end.getTime()) ? end.toISOString().split('T')[0] : '',
-        endTime: end && !isNaN(end.getTime()) ? end.toTimeString().slice(0,5) : '17:00',
+        startDate: start && !isNaN(start.getTime()) ? start.toLocaleDateString('en-CA') : '',
+        startTime: start && !isNaN(start.getTime()) ? start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '08:00',
+        endDate: end && !isNaN(end.getTime()) ? end.toLocaleDateString('en-CA') : '',
+        endTime: end && !isNaN(end.getTime()) ? end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '17:00',
         maxCandidates: election.maxCandidates || 10,
         maxVoters: election.maxVoters || 0,
         votePrice: price,
@@ -628,12 +627,12 @@ export default function AddElectionModal({ open, onClose, onSuccess, election })
               </div>
               <div className="p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Start (BS)</span>
-                  <span>{formatADtoBSLong(form.startDate) || '—'}</span>
+                  <span className="text-gray-500">Start</span>
+                  <span>{form.startDate ? new Date(form.startDate).toLocaleDateString() : '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">End (BS)</span>
-                  <span>{formatADtoBSLong(form.endDate) || '—'}</span>
+                  <span className="text-gray-500">End</span>
+                  <span>{form.endDate ? new Date(form.endDate).toLocaleDateString() : '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Candidates</span>
