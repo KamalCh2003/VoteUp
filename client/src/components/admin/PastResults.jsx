@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { formatADtoBSLong } from '../../utils/date';
 
 export default function PastResults() {
   const [elections, setElections] = useState([]);
@@ -155,7 +154,7 @@ export default function PastResults() {
             <thead className="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
               <tr>
                 <th className="p-4">Election</th>
-                <th className="p-4">End Date (BS)</th>
+                <th className="p-4">End Date</th>
                 <th className="p-4">Total Votes</th>
                 <th className="p-4">Winner</th>
                 <th className="p-4 text-center">Publish</th>
@@ -180,7 +179,7 @@ export default function PastResults() {
                     <td className="p-4 text-gray-500">
                       <span className="flex items-center gap-1.5">
                         <Calendar size={14} />
-                        {formatADtoBSLong(election.endDate)}
+                        {new Date(election.endDate).toLocaleDateString()}
                       </span>
                     </td>
                     <td className="p-4 text-gray-700">

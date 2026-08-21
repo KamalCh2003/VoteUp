@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import NepaliDate from 'nepali-date-converter';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -24,34 +23,21 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const formatBsDateTime = (adDateString) => {
+const formatDateTime = (adDateString) => {
   const date = new Date(adDateString);
   if (isNaN(date.getTime())) return '—';
-  try {
-    const npDate = new NepaliDate(date);
-    const year = npDate.getYear();
-    const month = String(npDate.getMonth()).padStart(2, '0');
-    const day = String(npDate.getDate()).padStart(2, '0');
-    const time = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return `${year}/${month}/${day} ${time}`;
-  } catch {
-    return '—';
-  }
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
-const formatBsMonth = (monthLabel) => {
-  try {
-    // Parse the AD month label (e.g., "Jan 2024") into a Date
-    const date = new Date(monthLabel);
-    if (isNaN(date.getTime())) return monthLabel;
-    const npDate = new NepaliDate(date);
-    return npDate.format('YYYY MMM');
-  } catch {
-    return monthLabel;
-  }
+const formatMonth = (monthLabel) => {
+  // monthLabel is like "Jan 2024" – keep as is (AD)
+  return monthLabel;
 };
 
 export default function FinanceView() {
@@ -102,10 +88,9 @@ export default function FinanceView() {
   const failedTransactions = recentPayments.filter(p => p.status === 'FAILED').length;
   const avgTransaction = totalTransactions ? totalRevenue / totalTransactions : 0;
 
-  // Convert month labels to BS format for the chart
   const bsRevenueData = revenueData.map(item => ({
     ...item,
-    month: formatBsMonth(item.month),
+    month: formatMonth(item.month),
   }));
 
   if (loading && !revenueData.length) {
@@ -125,7 +110,6 @@ export default function FinanceView() {
         </h2>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="relative overflow-hidden rounded-2xl bg-white border border-gray-200 shadow-sm p-5">
           <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-emerald-100 opacity-50"></div>
@@ -184,14 +168,12 @@ export default function FinanceView() {
         </div>
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Revenue Trend with range selector */}
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <TrendingUp size={18} className="text-emerald-600" />
-              Revenue Trend (BS)
+              Revenue Trend
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <Calendar size={16} className="text-violet-500" />
@@ -225,7 +207,6 @@ export default function FinanceView() {
           </ResponsiveContainer>
         </div>
 
-        {/* Top Voters */}
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <Users size={18} className="text-cyan-600" />
@@ -252,7 +233,6 @@ export default function FinanceView() {
         </div>
       </div>
 
-      {/* Recent Transactions with pagination */}
       <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <ShoppingCart size={18} className="text-violet-600" />
@@ -262,7 +242,7 @@ export default function FinanceView() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left">
-                <th className="py-3 px-4 text-gray-500 font-medium">Date & Time (BS)</th>
+                <th className="py-3 px-4 text-gray-500 font-medium">Date & Time</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Voter</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Contestant</th>
                 <th className="py-3 px-4 text-gray-500 font-medium">Amount</th>
@@ -274,7 +254,7 @@ export default function FinanceView() {
               {paginatedPayments.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 transition">
                   <td className="py-3 px-4 text-gray-500 text-xs">
-                    {formatBsDateTime(p.createdAt)}
+                    {formatDateTime(p.createdAt)}
                   </td>
                   <td className="py-3 px-4 text-gray-700">
                     {p.voterName || (p.user?.firstName || p.user?.email || 'N/A')}
@@ -305,7 +285,6 @@ export default function FinanceView() {
           </table>
         </div>
 
-        {/* Pagination controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4 text-sm">
             <button
