@@ -11,7 +11,6 @@ import {
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Link } from 'react-router-dom';
-import { formatADtoBS, formatADtoBSLong } from '../../utils/date';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -33,12 +32,17 @@ const formatRelativeTime = (dateString) => {
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
-
   if (diffSec < 60) return 'Just now';
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffHour < 24) return `${diffHour}h ago`;
   if (diffDay < 7) return `${diffDay}d ago`;
   return date.toLocaleDateString();
+};
+
+const formatDate = (dateStr) => {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 
 export default function DashboardOverview() {
@@ -156,10 +160,9 @@ export default function DashboardOverview() {
     setExpandedLogId(expandedLogId === id ? null : id);
   };
 
-  // Convert vote trend dates to BS
   const bsVoteTrend = voteTrend.map(item => ({
     ...item,
-    date: formatADtoBS(item.date),
+    date: formatDate(item.date),
   }));
 
   if (loading) {
@@ -172,7 +175,6 @@ export default function DashboardOverview() {
 
   return (
     <div className="py-6">
-      {/* Stats Cards – 6 columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-violet-100 blur-xl" />
@@ -253,13 +255,12 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ---- Row 1: Vote Trend + Vote Type Breakdown Pie Chart ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp size={18} className="text-violet-600" />
-              Vote Trend (BS)
+              Vote Trend
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <Clock size={16} className="text-violet-500" />
@@ -278,7 +279,7 @@ export default function DashboardOverview() {
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={bsVoteTrend}>
-              <XAxis dataKey="date" stroke="#888888" fontSize={12} />
+              <XAxis dataKey="date" stroke="#888888" fontSize={12} tickMargin={8} />
               <YAxis stroke="#888888" fontSize={12} allowDecimals={false} />
               <Tooltip content={<CustomTooltip />} />
               <Line
@@ -294,7 +295,7 @@ export default function DashboardOverview() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 flex flex-col items-center justify-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 self-start flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900 self-start flex items-center gap-2">
             <PieChartIcon size={18} className="text-violet-600" />
             Vote Type Breakdown
           </h3>
@@ -307,7 +308,7 @@ export default function DashboardOverview() {
                   cy="50%"
                   innerRadius={60}
                   outerRadius={100}
-                  paddingAngle={4}
+                  paddingAngle={0}
                   dataKey="value"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
@@ -324,7 +325,6 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ---- Row 2: Active Elections + Top Performing Elections by Revenue ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -351,7 +351,7 @@ export default function DashboardOverview() {
                       />
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
-                      Ends {formatADtoBSLong(election.endDate)}
+                      Ends {new Date(election.endDate).toLocaleDateString()}
                     </p>
                   </div>
                 );
@@ -410,7 +410,6 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ---- Row 3: Top 10 Most Active Voters ---- */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Trophy size={18} className="text-amber-500" />
@@ -438,7 +437,6 @@ export default function DashboardOverview() {
         )}
       </div>
 
-      {/* ---- Recent Activity – 5 most recent logs, no pagination ---- */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">

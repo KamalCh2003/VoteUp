@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
-import { formatADtoBSLong } from "../../utils/date";
 
 export default function Leaderboard() {
   const toast = useToast();
@@ -272,8 +271,8 @@ export default function Leaderboard() {
               <span className="flex items-center gap-1.5">
                 <Calendar size={12} />
                 {active
-                  ? `Ends ${formatADtoBSLong(election.endDate)}`
-                  : `Ended ${formatADtoBSLong(election.endDate)}`}
+                  ? `Ends ${new Date(election.endDate).toLocaleDateString()}`
+                  : `Ended ${new Date(election.endDate).toLocaleDateString()}`}
               </span>
               {!active && (
                 <>
@@ -618,7 +617,7 @@ export default function Leaderboard() {
               <span className="flex items-center gap-1.5">
                 <Calendar size={13} />
                 {isActive ? "Ends" : "Ended"}{" "}
-                {formatADtoBSLong(selectedElection.endDate)}
+                {new Date(selectedElection.endDate).toLocaleDateString()}
               </span>
               <span className="h-4 w-px bg-white/20" />
               <span className="flex items-center gap-1.5">
