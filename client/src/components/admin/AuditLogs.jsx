@@ -1,41 +1,52 @@
-import { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, ChevronRight, Shield, Clock, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Filter, ChevronDown, ChevronRight, Shield, Clock, ChevronLeft, ChevronRight as ChevronRightIcon, RefreshCw } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import NepaliDate from 'nepali-date-converter';
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
   const [expandedId, setExpandedId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const toast = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const formatBsDateTime = (adDateString) => {
+  const intervalRef = useRef(null);
+
+  const formatDateTime = (adDateString) => {
     const date = new Date(adDateString);
     if (isNaN(date.getTime())) return '—';
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const fetchLogs = async () => {
+    setLoading(true);
     try {
-      const npDate = new NepaliDate(date);
-      const year = npDate.getYear();
-      const month = String(npDate.getMonth()).padStart(2, '0');
-      const day = npDate.getDate();
-      const time = date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      return `${year}/${month}/${day} ${time}`;
-    } catch {
-      return '—';
+      const { data } = await api.get('/admin/audit-logs');
+      setLogs(data.logs || []);
+    } catch (err) {
+      toast.error('Failed to load audit logs');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    api.get('/admin/audit-logs')
-      .then(({ data }) => setLogs(data.logs || []))
-      .catch(() => toast.error('Failed to load audit logs'));
+    fetchLogs();
+    // Auto-refresh every 30 seconds
+    intervalRef.current = setInterval(() => {
+      fetchLogs();
+    }, 30000);
+    return () => clearInterval(intervalRef.current);
   }, []);
 
   const eventTypes = ['ALL', ...new Set(logs.map(l => l.event))];
@@ -93,6 +104,14 @@ export default function AuditLogs() {
           Audit Logs
         </h2>
         <div className="flex items-center gap-3">
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:text-violet-600 hover:border-violet-300 transition disabled:opacity-50"
+            title="Refresh logs"
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+          </button>
           <div className="relative w-full sm:w-72">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -125,7 +144,7 @@ export default function AuditLogs() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left py-4 px-6 font-medium text-gray-500">Time (BS)</th>
+                <th className="text-left py-4 px-6 font-medium text-gray-500">Time</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Event</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">User</th>
                 <th className="text-left py-4 px-6 font-medium text-gray-500">Role</th>
@@ -144,7 +163,7 @@ export default function AuditLogs() {
                     <td className="py-4 px-6 text-gray-500 text-xs whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <Clock size={13} />
-                        {formatBsDateTime(log.createdAt)}
+                        {formatDateTime(log.createdAt)}
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -203,7 +222,6 @@ export default function AuditLogs() {
             </tbody>
           </table>
         </div>
-        {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
             <div className="text-sm text-gray-500">
