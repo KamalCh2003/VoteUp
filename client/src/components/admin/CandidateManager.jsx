@@ -10,9 +10,6 @@ import Button from '../common/Button';
 import AddCandidateModal from './AddCandidateModal';
 import EditCandidateModal from './EditCandidateModal';
 import { Link } from 'react-router-dom';
-import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
-import 'nepali-datepicker-reactjs/dist/index.css';
-import { convertBStoAD } from '../../utils/date';
 
 export default function ContestantManagement() {
   const [candidates, setCandidates] = useState([]);
@@ -22,7 +19,6 @@ export default function ContestantManagement() {
   const [electionFilter, setElectionFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [filterDate, setFilterDate] = useState('');
-  const [nepaliFilterDate, setNepaliFilterDate] = useState('');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -34,9 +30,6 @@ export default function ContestantManagement() {
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [loadingBatch, setLoadingBatch] = useState(false);
-
-  const datePickerRef = useRef(null);
-  const [datePickerKey, setDatePickerKey] = useState(0);
 
   useEffect(() => {
     fetchCandidates();
@@ -81,39 +74,8 @@ export default function ContestantManagement() {
     return Array.from(cats).sort();
   }, [elections]);
 
-  const handleNepaliDateChange = (date) => {
-    if (date) {
-      const ad = convertBStoAD(date);
-      if (ad) {
-        setNepaliFilterDate(date);
-        setFilterDate(ad);
-      } else {
-        toast.error('Invalid Nepali date');
-        setNepaliFilterDate('');
-        setFilterDate('');
-      }
-    } else {
-      setNepaliFilterDate('');
-      setFilterDate('');
-    }
-  };
-
   const clearDateFilter = () => {
     setFilterDate('');
-    setNepaliFilterDate('');
-    if (datePickerRef.current) {
-      const input = datePickerRef.current;
-      if (input.input) {
-        input.input.value = '';
-      } else if (input.value !== undefined) {
-        input.value = '';
-      }
-      if (input.dispatchEvent) {
-        const event = new Event('input', { bubbles: true });
-        input.dispatchEvent(event);
-      }
-    }
-    setDatePickerKey(prev => prev + 1);
   };
 
   const filtered = candidatesWithRank.filter(c => {
@@ -413,25 +375,13 @@ export default function ContestantManagement() {
           {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
 
-        <div className="flex items-center gap-2">
-          <NepaliDatePicker
-            key={datePickerKey}
-            ref={datePickerRef}
-            value={nepaliFilterDate || ''}
-            onChange={handleNepaliDateChange}
-            placeholder="Filter by BS date"
-            inputClassName="px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500 w-full sm:w-48 placeholder:text-gray-400"
-            options={{ format: 'YYYY-MM-DD' }}
-          />
-          {nepaliFilterDate && (
-            <button
-              onClick={clearDateFilter}
-              className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
-            >
-              Clear date
-            </button>
-          )}
-        </div>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+          className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 outline-none focus:border-violet-500"
+          placeholder="Filter by date"
+        />
 
         {(search || electionFilter !== 'ALL' || categoryFilter !== 'ALL' || filterDate) && (
           <button
@@ -439,7 +389,7 @@ export default function ContestantManagement() {
               setSearch('');
               setElectionFilter('ALL');
               setCategoryFilter('ALL');
-              clearDateFilter();
+              setFilterDate('');
             }}
             className="text-sm text-violet-600 hover:text-violet-700"
           >
