@@ -24,7 +24,6 @@ import {
 import { useToast } from '../../context/ToastContext';
 import Button from '../common/Button';
 import AddElectionModal from './AddElectionModal';
-import { formatADtoBS } from '../../utils/date';
 
 function ConfirmDialog({ open, title, message, onConfirm, onCancel, loading = false }) {
   if (!open) return null;
@@ -430,7 +429,7 @@ export default function ElectionManager() {
                 </th>
                 <th className="text-left py-4 px-4 font-medium text-gray-500">Title</th>
                 <th className="text-left py-4 px-4 font-medium text-gray-500">Category</th>
-                <th className="text-left py-4 px-4 font-medium text-gray-500">Dates (BS)</th>
+                <th className="text-left py-4 px-4 font-medium text-gray-500">Dates</th>
                 <th className="text-left py-4 px-4 font-medium text-gray-500">Price Type</th>
                 <th className="text-left py-4 px-4 font-medium text-gray-500">Status</th>
                 <th className="text-left py-4 px-4 font-medium text-gray-500">Contestants</th>
@@ -463,7 +462,7 @@ export default function ElectionManager() {
                     <td className="py-4 px-4 text-gray-500 text-xs">
                       <div className="flex items-center gap-1.5">
                         <Calendar size={13} />
-                        {formatADtoBS(e.startDate)} – {formatADtoBS(e.endDate)}
+                        {new Date(e.startDate).toLocaleDateString()} – {new Date(e.endDate).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="py-4 px-4">{getPriceTypeBadge(e.votePrice)}</td>
