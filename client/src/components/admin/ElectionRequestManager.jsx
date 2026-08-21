@@ -6,7 +6,6 @@ import {
   XCircle, Clock, Archive, Trash2, ChevronLeft, ChevronRight,
   X, Send, Loader2, Phone,
 } from 'lucide-react';
-import NepaliDate from 'nepali-date-converter';
 
 export default function ElectionRequestManager() {
   const [requests, setRequests] = useState([]);
@@ -23,36 +22,26 @@ export default function ElectionRequestManager() {
   const [replyMessage, setReplyMessage] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
 
-  const formatBsDate = (adDateString) => {
+  const formatDate = (adDateString) => {
     const date = new Date(adDateString);
     if (isNaN(date.getTime())) return '—';
-    try {
-      const npDate = new NepaliDate(date);
-      const year = npDate.getYear();
-      const month = String(npDate.getMonth()).padStart(2, '0');
-      const day = String(npDate.getDate()).padStart(2, '0');
-      return `${year}/${month}/${day}`;
-    } catch {
-      return '—';
-    }
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
   };
 
-  const formatBsDateTime = (adDateString) => {
+  const formatDateTime = (adDateString) => {
     const date = new Date(adDateString);
     if (isNaN(date.getTime())) return '—';
-    try {
-      const npDate = new NepaliDate(date);
-      const year = npDate.getYear();
-      const month = String(npDate.getMonth()).padStart(2, '0');
-      const day = String(npDate.getDate()).padStart(2, '0');
-      const time = date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      return `${year}/${month}/${day} ${time}`;
-    } catch {
-      return '—';
-    }
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const fetchRequests = async () => {
@@ -197,7 +186,7 @@ export default function ElectionRequestManager() {
                     <th className="p-4 text-left">Phone</th>
                     <th className="p-4 text-left">Organization</th>
                     <th className="p-4 text-left">Message</th>
-                    <th className="p-4 text-left">Date (BS)</th>
+                    <th className="p-4 text-left">Date</th>
                     <th className="p-4 text-left">Status</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
@@ -219,7 +208,7 @@ export default function ElectionRequestManager() {
                         {req.message}
                       </td>
                       <td className="p-4 text-gray-500 text-xs">
-                        {formatBsDate(req.createdAt)}
+                        {formatDate(req.createdAt)}
                       </td>
                       <td className="p-4">{getStatusBadge(req.status)}</td>
                       <td className="p-4 text-right">
@@ -302,8 +291,8 @@ export default function ElectionRequestManager() {
                   <p className="text-gray-800">{selectedRequest.organization || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Date & Time (BS)</p>
-                  <p className="text-gray-800 text-sm">{formatBsDateTime(selectedRequest.createdAt)}</p>
+                  <p className="text-xs text-gray-500 uppercase mb-1">Date & Time</p>
+                  <p className="text-gray-800 text-sm">{formatDateTime(selectedRequest.createdAt)}</p>
                 </div>
               </div>
 
