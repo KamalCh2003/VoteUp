@@ -18,7 +18,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "../../context/ToastContext";
-import { formatADtoBS } from "../../utils/date";
 
 export default function UserManager() {
   const [users, setUsers] = useState([]);
@@ -375,7 +374,7 @@ export default function UserManager() {
                 <th className="p-4">Name</th>
                 <th className="p-4">Email</th>
                 <th className="p-4">Role</th>
-                <th className="p-4">Joined (BS)</th>
+                <th className="p-4">Joined</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -405,7 +404,7 @@ export default function UserManager() {
                     <td className="p-4 text-gray-600">{u.email}</td>
                     <td className="p-4">{getRoleBadge(u.role)}</td>
                     <td className="p-4 text-gray-500">
-                      {formatADtoBS(u.createdAt)}
+                      {new Date(u.createdAt).toLocaleDateString()}
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
