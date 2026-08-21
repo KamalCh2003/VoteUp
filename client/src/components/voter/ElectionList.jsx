@@ -1,25 +1,17 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Clock,
-  Activity,
-  Archive,
   Search,
-  Filter,
   Calendar,
   ChevronRight,
   Bookmark,
   CheckCheck,
-  SortAsc,
-  SortDesc,
   Loader2,
 } from "lucide-react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
-import { formatADtoBSLong, convertBStoAD } from "../../utils/date";
-import { NepaliDatePicker } from "nepali-datepicker-reactjs";
-import "nepali-datepicker-reactjs/dist/index.css";
 
 const BANNER_COLORS = [
   "linear-gradient(135deg,#6D28D9,#2563EB)",
@@ -36,11 +28,11 @@ export default function ElectionList() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [dateFilter, setDateFilter] = useState("");
-  const [nepaliDateFilter, setNepaliDateFilter] = useState("");
   const [activeTab, setActiveTab] = useState("LIVE");
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +43,18 @@ export default function ElectionList() {
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
   const [candidateCounts, setCandidateCounts] = useState({});
-  const [datePickerKey, setDatePickerKey] = useState(0);
 
   const getTimeRemaining = (endDate) => {
     const total = Date.parse(endDate) - Date.now();
-    if (total <= 0)
-      return { total: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+    if (total <= 0) {
+      return {
+        total: 0,
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+      };
+    }
     return {
       total,
       days: Math.floor(total / (1000 * 60 * 60 * 24)),
@@ -74,6 +72,13 @@ export default function ElectionList() {
     if (time.minutes > 0) parts.push(`${time.minutes}m`);
     parts.push(`${time.seconds}s`);
     return parts.join(" ");
+  };
+
+  const getDateOnly = (dateValue) => {
+    if (!dateValue) return null;
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString().split("T")[0];
   };
 
   const fetchElections = async () => {
@@ -104,19 +109,24 @@ export default function ElectionList() {
             id: election.id,
             count: res.data.election.candidates?.length || 0,
           }))
-          .catch(() => ({ id: election.id, count: 0 })),
+          .catch(() => ({
+            id: election.id,
+            count: 0,
+          })),
       );
       const countResults = await Promise.all(countPromises);
       const counts = {};
-      countResults.forEach((r) => (counts[r.id] = r.count));
+      countResults.forEach((result) => {
+        counts[result.id] = result.count;
+      });
       setCandidateCounts(counts);
 
       if (user) {
         try {
           const votesRes = await api.get("/users/me/votes");
           const votedIds = new Set();
-          (votesRes.data.votes || []).forEach((v) => {
-            if (v.electionId) votedIds.add(v.electionId);
+          (votesRes.data.votes || []).forEach((vote) => {
+            if (vote.electionId) votedIds.add(vote.electionId);
           });
           setVotedElections(votedIds);
         } catch (err) {
@@ -136,85 +146,74 @@ export default function ElectionList() {
 
   useEffect(() => {
     if (!elections.length) return;
-    const active = elections.filter((e) => e.status === "ACTIVE");
+    const active = elections.filter(
+      (election) => election.status === "ACTIVE",
+    );
     if (!active.length) return;
     const interval = setInterval(() => {
       const updated = {};
-      active.forEach((e) => {
-        updated[e.id] = getTimeRemaining(e.endDate);
+      active.forEach((election) => {
+        updated[election.id] = getTimeRemaining(election.endDate);
       });
       setTimeLeft(updated);
     }, 1000);
     return () => clearInterval(interval);
   }, [elections]);
 
-  const toggleBookmark = async (electionId, e) => {
-    e.stopPropagation();
+  const toggleBookmark = async (electionId, event) => {
+    event.stopPropagation();
     try {
-      if (bookmarks.has(electionId)) {
+      const updatedBookmarks = new Set(bookmarks);
+      if (updatedBookmarks.has(electionId)) {
         await api.delete(`/users/me/bookmarks/${electionId}`);
-        bookmarks.delete(electionId);
+        updatedBookmarks.delete(electionId);
         toast.success("Removed from bookmarks");
       } else {
         await api.post(`/users/me/bookmarks/${electionId}`);
-        bookmarks.add(electionId);
+        updatedBookmarks.add(electionId);
         toast.success("Added to bookmarks");
       }
-      setBookmarks(new Set(bookmarks));
+      setBookmarks(updatedBookmarks);
     } catch (err) {
       toast.error("Failed to update bookmark");
     }
   };
 
-  const handleNepaliDateChange = (date) => {
-    if (date) {
-      const ad = convertBStoAD(date);
-      if (ad) {
-        setNepaliDateFilter(date);
-        setDateFilter(ad);
-      } else {
-        toast.error("Invalid Nepali date");
-        setNepaliDateFilter("");
-        setDateFilter("");
-      }
-    } else {
-      setNepaliDateFilter("");
-      setDateFilter("");
-    }
-  };
-
   const clearDateFilter = () => {
     setDateFilter("");
-    setNepaliDateFilter("");
-    setDatePickerKey(prev => prev + 1);
   };
 
   const getStatusFromTab = (tab) => {
     switch (tab) {
-      case "LIVE":
-        return "ACTIVE";
-      case "UPCOMING":
-        return "UPCOMING";
-      case "COMPLETED":
-        return "ENDED";
-      default:
-        return null;
+      case "LIVE": return "ACTIVE";
+      case "UPCOMING": return "UPCOMING";
+      case "COMPLETED": return "ENDED";
+      default: return null;
     }
   };
 
   const filtered = elections
-    .filter((e) => {
+    .filter((election) => {
+      const title = election.title?.toLowerCase() || "";
+      const electionCategory = election.category?.toLowerCase() || "";
+      const searchValue = search.toLowerCase();
       const matchesSearch =
-        e.title.toLowerCase().includes(search.toLowerCase()) ||
-        e.category?.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = !category || e.category === category;
-      const matchesDate =
-        !dateFilter ||
-        new Date(e.startDate).toISOString().split("T")[0] === dateFilter ||
-        new Date(e.endDate).toISOString().split("T")[0] === dateFilter;
+        title.includes(searchValue) ||
+        electionCategory.includes(searchValue);
+      const matchesCategory =
+        !category || election.category === category;
+      const startDate = getDateOnly(election.startDate);
+      const endDate = getDateOnly(election.endDate);
+      const matchesDate = (() => {
+        if (!dateFilter) return true;
+        if (!startDate || !endDate) return false;
+        return dateFilter >= startDate && dateFilter <= endDate;
+      })();
       const statusFromTab = getStatusFromTab(activeTab);
-      const matchesStatus = !statusFromTab || e.status === statusFromTab;
-      const matchesBookmark = !showBookmarkedOnly || bookmarks.has(e.id);
+      const matchesStatus =
+        !statusFromTab || election.status === statusFromTab;
+      const matchesBookmark =
+        !showBookmarkedOnly || bookmarks.has(election.id);
       return (
         matchesSearch &&
         matchesCategory &&
@@ -227,7 +226,6 @@ export default function ElectionList() {
       const statusOrder = { ACTIVE: 0, UPCOMING: 1, ENDED: 2 };
       const statusDiff = statusOrder[a.status] - statusOrder[b.status];
       if (statusDiff !== 0) return statusDiff;
-
       switch (sortBy) {
         case "newest":
           return new Date(b.startDate) - new Date(a.startDate);
@@ -246,14 +244,22 @@ export default function ElectionList() {
 
   const ElectionCard = ({ election, index }) => {
     const color = BANNER_COLORS[index % BANNER_COLORS.length];
-    const remaining = timeLeft[election.id] || { total: 0 };
+    const remaining = timeLeft[election.id] || {
+      total: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+    };
     const isActive = election.status === "ACTIVE";
     const isUpcoming = election.status === "UPCOMING";
     const isEnded = election.status === "ENDED";
     const hasVotedInElection = votedElections.has(election.id);
     const isBookmarked = bookmarks.has(election.id);
     const candidateCount =
-      candidateCounts[election.id] ?? election.candidates?.length ?? 0;
+      candidateCounts[election.id] ??
+      election.candidates?.length ??
+      0;
     const isFree = election.votePrice === 0;
 
     let actionLabel = "View details";
@@ -287,9 +293,6 @@ export default function ElectionList() {
     } else if (isUpcoming) {
       actionLabel = "Upcoming";
       actionClasses = "text-xs text-gray-400";
-    } else {
-      actionLabel = "View details";
-      actionClasses = "text-xs text-gray-400";
     }
 
     return (
@@ -317,19 +320,18 @@ export default function ElectionList() {
               )}
               {isActive ? "Live" : isUpcoming ? "Upcoming" : "Ended"}
             </span>
-            {isFree && (
+            {isFree ? (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/90 text-green-700 border border-green-200">
                 Free
               </span>
-            )}
-            {!isFree && (
+            ) : (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/90 text-amber-700 border border-amber-200">
                 रू {election.votePrice}
               </span>
             )}
           </div>
           <button
-            onClick={(e) => toggleBookmark(election.id, e)}
+            onClick={(event) => toggleBookmark(election.id, event)}
             className="absolute top-3 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-violet-600 transition backdrop-blur-sm"
             title={isBookmarked ? "Remove bookmark" : "Bookmark"}
           >
@@ -345,7 +347,9 @@ export default function ElectionList() {
             <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
               {election.title}
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">{election.category}</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {election.category}
+            </p>
           </div>
 
           <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
@@ -356,7 +360,9 @@ export default function ElectionList() {
                 </span>{" "}
                 candidates
               </span>
-              <span>Ends {formatADtoBSLong(election.endDate)}</span>
+              <span>
+                Ends {new Date(election.endDate).toLocaleDateString()}
+              </span>
             </div>
             {isActive && (
               <span className="text-cyan-600 font-mono text-xs flex items-center gap-1">
@@ -367,26 +373,29 @@ export default function ElectionList() {
           </div>
 
           <div className="mt-4 flex items-center justify-between">
-            {actionLabel === "Vote Now" || actionLabel === "Vote Again" ? (
-              <span className={actionClasses}>
-                {actionLabel} <ChevronRight size={14} />
-              </span>
-            ) : actionLabel === "Voted" ? (
-              <span className={actionClasses}>
-                <CheckCheck size={14} /> {actionLabel}
-              </span>
-            ) : (
-              <span className={actionClasses}>{actionLabel}</span>
-            )}
-            {showVotedBadge && actionLabel !== "Voted" && (
-              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-medium border border-emerald-200">
-                <CheckCheck size={10} /> Voted
-              </span>
-            )}
-            <ChevronRight
-              size={16}
-              className="text-gray-400 transition"
-            />
+            <div className="flex items-center">
+              {actionLabel === "Vote Now" || actionLabel === "Vote Again" ? (
+                <span className={actionClasses}>
+                  {actionLabel}
+                  <ChevronRight size={14} />
+                </span>
+              ) : actionLabel === "Voted" ? (
+                <span className={actionClasses}>
+                  <CheckCheck size={14} />
+                  {actionLabel}
+                </span>
+              ) : (
+                <span className={actionClasses}>
+                  {actionLabel}
+                </span>
+              )}
+              {showVotedBadge && actionLabel !== "Voted" && (
+                <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-medium border border-emerald-200">
+                  <CheckCheck size={10} /> Voted
+                </span>
+              )}
+            </div>
+            <ChevronRight size={16} className="text-gray-400 transition" />
           </div>
         </div>
       </div>
@@ -424,8 +433,7 @@ export default function ElectionList() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Browse Elections</h1>
           <p className="text-gray-500 mt-1">
-            Discover and vote in active elections. Save your favorites and track
-            your voting history.
+            Discover and vote in active elections. Save your favorites and track your voting history.
           </p>
         </div>
 
@@ -439,7 +447,7 @@ export default function ElectionList() {
               type="text"
               placeholder="Search elections..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none"
             />
           </div>
@@ -447,20 +455,18 @@ export default function ElectionList() {
           <div className="hidden md:flex items-center gap-3 flex-wrap">
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(event) => setCategory(event.target.value)}
               className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 outline-none"
             >
               <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(event) => setSortBy(event.target.value)}
               className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 outline-none"
             >
               <option value="newest">Newest</option>
@@ -470,25 +476,12 @@ export default function ElectionList() {
               <option value="priceHigh">Price: High–Low</option>
             </select>
 
-            {/* Nepali Date Picker with typing support */}
-            <div className="flex items-center gap-2">
-              <NepaliDatePicker
-                key={datePickerKey}
-                value={nepaliDateFilter || ''}
-                onChange={handleNepaliDateChange}
-                placeholder="Filter by BS date"
-                inputClassName="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 outline-none w-[170px] placeholder:text-gray-400"
-                options={{ format: 'YYYY-MM-DD' }}
-              />
-              {nepaliDateFilter && (
-                <button
-                  onClick={clearDateFilter}
-                  className="text-sm text-violet-600 hover:text-violet-800 whitespace-nowrap"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:border-violet-500 outline-none"
+            />
           </div>
 
           <button
@@ -501,9 +494,7 @@ export default function ElectionList() {
           >
             <Bookmark
               size={16}
-              className={
-                showBookmarkedOnly ? "fill-violet-600 text-violet-600" : ""
-              }
+              className={showBookmarkedOnly ? "fill-violet-600 text-violet-600" : ""}
             />
             <span>Bookmarked</span>
             {bookmarks.size > 0 && (
@@ -530,7 +521,7 @@ export default function ElectionList() {
                 setSearch("");
                 setCategory("");
                 setStatusFilter("ALL");
-                clearDateFilter();
+                setDateFilter("");
                 setShowBookmarkedOnly(false);
                 setSortBy("newest");
               }}
@@ -541,17 +532,33 @@ export default function ElectionList() {
           )}
         </div>
 
+        {dateFilter && (
+          <div className="mb-6 flex items-center gap-2 text-sm">
+            <Calendar size={16} className="text-violet-600" />
+            <span className="text-gray-500">
+              Showing elections active on
+            </span>
+            <span className="font-semibold text-violet-700">
+              {new Date(dateFilter).toLocaleDateString()}
+            </span>
+            <button
+              type="button"
+              onClick={clearDateFilter}
+              className="text-gray-400 hover:text-red-500"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-1 mb-8 border-b border-gray-200 overflow-x-auto">
           {["ALL", "LIVE", "UPCOMING", "COMPLETED"].map((tab) => {
-            const label =
-              tab === "ALL"
-                ? "All"
-                : tab.charAt(0) + tab.slice(1).toLowerCase();
-            const count = elections.filter((e) => {
+            const label = tab === "ALL" ? "All" : tab.charAt(0) + tab.slice(1).toLowerCase();
+            const count = elections.filter((election) => {
               if (tab === "ALL") return true;
-              if (tab === "LIVE") return e.status === "ACTIVE";
-              if (tab === "UPCOMING") return e.status === "UPCOMING";
-              if (tab === "COMPLETED") return e.status === "ENDED";
+              if (tab === "LIVE") return election.status === "ACTIVE";
+              if (tab === "UPCOMING") return election.status === "UPCOMING";
+              if (tab === "COMPLETED") return election.status === "ENDED";
               return false;
             }).length;
             return (
@@ -572,13 +579,22 @@ export default function ElectionList() {
 
         {filtered.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((election, idx) => (
-              <ElectionCard key={election.id} election={election} index={idx} />
+            {filtered.map((election, index) => (
+              <ElectionCard key={election.id} election={election} index={index} />
             ))}
           </div>
         ) : (
           <div className="py-20 text-center text-gray-500">
-            No elections found matching your filters.
+            <Calendar size={40} className="mx-auto mb-4 text-gray-300" />
+            <p className="font-medium">No elections found matching your filters.</p>
+            {dateFilter && (
+              <button
+                onClick={clearDateFilter}
+                className="mt-3 text-sm text-violet-600 hover:text-violet-800"
+              >
+                Clear date filter
+              </button>
+            )}
           </div>
         )}
       </div>

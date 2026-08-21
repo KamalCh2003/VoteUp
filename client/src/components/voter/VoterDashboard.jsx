@@ -17,7 +17,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import api from "../../services/api";
-import { formatADtoBSLong } from "../../utils/date";
 
 function Reveal({ children, delay = 0, className = "" }) {
   const [visible, setVisible] = useState(false);
@@ -90,12 +89,13 @@ export default function VoterDashboard() {
   const collapse = () => setVisibleActivities(5);
 
   const formatActivityDate = (date) => {
-    const bsDate = formatADtoBSLong(date);
-    const time = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
-    return `${bsDate}, ${time}`;
   };
 
   useEffect(() => {
@@ -401,7 +401,7 @@ export default function VoterDashboard() {
                         </p>
                         <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
                           <Clock size={12} />
-                          Ends {formatADtoBSLong(election.endDate)}
+                          Ends {new Date(election.endDate).toLocaleDateString()}
                         </div>
                       </div>
                       <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 transition-all duration-300 group-hover:bg-emerald-100">
