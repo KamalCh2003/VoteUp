@@ -6,6 +6,7 @@ const passport = require('passport');
 
 const { generalLimiter } = require('./middleware/rateLimiter');
 const maintenanceMiddleware = require('./middleware/maintenance');
+const settingsController = require('./controllers/settings.controller');
 require('./config/passport');
 
 const authRoutes = require('./routes/auth.routes');
@@ -44,6 +45,9 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(maintenanceMiddleware);
+
+// Public maintenance status route (must be before any auth middleware)
+app.get('/api/maintenance-status', settingsController.getMaintenanceStatus);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
