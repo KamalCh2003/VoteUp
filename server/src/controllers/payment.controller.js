@@ -11,7 +11,7 @@ const KHALTI_API_BASE = KHALTI_ENV === 'live'
 exports.createIntent = async (req, res) => {
   try {
     const { amount, type, candidateId } = req.body;
-    const intent = await paymentService.createPaymentIntent(amount, 'usd', {
+    const intent = await paymentService.createPaymentIntent(amount, 'npr', {
       userId: req.user.id,
       type,
       candidateId: candidateId || '',
