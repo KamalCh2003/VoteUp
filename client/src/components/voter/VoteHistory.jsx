@@ -81,6 +81,32 @@ export default function VoteHistory() {
     setCurrentPage(Math.min(Math.max(1, page), totalPages));
   };
 
+  const getPageNumbers = () => {
+    const pages = [];
+    const total = totalPages;
+    const current = currentPage;
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      if (current <= 3) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push('...');
+        pages.push(total);
+      } else if (current >= total - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = total - 4; i <= total; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(total);
+      }
+    }
+    return pages;
+  };
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -333,33 +359,36 @@ export default function VoteHistory() {
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50"
+                  aria-label="Previous page"
                 >
                   <ChevronLeft size={16} />
                 </button>
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  let page;
-                  if (totalPages <= 5) page = i + 1;
-                  else if (currentPage <= 3) page = i + 1;
-                  else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
-                  else page = currentPage - 2 + i;
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => goToPage(page)}
-                      className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold transition ${ 
-                        page === currentPage
-                          ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
-                          : 'border border-gray-200 bg-white text-gray-500 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
+                <div className="flex gap-1">
+                  {getPageNumbers().map((page, idx) =>
+                    page === '...' ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-semibold transition ${
+                          page === currentPage
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                            : 'border border-gray-200 bg-white text-gray-500 hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+                </div>
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50"
+                  aria-label="Next page"
                 >
                   <ChevronRight size={16} />
                 </button>

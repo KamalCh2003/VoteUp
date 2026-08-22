@@ -105,60 +105,49 @@ export default function VoterDashboard() {
       setPaymentError(false);
 
       try {
-        const votesRes = await api.get("/users/me/votes");
-        const votes = votesRes.data.votes || [];
+        // Fetch votes and payments in parallel
+        const [votesRes, paymentsRes, electionsRes, bookmarksRes] = await Promise.all([
+          api.get("/users/me/votes"),
+          api.get("/users/me/payments").catch(() => ({ data: { payments: [] } })),
+          api.get("/elections", {
+            params: { status: "ACTIVE", limit: 3 },
+          }).catch(() => ({ data: { elections: [] } })),
+          api.get("/users/me/bookmarks").catch(() => ({ data: { bookmarks: [] } })),
+        ]);
 
+        const votes = votesRes.data.votes || [];
+        const payments = paymentsRes.data.payments || [];
+        const activeElections = electionsRes.data.elections || [];
+        const bookmarks = bookmarksRes.data.bookmarks?.length || 0;
+
+        // Calculate total votes cast (sum of vote quantities)
         const votesCast = votes.reduce((sum, v) => sum + (v.quantity || 1), 0);
 
-        const electionsRes = await api.get("/elections", {
-          params: {
-            status: "ACTIVE",
-            limit: 3,
-          },
+        // Build map: paymentId -> total quantity of votes linked to that payment
+        const paymentQuantityMap = new Map();
+        votes.forEach(v => {
+          if (v.paymentId) {
+            const qty = v.quantity || 1;
+            paymentQuantityMap.set(v.paymentId, (paymentQuantityMap.get(v.paymentId) || 0) + qty);
+          }
         });
 
-        const activeElections = electionsRes.data.elections || [];
-
-        let payments = [];
+        // Compute total payments (only completed/success)
         let totalPayments = 0;
-
-        try {
-          const paymentsRes = await api.get("/users/me/payments");
-
-          payments = paymentsRes.data.payments || paymentsRes.data || [];
-
-          if (!Array.isArray(payments)) {
-            payments = [];
+        payments.forEach(p => {
+          if (p.status === "COMPLETED" || p.status === "SUCCESS") {
+            totalPayments += p.amount || 0;
           }
-
-          totalPayments = payments
-            .filter((p) => p.status === "COMPLETED" || p.status === "SUCCESS")
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-        } catch {
-          setPaymentError(true);
-          totalPayments = 0;
-          payments = [];
-        }
-
-        let bookmarks = 0;
-
-        try {
-          const bookmarksRes = await api.get("/users/me/bookmarks");
-
-          bookmarks = bookmarksRes.data.bookmarks?.length || 0;
-        } catch {
-          bookmarks = 0;
-        }
+        });
 
         const activityList = [];
 
+        // Activity: Votes
         votes.forEach((v) => {
           const candidateName = v.candidate?.user
             ? `${v.candidate.user.firstName} ${v.candidate.user.lastName}`
             : "a candidate";
-
           const electionTitle = v.election?.title || "an election";
-
           activityList.push({
             id: `vote-${v.id}`,
             type: "vote",
@@ -170,11 +159,12 @@ export default function VoterDashboard() {
           });
         });
 
+        // Activity: Payments – use the map to get quantity
         payments.forEach((p) => {
           if (p.status === "COMPLETED" || p.status === "SUCCESS") {
-            const quantity = p.quantity || 1;
             const amount = p.amount || 0;
-
+            // Get quantity from map, fallback to 1
+            const quantity = paymentQuantityMap.get(p.id) || 1;
             activityList.push({
               id: `payment-${p.id}`,
               type: "payment",
@@ -187,8 +177,10 @@ export default function VoterDashboard() {
           }
         });
 
+        // Sort activities by timestamp (newest first)
         activityList.sort((a, b) => b.timestamp - a.timestamp);
 
+        // Keep only the 10 most recent
         const recentActivities = activityList.slice(0, 10);
 
         setStats({
@@ -202,7 +194,6 @@ export default function VoterDashboard() {
         setActivities(recentActivities);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
-
         setError("Could not load dashboard. Please try again.");
       } finally {
         setLoading(false);
@@ -252,10 +243,8 @@ export default function VoterDashboard() {
   }
 
   const displayedActivities = activities.slice(0, visibleActivities);
-
   const hasMore = visibleActivities < activities.length;
-  const allShown =
-    visibleActivities >= activities.length && activities.length > 0;
+  const allShown = visibleActivities >= activities.length && activities.length > 0;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-50">
@@ -308,7 +297,6 @@ export default function VoterDashboard() {
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((card, index) => {
             const Icon = card.icon;
-
             const value =
               card.key === "totalPayments"
                 ? stats.totalPayments > 0
@@ -384,9 +372,7 @@ export default function VoterDashboard() {
                     <Link
                       to={`/elections/${election.id}`}
                       key={election.id}
-                      style={{
-                        transitionDelay: `${index * 70}ms`,
-                      }}
+                      style={{ transitionDelay: `${index * 70}ms` }}
                       className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-purple-100 hover:bg-white hover:shadow-lg"
                     >
                       <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-md shadow-purple-500/20">
@@ -443,9 +429,7 @@ export default function VoterDashboard() {
                   {displayedActivities.map((activity, index) => (
                     <div
                       key={activity.id}
-                      style={{
-                        animationDelay: `${index * 60}ms`,
-                      }}
+                      style={{ animationDelay: `${index * 60}ms` }}
                       className="group flex items-start gap-3 rounded-2xl border border-transparent p-3 transition-all duration-300 hover:border-gray-100 hover:bg-gray-50"
                     >
                       <div
