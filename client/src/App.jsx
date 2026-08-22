@@ -79,8 +79,7 @@ function ScrollToTop() {
 
 function Protected({ children, roles }) {
   const { isAuthenticated, user, loading } = useAuth();
-  if (loading)
-    return <div className="flex justify-center p-10">Loading...</div>;
+  if (loading) return <div className="flex justify-center p-10">Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" />;
   return children;
@@ -97,11 +96,9 @@ function PublicRoute({ children }) {
     if (user?.role === "ADMIN") {
       return <Navigate to="/admin/dashboard" replace />;
     }
-
     if (user?.role === "CONTESTANT") {
       return <Navigate to="/contestant/dashboard" replace />;
     }
-
     return <Navigate to="/voter/dashboard" replace />;
   }
 
@@ -121,8 +118,14 @@ function AppContent() {
       try {
         const res = await api.get("/maintenance-status");
         setMaintenance({ loading: false, enabled: res.data.maintenanceMode });
-      } catch {
-        setMaintenance({ loading: false, enabled: false });
+      } catch (err) {
+        // If the server returns 503, maintenance is enabled
+        if (err.response && err.response.status === 503) {
+          setMaintenance({ loading: false, enabled: true });
+        } else {
+          // Other errors: treat as no maintenance
+          setMaintenance({ loading: false, enabled: false });
+        }
       }
     };
     checkMaintenance();
@@ -207,7 +210,6 @@ function AppContent() {
               </Protected>
             }
           />
-
           <Route
             path="/admin/past-results"
             element={
@@ -350,7 +352,6 @@ function AppContent() {
               path="/voter/home"
               element={<Navigate to="/voter/dashboard" replace />}
             />
-
             <Route
               path="/"
               element={
@@ -359,7 +360,6 @@ function AppContent() {
                 </PublicRoute>
               }
             />
-
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/compliance" element={<Compliance />} />

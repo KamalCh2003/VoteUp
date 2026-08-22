@@ -97,6 +97,26 @@ export default function AdminLayout({ children }) {
     }
   };
 
+  // Avatar render helper – used in sidebar and dropdown
+  const renderAvatar = (size = "h-9 w-9", textSize = "text-sm") => {
+    if (user?.avatarUrl) {
+      return (
+        <img
+          src={user.avatarUrl}
+          alt={getFullName()}
+          className={`${size} rounded-full object-cover border-2 border-white/20`}
+        />
+      );
+    }
+    return (
+      <div
+        className={`${size} rounded-full bg-gradient-to-r from-[#6D28D9] to-[#2563EB] flex items-center justify-center text-white font-bold ${textSize} flex-shrink-0`}
+      >
+        {getInitials()}
+      </div>
+    );
+  };
+
   const fetchUnreadCount = async () => {
     try {
       const res = await api.get("/admin/notifications/unread-count");
@@ -389,9 +409,7 @@ export default function AdminLayout({ children }) {
               !sidebarOpen ? "justify-center" : ""
             }`}
           >
-            <div className="h-9 w-9 rounded-full bg-gradient-to-r from-[#6D28D9] to-[#2563EB] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {getInitials()}
-            </div>
+            {renderAvatar("h-9 w-9", "text-xs")}
             {sidebarOpen && (
               <div className="overflow-hidden">
                 <h4 className="text-sm font-semibold text-[#0F172A]">
@@ -436,9 +454,7 @@ export default function AdminLayout({ children }) {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-xl px-3 py-1.5 hover:border-[#6D28D9] transition"
               >
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-[#6D28D9] to-[#2563EB] flex items-center justify-center text-white font-bold text-sm">
-                  {getInitials()}
-                </div>
+                {renderAvatar("h-8 w-8", "text-[10px]")}
                 <div className="hidden sm:block text-left">
                   <h4 className="text-sm font-semibold text-[#0F172A]">
                     {getFullName()}
