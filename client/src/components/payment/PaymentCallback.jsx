@@ -29,7 +29,7 @@ export default function PaymentCallback() {
         all: Object.fromEntries(searchParams.entries()),
       });
 
-      // If status is not 'Completed' or pidx is missing → treat as failure
+      
       if (!pidx || statusParam !== 'Completed') {
         setStatus('error');
         const errorMsg = statusParam
