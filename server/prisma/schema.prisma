@@ -157,7 +157,7 @@ model Payment {
   candidateId           String?
   candidate             Candidate?    @relation(fields: [candidateId], references: [id])
   amount                Float
-  currency              String        @default("USD")
+  currency              String        @default("NPR")
   type                  PaymentType
   status                PaymentStatus @default(COMPLETED)
   stripePaymentIntentId String?       @unique
